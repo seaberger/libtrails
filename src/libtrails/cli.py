@@ -78,12 +78,13 @@ def status():
 @click.option('--model', '-m', default=DEFAULT_MODEL, help='Ollama model to use')
 @click.option('--dry-run', is_flag=True, help='Parse and chunk without topic extraction')
 @click.option('--reindex', is_flag=True, help='Re-index books that are already indexed')
-def index(book_id: int, title: str, index_all: bool, model: str, dry_run: bool, reindex: bool):
+@click.option('--max-words', type=int, default=None, help='Skip books with more than N words (e.g., 500000)')
+def index(book_id: int, title: str, index_all: bool, model: str, dry_run: bool, reindex: bool, max_words: int):
     """Index a book (parse, chunk, extract topics)."""
     init_chunks_table()
 
     if index_all:
-        _index_all_books(model, dry_run, reindex)
+        _index_all_books(model, dry_run, reindex, max_words)
         return
 
     # Find the book
@@ -100,8 +101,8 @@ def index(book_id: int, title: str, index_all: bool, model: str, dry_run: bool, 
     _index_single_book(book, model, dry_run)
 
 
-def _index_single_book(book: dict, model: str, dry_run: bool):
-    """Index a single book. Raises exception on failure."""
+def _index_single_book(book: dict, model: str, dry_run: bool, max_words: int = None):
+    """Index a single book. Raises exception on failure. Returns 'skipped' if over max_words."""
     console.print(f"[bold]Indexing:[/bold] {book['title'][:60]}")
     console.print(f"[dim]Author: {book['author'] or 'Unknown'}[/dim]")
 
@@ -125,6 +126,11 @@ def _index_single_book(book: dict, model: str, dry_run: bool):
     # Check minimum content
     if word_count < 100:
         raise ValueError(f"Insufficient content: only {word_count} words extracted")
+
+    # Check maximum content (for skipping huge collected works)
+    if max_words and word_count > max_words:
+        console.print(f"[yellow]Skipping: {word_count:,} words exceeds --max-words {max_words:,}[/yellow]")
+        return "skipped"
 
     console.print(f"[green]Extracted {word_count:,} words[/green]")
 
@@ -189,12 +195,15 @@ def _index_single_book(book: dict, model: str, dry_run: bool):
             console.print(f"  {topic} ({count})")
 
 
-def _index_all_books(model: str, dry_run: bool, reindex: bool = False):
+def _index_all_books(model: str, dry_run: bool, reindex: bool = False, max_words: int = None):
     """Index all books with Calibre matches, with resume support."""
     from .database import get_db, get_book_path
     import time
 
     books = get_all_books(with_calibre_match=True)
+
+    if max_words:
+        console.print(f"[dim]Skipping books with more than {max_words:,} words[/dim]")
 
     # Get already indexed book IDs
     with get_db() as conn:
@@ -231,13 +240,14 @@ def _index_all_books(model: str, dry_run: bool, reindex: bool = False):
 
     # Process books
     successful = 0
+    skipped_large = 0
     failed = []
     start_time = time.time()
 
     for i, book in enumerate(processable, 1):
         elapsed = time.time() - start_time
-        if i > 1:
-            avg_time = elapsed / (i - 1)
+        if successful > 0:
+            avg_time = elapsed / successful
             remaining = avg_time * (len(processable) - i + 1)
             eta = f"ETA: {int(remaining // 60)}m {int(remaining % 60)}s"
         else:
@@ -246,7 +256,10 @@ def _index_all_books(model: str, dry_run: bool, reindex: bool = False):
         console.print(f"\n[dim]({i}/{len(processable)}) {eta}[/dim]")
 
         try:
-            _index_single_book(book, model, dry_run)
+            result = _index_single_book(book, model, dry_run, max_words)
+            if result == "skipped":
+                skipped_large += 1
+                continue
             successful += 1
         except KeyboardInterrupt:
             console.print("\n[yellow]Interrupted! Progress saved. Run again to resume.[/yellow]")
@@ -260,6 +273,8 @@ def _index_all_books(model: str, dry_run: bool, reindex: bool = False):
     console.print(f"\n[bold]{'─' * 40}[/bold]")
     console.print(f"[bold]Batch complete![/bold]")
     console.print(f"  [green]Successful: {successful}[/green]")
+    if skipped_large:
+        console.print(f"  [yellow]Skipped (too large): {skipped_large}[/yellow]")
     if failed:
         console.print(f"  [red]Failed: {len(failed)}[/red]")
     console.print(f"  [dim]Time: {int(total_time // 60)}m {int(total_time % 60)}s[/dim]")
