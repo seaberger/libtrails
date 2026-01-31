@@ -11,6 +11,43 @@ Inspired by [Pieter Maes' "Reading Across Books" project](https://pieterma.es/sy
 
 ---
 
+## Implemented Architecture
+
+| Component | Technology | Status |
+|-----------|------------|--------|
+| EPUB parsing | `selectolax` | ✅ |
+| Text chunking | Custom (~500 words) | ✅ |
+| Topic extraction | Ollama (gemma3:4b/27b) | ✅ |
+| Embeddings | `BAAI/bge-small-en-v1.5` (384 dims) | ✅ |
+| Vector search | `sqlite-vec` (cosine distance) | ✅ |
+| Topic graph | `python-igraph` | ✅ |
+| Clustering | `leidenalg` (Surprise quality) | ✅ |
+| Storage | SQLite + FTS | ✅ |
+| CLI | `click` + `rich` | ✅ |
+
+### Pipeline Flow
+
+```
+EPUB → selectolax → Chunks (500 words) → Ollama → Raw Topics
+                                                      ↓
+                                              Normalize (lowercase, strip)
+                                                      ↓
+                                              BGE Embeddings (384 dims)
+                                                      ↓
+                                    ┌─────────────────┴─────────────────┐
+                                    ↓                                   ↓
+                            sqlite-vec index                    Deduplication
+                            (cosine distance)                   (similarity > 0.85)
+                                    ↓                                   ↓
+                            Semantic Search              Co-occurrence Graph (PMI)
+                                                                        ↓
+                                                         Leiden Clustering
+                                                                        ↓
+                                                            Topic Hierarchy
+```
+
+---
+
 ## Data Sources
 
 ### 1. Main Calibre Library
@@ -55,236 +92,342 @@ GROUP BY b.id;
 **To refresh iPad library data**:
 1. Open MapleRead SE on iPad
 2. Enable "Book Sharing" server
-3. Run `python3 scrape_mapleread.py` or `scrape_mapleread_full.py`
-
-**Current data captured**:
-- Book ID (MD5 hash)
-- Title
-- Author
-- Format (epub/pdf)
-- Tags (via full scrape)
-
-### 3. External Enrichment Sources (potential)
-- **Goodreads** - API deprecated, but web data exists
-- **Open Library** - Free API, has many books
-- **Google Books API** - Descriptions, categories
-- **ISBNdb** - Comprehensive but paid
+3. Run `python3 utils/scrape_mapleread.py` or `utils/scrape_mapleread_full.py`
 
 ---
 
-## Technical Architecture (from Pieter's implementation)
+## Database Schema
 
-| Component | Technology |
-|-----------|------------|
-| EPUB parsing | `selectolax` |
-| Sentence splitting | `wtpsplit` (sat-6l-sm) |
-| Storage | SQLite + `sqlite-vec` |
-| Topic extraction | Gemini 2.5 Flash Lite |
-| Embeddings | `google/embeddings-gemma-300m` |
-| Reranking | `BAAI/bge-reranker-v2-m3` |
-| Topic graph | `igraph` + Leiden clustering |
-| Agent interface | Claude Code with CLI tools |
+### Core Tables
+
+```sql
+-- Books from iPad library (matched to Calibre)
+CREATE TABLE books (
+    id INTEGER PRIMARY KEY,
+    title TEXT,
+    author TEXT,
+    calibre_id INTEGER,          -- FK to Calibre metadata.db
+    description TEXT,
+    -- ... other metadata
+);
+
+-- Text chunks from parsed EPUBs
+CREATE TABLE chunks (
+    id INTEGER PRIMARY KEY,
+    book_id INTEGER REFERENCES books(id),
+    chunk_index INTEGER,
+    content TEXT,
+    word_count INTEGER
+);
+
+-- Raw topics extracted per chunk (before normalization)
+CREATE TABLE chunk_topics (
+    id INTEGER PRIMARY KEY,
+    chunk_id INTEGER REFERENCES chunks(id),
+    topic TEXT
+);
+
+-- Normalized, deduplicated topics with embeddings
+CREATE TABLE topics (
+    id INTEGER PRIMARY KEY,
+    label TEXT UNIQUE NOT NULL,       -- normalized: lowercase, trimmed
+    embedding BLOB,                    -- 384-dim float32 vector
+    cluster_id INTEGER,               -- Leiden cluster assignment
+    parent_topic_id INTEGER,          -- for hierarchical structure
+    occurrence_count INTEGER DEFAULT 0
+);
+
+-- Many-to-many: chunks ↔ normalized topics
+CREATE TABLE chunk_topic_links (
+    chunk_id INTEGER REFERENCES chunks(id),
+    topic_id INTEGER REFERENCES topics(id),
+    PRIMARY KEY (chunk_id, topic_id)
+);
+
+-- Topic co-occurrence with PMI scores
+CREATE TABLE topic_cooccurrences (
+    topic1_id INTEGER,
+    topic2_id INTEGER,
+    count INTEGER DEFAULT 0,
+    pmi REAL,                         -- Pointwise Mutual Information
+    PRIMARY KEY (topic1_id, topic2_id)
+);
+
+-- sqlite-vec virtual table for vector search
+CREATE VIRTUAL TABLE topic_vectors USING vec0(
+    topic_id INTEGER PRIMARY KEY,
+    embedding FLOAT[384] distance_metric=cosine
+);
+```
 
 ---
 
-## Possible Directions
+## Key Implementation Details
 
-### Option A: Metadata-First Discovery
-Start with just metadata (titles, authors, descriptions, tags) from both libraries.
+### Embedding Model
 
-**Approach**:
-1. Extract all metadata from Calibre's 40k library
-2. Use iPad's 969 books as "taste profile"
-3. Generate embeddings for descriptions/titles
-4. Build topic tree from existing tags
-5. Create CLI tools for Claude to explore connections
+Using **BGE-small-en-v1.5** instead of all-MiniLM-L6-v2:
+- Better performance on semantic textual similarity (STS) tasks
+- Same 384 dimensions, similar speed
+- Top performer on MTEB benchmark for its size
 
-**Pros**: Fast to implement, no book parsing needed, low cost
-**Cons**: Limited depth - can't find connections within book content
+```python
+# src/libtrails/embeddings.py
+MODEL_NAME = "BAAI/bge-small-en-v1.5"
+EMBEDDING_DIMENSION = 384
+MODEL_CACHE_DIR = PROJECT_ROOT / "models"  # Cached locally
+```
 
-### Option B: Deep Read of iPad Library
-Use local LLM (Gemma-3) to deeply analyze the 969 iPad books.
+Model is downloaded on first use and cached in `models/` directory (~130MB).
 
-**Approach**:
-1. Parse EPUBs from iPad library
-2. Chunk into ~500 word segments
-3. Extract topics per chunk using local LLM
-4. Build rich topic tree from actual content
-5. Use these deep topics to search/rank the 40k library
+### Vector Search with Cosine Distance
 
-**Pros**: Rich understanding of your curated collection
-**Cons**: Requires EPUB access, processing time, local LLM setup
+sqlite-vec configured for cosine similarity (not L2/Euclidean):
 
-### Option C: External Enrichment
-Augment all 40k books with Goodreads/OpenLibrary data.
+```python
+# src/libtrails/vector_search.py
+conn.execute(f"""
+    CREATE VIRTUAL TABLE IF NOT EXISTS topic_vectors USING vec0(
+        topic_id INTEGER PRIMARY KEY,
+        embedding FLOAT[{dim}] distance_metric=cosine
+    )
+""")
+```
 
-**Approach**:
-1. Match books by ISBN/title/author to external sources
-2. Pull summaries, genres, similar books, ratings
-3. Build comprehensive metadata database
-4. Enable search/discovery across enriched data
+**Important**: sqlite-vec requires `k=?` in WHERE clause, not LIMIT:
+```sql
+-- Correct
+SELECT topic_id, distance FROM topic_vectors
+WHERE embedding MATCH ? AND k = 20
+ORDER BY distance;
 
-**Pros**: Covers entire library quickly, crowd-sourced wisdom
-**Cons**: Depends on external data quality, some books won't match
+-- Wrong (will error)
+SELECT topic_id, distance FROM topic_vectors
+WHERE embedding MATCH ?
+ORDER BY distance LIMIT 20;
+```
 
-### Option D: Hybrid Approach (Recommended)
-Combine metadata-first for breadth with deep read for depth.
+### Topic Normalization
 
-**Approach**:
-1. **Phase 1**: Index all 40k metadata + generate embeddings
-2. **Phase 2**: Deep analyze 969 iPad books as "seed corpus"
-3. **Phase 3**: Use seed corpus topics to surface related books in main library
-4. **Phase 4**: Optionally enrich with external data where gaps exist
+```python
+# src/libtrails/topic_extractor.py
+def normalize_topic(topic: str) -> str:
+    normalized = topic.strip().lower().replace("_", " ")
+    while "  " in normalized:
+        normalized = normalized.replace("  ", " ")
+    return normalized
+```
+
+### Deduplication Algorithm
+
+Uses Union-Find to merge topics with cosine similarity > 0.85:
+
+1. Compute pairwise similarity matrix for all embeddings
+2. Build connected components where similarity > threshold
+3. Keep most frequent label as canonical
+4. Update all chunk_topic_links to point to canonical topic
+5. Delete duplicate topics
+
+### Leiden Clustering
+
+Uses igraph + leidenalg with Surprise quality function:
+
+```python
+import leidenalg
+partition = leidenalg.find_partition(
+    graph,
+    leidenalg.SurpriseVertexPartition
+)
+```
+
+Graph edges come from:
+1. **Embedding similarity**: cosine > 0.5 threshold
+2. **Co-occurrence**: topics appearing in same chunks (weighted by PMI)
 
 ---
 
-## Potential CLI Tools for Claude
+## CLI Commands
 
-Based on Pieter's approach, these tools would enable agentic exploration:
+```bash
+# Indexing
+uv run libtrails status                    # Library stats
+uv run libtrails index --title "Book"      # Index single book
+uv run libtrails index --all               # Index all books
+uv run libtrails topics 123                # Show book's topics
+
+# Post-processing pipeline
+uv run libtrails embed                     # Generate embeddings
+uv run libtrails embed --force             # Regenerate all (after model change)
+uv run libtrails dedupe --dry-run          # Preview deduplication
+uv run libtrails dedupe                    # Merge similar topics
+uv run libtrails cluster                   # Leiden clustering
+uv run libtrails process                   # Run full pipeline
+
+# Discovery
+uv run libtrails search-semantic "query"   # Semantic search
+uv run libtrails tree                      # Browse topic hierarchy
+uv run libtrails related "topic"           # Graph-connected topics
+uv run libtrails cooccur "topic"           # Co-occurring topics
+```
+
+---
+
+## File Structure
 
 ```
-lib search <query>        # Semantic search across library
-lib topics <book_id>      # Show topics extracted from a book
-lib similar <book_id>     # Find books similar to this one
-lib tree browse           # Navigate topic hierarchy
-lib tree find <topic>     # Find all books under a topic
-lib trail suggest         # Propose new trail ideas
-lib trail create <idea>   # Build a trail from an idea
-lib compare <id1> <id2>   # Compare themes between books
-lib taste                 # Analyze reading preferences from iPad library
-lib surface               # Surface main library books based on taste
+calibre_lib/
+├── CLAUDE.md                    # This file (internal dev notes)
+├── README.md                    # Public-facing documentation
+├── pyproject.toml               # Package config
+├── requirements.txt             # Dependencies for uv
+├── data/
+│   ├── ipad_library.db          # SQLite database (primary)
+│   ├── ipad_library.json        # Raw scraped data
+│   ├── ipad_library_enriched.json
+│   ├── ipad_unmatched.json
+│   └── ipad_tags.json
+├── docs/
+│   ├── read_books_with_claude_code.md
+│   ├── calibre_plugin_research.md
+│   ├── calibre-rag-prd.md
+│   ├── calibre-plugin-guide.md
+│   ├── calibre-rag-pseudocode.md
+│   └── plugin_idea.md
+├── models/                      # Cached embedding model (gitignored)
+│   └── BAAI_bge-small-en-v1.5/
+├── src/libtrails/
+│   ├── __init__.py
+│   ├── cli.py                   # Click CLI with all commands
+│   ├── config.py                # Paths, thresholds, model settings
+│   ├── database.py              # SQLite operations, schema
+│   ├── epub_parser.py           # selectolax EPUB extraction
+│   ├── chunker.py               # Text chunking (~500 words)
+│   ├── topic_extractor.py       # Ollama topic extraction + normalization
+│   ├── embeddings.py            # BGE model, caching, utilities
+│   ├── vector_search.py         # sqlite-vec search functions
+│   ├── deduplication.py         # Union-Find topic merging
+│   ├── topic_graph.py           # igraph construction, co-occurrence
+│   └── clustering.py            # Leiden algorithm wrapper
+└── utils/
+    ├── scrape_mapleread.py      # Basic iPad scraper
+    ├── scrape_mapleread_full.py # Full scraper with tags
+    ├── match_to_calibre.py      # Match iPad→Calibre
+    └── create_ipad_db.py        # Initial DB creation
+```
+
+---
+
+## Configuration
+
+Edit `src/libtrails/config.py`:
+
+```python
+# Paths
+PROJECT_ROOT = Path(__file__).parent.parent.parent
+DATA_DIR = PROJECT_ROOT / "data"
+IPAD_DB_PATH = DATA_DIR / "ipad_library.db"
+
+# Calibre library (read-only)
+CALIBRE_LIBRARY_PATH = Path.home() / "Calibre_Main_Library"
+CALIBRE_DB_PATH = CALIBRE_LIBRARY_PATH / "metadata.db"
+
+# LLM settings
+DEFAULT_MODEL = "gemma3:27b"
+OLLAMA_HOST = "http://localhost:11434"
+
+# Chunking settings
+CHUNK_TARGET_WORDS = 500
+CHUNK_MIN_WORDS = 100
+
+# Topic extraction
+TOPICS_PER_CHUNK = 5
+
+# Deduplication settings
+DEDUP_SIMILARITY_THRESHOLD = 0.85
+
+# Graph/clustering settings
+EMBEDDING_EDGE_THRESHOLD = 0.5
+COOCCURRENCE_MIN_COUNT = 2
+PMI_MIN_THRESHOLD = 0.0
 ```
 
 ---
 
 ## Current Progress (Jan 30, 2025)
 
-### Completed
+### Completed ✅
 - [x] Scraped 969 books from iPad MapleRead library (with tags)
 - [x] Matched 927/969 (96%) to Calibre metadata
 - [x] Created SQLite database with full-text search
+- [x] EPUB parsing with selectolax
+- [x] Text chunking (~500 words per chunk)
+- [x] Topic extraction via Ollama (gemma3:4b)
+- [x] Topic normalization and deduplication
+- [x] BGE embeddings with local caching
+- [x] sqlite-vec with cosine distance
+- [x] Co-occurrence analysis with PMI
+- [x] Leiden clustering with igraph
+- [x] Full CLI interface
 
-### iPad Library Database Stats
-| Metric | Count |
+### Current Stats (1 book indexed: Siddhartha)
+| Metric | Value |
 |--------|-------|
-| Total books | 969 |
-| Matched to Calibre | 927 (96%) |
-| Unique authors | 810 |
-| iPad tags | 955 |
-| Calibre tags | 1,068 |
-| With descriptions | 901 |
-| With ISBN | 820 |
-| In a series | 133 |
+| Chunks | 83 |
+| Raw topics | 223 |
+| Normalized topics | 223 |
+| Embedded topics | 223 |
+| Clusters | 70 |
 
-### Top Reading Interests (by Calibre tags)
-1. Fiction (234)
-2. Science Fiction (155)
-3. Fantasy (116)
-4. History (104)
-5. Classics (95)
-6. Philosophy (62)
-7. Politics (56)
-8. Business (50)
-9. Writing (49)
-
----
-
-## Development Setup
-
-This project uses **uv** for package management. All commands should be run with `uv run`.
-
-```bash
-# Create virtual environment
-uv venv
-
-# Install dependencies
-uv pip install -r requirements.txt
-uv pip install -e .
-
-# Run CLI commands
-uv run libtrails status
-uv run libtrails index --title "Book Name" --dry-run
-uv run libtrails index 123
-uv run libtrails models
-```
-
-## File Structure
-
-```
-calibre_lib/
-├── CLAUDE.md                    # This file
-├── pyproject.toml               # Package config
-├── requirements.txt             # Dependencies for uv
-├── README.md                    # Package readme
-├── data/
-│   ├── ipad_library.db          # SQLite database with FTS (primary)
-│   ├── ipad_library.json        # Raw scraped data
-│   ├── ipad_library_enriched.json  # With Calibre metadata
-│   ├── ipad_unmatched.json      # 42 books not in Calibre
-│   └── ipad_tags.json           # Unique tags list
-├── docs/
-│   ├── read_books_with_claude_code.md  # Pieter's article
-│   ├── calibre_plugin_research.md       # Plugin research
-│   ├── calibre-rag-prd.md              # PRD for RAG plugin
-│   ├── calibre-plugin-guide.md         # Calibre plugin dev guide
-│   ├── calibre-rag-pseudocode.md       # Search pipeline pseudocode
-│   └── plugin_idea.md                  # Original plugin concept
-├── src/libtrails/               # Main package
-│   ├── __init__.py
-│   ├── cli.py                   # Click CLI interface
-│   ├── config.py                # Paths and settings
-│   ├── database.py              # SQLite operations
-│   ├── epub_parser.py           # EPUB text extraction
-│   ├── chunker.py               # Text chunking (~500 words)
-│   └── topic_extractor.py       # Ollama topic extraction
-├── scrape_mapleread.py          # Basic iPad library scraper
-├── scrape_mapleread_full.py     # Full scraper with tags
-├── match_to_calibre.py          # Match iPad books to Calibre
-└── create_ipad_db.py            # Create SQLite database
-```
-
----
-
-## Key Decisions to Make
-
-1. **Scope**: Focus on discovery/trails first, or build toward a Calibre plugin?
-
-2. **Processing depth**:
-   - Metadata only (fast, cheap)
-   - iPad books deep read (moderate)
-   - All 40k books (expensive, slow)
-
-3. **LLM strategy**:
-   - Local (Gemma-3) for cost-free processing
-   - Gemini API for quality topic extraction
-   - Hybrid based on task
-
-4. **Primary interface**:
-   - CLI tools for Claude Code exploration
-   - Web UI for browsing
-   - Calibre plugin integration
+### Search Quality
+With BGE + cosine distance, semantic search produces realistic scores:
+- "spiritual journey" → "spirituality": 0.803
+- "spiritual journey" → "spiritual awakening": 0.792
+- "spiritual journey" → "pilgrimage": 0.765
 
 ---
 
 ## Next Steps
 
-### Completed
-- [x] Match iPad books to Calibre library entries
-- [x] Build metadata extraction pipeline
-- [x] Create SQLite database with FTS
+### Short Term
+1. [ ] Index more books from iPad library (currently 1/927)
+2. [ ] Add batch indexing with progress persistence (resume on crash)
+3. [ ] Improve topic extraction prompts for better quality
+4. [ ] LLM-generated cluster labels (use Ollama to name clusters)
 
-### Up Next: Deep Reading for Trail-Finding
-1. [ ] Access EPUB files from Calibre library for the 927 matched books
-2. [ ] Parse EPUBs with `selectolax`, chunk into ~500 word segments
-3. [ ] Extract topics per chunk (Gemini API or local Gemma-3)
-4. [ ] Generate embeddings for chunks (`sqlite-vec`)
-5. [ ] Build topic tree using Leiden clustering
-6. [ ] Create CLI tools for Claude to explore connections
+### Medium Term
+5. [ ] Export topic graph for visualization (Gephi, D3.js)
+6. [ ] Cross-book trail generation (find excerpts across books on a topic)
+7. [ ] Book recommendations based on topic overlap
+8. [ ] Web UI for browsing topics and trails
 
-### Later: Surface Books from Main Library
-7. [ ] Generate embeddings for all 40k book descriptions
-8. [ ] Use iPad library topics as "lens" to rank main library
-9. [ ] Build trail-finding agentic workflow
+### Long Term
+9. [ ] Index descriptions from full 40k Calibre library
+10. [ ] Use iPad library topics as "lens" to surface related books
+11. [ ] Integration with reading highlights from MapleRead
+12. [ ] Calibre plugin for in-app discovery
+
+---
+
+## Known Issues & Fixes
+
+### sqlite-vec k=? syntax
+sqlite-vec requires `k=?` in WHERE clause:
+```sql
+-- Use this
+WHERE embedding MATCH ? AND k = 20
+
+-- Not this (errors)
+ORDER BY distance LIMIT 20
+```
+
+### Vector table recreation
+When changing distance metric (L2 → cosine), must recreate table:
+```python
+rebuild_vector_index(conn, force_recreate=True)
+```
+
+### Model caching
+First run downloads ~130MB model. Subsequent runs use local cache in `models/`.
 
 ---
 
