@@ -17,7 +17,7 @@ from .database import (
 )
 from .document_parser import extract_text
 from .chunker import chunk_text
-from .topic_extractor import extract_topics, check_ollama_available, get_available_models
+from .topic_extractor import extract_topics, extract_topics_batch, check_ollama_available, get_available_models
 
 console = Console()
 
@@ -159,6 +159,14 @@ def _index_single_book(book: dict, model: str, dry_run: bool, max_words: int = N
 
     from .database import get_db
 
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT id FROM chunks WHERE book_id = ? ORDER BY chunk_index",
+            (book['id'],)
+        )
+        chunk_ids = [row[0] for row in cursor.fetchall()]
+
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
@@ -168,21 +176,19 @@ def _index_single_book(book: dict, model: str, dry_run: bool, max_words: int = N
     ) as progress:
         task = progress.add_task("Processing chunks", total=len(chunks))
 
-        with get_db() as conn:
-            cursor = conn.cursor()
-            cursor.execute(
-                "SELECT id FROM chunks WHERE book_id = ? ORDER BY chunk_index",
-                (book['id'],)
-            )
-            chunk_ids = [row[0] for row in cursor.fetchall()]
+        def update_progress(completed: int, total: int):
+            progress.update(task, completed=completed)
 
-            all_topics = []
-            for chunk_id, chunk_content in zip(chunk_ids, chunks):
-                topics = extract_topics(chunk_content, model)
-                if topics:
-                    save_chunk_topics(chunk_id, topics)
-                    all_topics.extend(topics)
-                progress.advance(task)
+        # Extract topics in parallel (4 workers)
+        topics_per_chunk = extract_topics_batch(
+            chunks, model, progress_callback=update_progress
+        )
+
+        all_topics = []
+        for chunk_id, topics in zip(chunk_ids, topics_per_chunk):
+            if topics:
+                save_chunk_topics(chunk_id, topics)
+                all_topics.extend(topics)
 
     unique_topics = set(all_topics)
     console.print(f"\n[green]Extracted {len(unique_topics)} unique topics[/green]")

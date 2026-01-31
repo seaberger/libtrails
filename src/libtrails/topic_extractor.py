@@ -1,11 +1,66 @@
 """Topic extraction using local LLM via Ollama."""
 
-import subprocess
 import json
 import re
+import subprocess
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional
 
+import httpx
+
 from .config import DEFAULT_MODEL, TOPICS_PER_CHUNK
+
+# Ollama API endpoint
+OLLAMA_API_URL = "http://localhost:11434/api/generate"
+
+# Reusable HTTP client for connection pooling
+_client: Optional[httpx.Client] = None
+
+# Number of parallel workers for topic extraction
+# Ollama queues requests, but parallelism helps with HTTP overhead
+NUM_WORKERS = 4
+
+
+def _get_client() -> httpx.Client:
+    """Get or create a reusable HTTP client."""
+    global _client
+    if _client is None:
+        _client = httpx.Client(timeout=60.0)
+    return _client
+
+
+def extract_topics_batch(
+    chunks: list[str],
+    model: str = DEFAULT_MODEL,
+    num_topics: int = TOPICS_PER_CHUNK,
+    progress_callback: Optional[callable] = None
+) -> list[list[str]]:
+    """
+    Extract topics from multiple chunks in parallel.
+
+    Returns a list of topic lists, one per chunk.
+    """
+    results = [None] * len(chunks)
+    completed = 0
+
+    def process_chunk(idx: int, text: str) -> tuple[int, list[str]]:
+        topics = extract_topics(text, model, num_topics)
+        return idx, topics
+
+    with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:
+        futures = {
+            executor.submit(process_chunk, i, chunk): i
+            for i, chunk in enumerate(chunks)
+        }
+
+        for future in as_completed(futures):
+            idx, topics = future.result()
+            results[idx] = topics
+            completed += 1
+            if progress_callback:
+                progress_callback(completed, len(chunks))
+
+    return results
 
 
 
@@ -31,7 +86,7 @@ def extract_topics(
     num_topics: int = TOPICS_PER_CHUNK
 ) -> list[str]:
     """
-    Extract topics from a text chunk using Ollama.
+    Extract topics from a text chunk using Ollama HTTP API.
 
     Returns a list of topic strings.
     """
@@ -43,20 +98,20 @@ Passage: "{text[:2000]}"
 Topics:'''
 
     try:
-        result = subprocess.run(
-            ['ollama', 'run', model],
-            input=prompt,
-            capture_output=True,
-            text=True,
-            timeout=60
+        client = _get_client()
+        response = client.post(
+            OLLAMA_API_URL,
+            json={
+                "model": model,
+                "prompt": prompt,
+                "stream": False,
+            }
         )
+        response.raise_for_status()
+        result = response.json()
+        return _parse_topics(result.get("response", ""))
 
-        if result.returncode != 0:
-            return []
-
-        return _parse_topics(result.stdout)
-
-    except subprocess.TimeoutExpired:
+    except httpx.TimeoutException:
         return []
     except Exception as e:
         return []

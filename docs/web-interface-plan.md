@@ -1,0 +1,616 @@
+# LibTrails Web Interface - Project Plan
+
+## Overview
+
+Build a modern, visually appealing web interface for browsing the indexed book library by themes, discovering related books through semantic search, and exploring connections across the collection.
+
+**Inspiration**: [Pieter Maes' Trails](https://trails.pieterma.es) - clean design with 3D book covers, smooth transitions, theme clustering.
+
+---
+
+## Core Features
+
+### 1. Theme Browser (Home Page)
+Visual clusters of books grouped by topic/theme.
+
+**Design**:
+- Grid of theme "cards" or clusters
+- Each cluster shows 3-5 overlapping book covers (stacked with slight offset)
+- Theme label below/beside the cluster
+- Hover effect reveals more covers or expands slightly
+- Click theme → navigates to Theme Detail page
+
+**Data source**: Leiden clusters from `topics` table + `chunk_topic_links`
+
+### 2. Theme Detail Page
+All books belonging to a selected theme.
+
+**Design**:
+- Theme title as header
+- Vertical stack of book "cards" (not a grid - linear scroll)
+- Each card shows: cover image, title, author, maybe top 3 sub-topics
+- Smooth scroll, cards slightly overlap or have subtle shadow/depth
+- Click book → navigates to Book Detail page
+
+**Data source**: Books linked to the theme cluster via topic relationships
+
+### 3. Book Detail Page
+Single book view with related books discovery.
+
+**Design**:
+- Large cover image + title + author
+- List of extracted topics (as tags/chips)
+- "Related Books" section showing semantically similar titles
+- Two similarity modes:
+  - **Semantic**: Vector similarity via sqlite-vec embeddings
+  - **Topic overlap**: Books sharing the most topics
+
+**Data source**:
+- Book metadata from `books` table
+- Topics from `chunk_topics` / `topics`
+- Similarity from `topic_vectors` (sqlite-vec)
+
+### 4. Dynamic Search/Filter Bar
+Real-time filtering as user types.
+
+**Design**:
+- Sticky search bar at top of page
+- Placeholder: "Search by title, author, or topic..."
+- As user types:
+  - Filter visible books/themes in real-time
+  - Show autocomplete suggestions (titles, authors, topics)
+- Works on Theme Browser (filters which themes show)
+- Works on a dedicated "All Books" view
+
+**Implementation**: Client-side filtering with pre-loaded JSON index, or lightweight API endpoint
+
+### 5. All Books View (Optional)
+Flat list/grid of all books for browsing without theme grouping.
+
+**Design**:
+- Sortable by title, author, date added
+- Filterable via search bar
+- Toggle between grid (covers) and list (title/author rows) view
+
+---
+
+## Technology Evaluation
+
+### Key Constraint: Hybrid Fusion Search
+
+The responsive search bar requires **both keyword and semantic search** combined. This has architectural implications:
+
+| Approach | Keyword Search | Semantic Search | Tradeoffs |
+|----------|---------------|-----------------|-----------|
+| **Client-only** | Fuse.js (fast) | Pre-computed similarities only | Can't search arbitrary queries semantically |
+| **API backend** | SQLite FTS5 | sqlite-vec in real-time | Needs server, but full flexibility |
+| **Hybrid** | Client for keywords | API for semantic | Best UX, moderate complexity |
+
+**Recommendation**: We need a **lightweight API backend** for semantic search. This means the "purely static site" approach won't fully work for our needs.
+
+### Search Performance Strategy
+
+To avoid bogging down typing:
+1. **Debounce input**: Wait 150-200ms after user stops typing before searching
+2. **Show instant results for keywords**: Client-side filter runs immediately
+3. **Async semantic results**: API call returns and merges results after ~200-500ms
+4. **Optimistic UI**: Show "searching..." indicator, stream results as they arrive
+
+### Framework Options Evaluated
+
+#### Option A: **Next.js** (React-based)
+
+| Pros | Cons |
+|------|------|
+| Full-featured from day one | Heavier than needed for static pages |
+| Built-in API routes (search endpoint) | React learning curve |
+| Huge ecosystem, lots of examples | More JavaScript complexity |
+| Easy deployment (Vercel, or self-host) | Larger bundle size |
+| Scales to full web app if needed | |
+
+**Upgrade path**: Already a full framework. Can add authentication, user accounts, database, etc.
+
+#### Option B: **Astro** + **FastAPI backend**
+
+| Pros | Cons |
+|------|------|
+| Static pages are blazing fast | Two separate projects to maintain |
+| Python backend matches libtrails codebase | More moving parts |
+| Clean separation of concerns | Need to deploy two services |
+| View transitions built-in | |
+
+**Upgrade path**: Can swap Astro for anything else; FastAPI backend is independent and reusable.
+
+#### Option C: **SvelteKit**
+
+| Pros | Cons |
+|------|------|
+| Lighter than React/Next.js | Smaller ecosystem |
+| Built-in API routes | Less familiar to most developers |
+| Excellent performance | Fewer tutorials/examples |
+| Can do static + server hybrid | |
+
+**Upgrade path**: Similar to Next.js - full framework that can grow.
+
+#### Option D: **Plain HTML/CSS/JS** + **FastAPI backend**
+
+| Pros | Cons |
+|------|------|
+| Simplest mental model | More manual work for interactivity |
+| No framework lock-in | Harder to maintain as it grows |
+| Python does all the work | No component reusability |
+| Easiest to understand | View transitions require manual setup |
+
+**Upgrade path**: Can migrate to any framework later, but may require rewrite.
+
+### Architecture Decision Matrix
+
+| Requirement | Next.js | Astro+FastAPI | SvelteKit | Plain+FastAPI |
+|-------------|---------|---------------|-----------|---------------|
+| Hybrid search | ✅ API routes | ✅ FastAPI | ✅ API routes | ✅ FastAPI |
+| Fast static pages | ⚠️ Good | ✅ Excellent | ✅ Excellent | ✅ Excellent |
+| Smooth transitions | ✅ Built-in | ✅ Built-in | ✅ Built-in | ⚠️ Manual |
+| Single codebase | ✅ Yes | ❌ Two projects | ✅ Yes | ❌ Two projects |
+| Python integration | ⚠️ Separate API | ✅ Same language | ⚠️ Separate API | ✅ Same language |
+| Learning curve | Medium | Medium | Medium | Low |
+| Future scalability | ✅ High | ✅ High | ✅ High | ⚠️ Medium |
+
+### Decision: Astro + FastAPI
+
+**Confirmed approach** based on project requirements:
+
+1. **Python consistency**: libtrails is Python, FastAPI keeps search logic in same language. Matches existing projects.
+2. **Clean separation**: Static site can be hosted on CDN, API on Lightsail
+3. **Flexibility**: Can swap frontend framework without touching search backend
+4. **Performance**: Astro's static output is ideal for theme/book browsing pages
+
+**Architecture**:
+```
+┌─────────────────────────────────────────────────────────┐
+│                      Browser                            │
+├─────────────────────────────────────────────────────────┤
+│  Astro Static Pages          │  Interactive Components  │
+│  - Theme Browser             │  - SearchBar (Svelte)    │
+│  - Theme Detail              │  - Filters               │
+│  - Book Detail               │                          │
+│  - All Books                 │                          │
+└──────────────┬───────────────┴──────────┬───────────────┘
+               │ Static files             │ API calls
+               ▼                          ▼
+┌──────────────────────────┐  ┌───────────────────────────┐
+│  CDN / Static Hosting    │  │  FastAPI Backend          │
+│  (Lightsail or S3)       │  │  - /api/search            │
+│                          │  │  - /api/similar/{book_id} │
+└──────────────────────────┘  │  - sqlite-vec queries     │
+                              │  - SQLite FTS5            │
+                              └───────────────────────────┘
+```
+
+---
+
+## Data Pipeline
+
+### Export from SQLite to JSON
+
+Before building the site, export the indexed data:
+
+```
+libtrails export --format json --output ./web/src/data/
+```
+
+**Exported files**:
+```
+data/
+├── books.json          # All books with metadata
+├── themes.json         # Leiden clusters with labels
+├── book-themes.json    # Book → theme mappings
+├── book-topics.json    # Book → topic list
+├── topic-vectors.json  # For client-side similarity (optional)
+└── search-index.json   # Pre-built search index for Fuse.js
+```
+
+### Data Schema
+
+**books.json**:
+```json
+[
+  {
+    "id": 123,
+    "title": "Siddhartha",
+    "author": "Hermann Hesse",
+    "cover": "/covers/123.jpg",
+    "topics": ["spirituality", "self-discovery", "buddhism"],
+    "themeIds": [5, 12],
+    "wordCount": 45000
+  }
+]
+```
+
+**themes.json**:
+```json
+[
+  {
+    "id": 5,
+    "label": "Eastern Philosophy",
+    "bookCount": 23,
+    "topBooks": [123, 456, 789],
+    "subTopics": ["buddhism", "taoism", "meditation"]
+  }
+]
+```
+
+---
+
+## Page Structure
+
+```
+/                       → Theme Browser (home)
+/theme/[id]             → Theme Detail (books in theme)
+/book/[id]              → Book Detail (single book + related)
+/books                  → All Books (flat list/grid)
+/search?q=...           → Search Results (optional dedicated page)
+```
+
+---
+
+## Design Specifications
+
+### Visual Style
+- **Clean, minimal** - lots of whitespace
+- **Book covers as primary visual** - high quality images
+- **Muted color palette** - let covers provide color
+- **Typography**: Modern sans-serif (Inter, System UI)
+- **Depth**: Subtle shadows, overlapping elements for 3D feel
+
+### Book Cover Display
+
+**Theme cluster (overlapping)**:
+```
+    ┌─────┐
+   ┌┼─────┼┐
+  ┌┼┼─────┼┼┐
+  │││ ... │││  ← 3-5 covers, offset by ~20px
+  └┴┴─────┴┴┘
+   Theme Name
+```
+
+**Theme detail (vertical stack)**:
+```
+┌──────────────────────────┐
+│ ┌─────┐                  │
+│ │cover│ Title            │
+│ │     │ Author           │
+│ └─────┘ topic, topic     │
+├──────────────────────────┤
+│ ┌─────┐                  │
+│ │cover│ Title            │
+│ │     │ Author           │
+│ └─────┘ topic, topic     │
+└──────────────────────────┘
+```
+
+### Responsive Breakpoints
+- **Desktop**: 3-4 theme clusters per row
+- **Tablet**: 2 clusters per row
+- **Mobile**: 1 cluster, full-width cards
+
+---
+
+## Implementation Phases
+
+### Phase 1: Data Export & Project Setup
+- [ ] Add `libtrails export` CLI command
+- [ ] Export books, themes, topics to JSON
+- [ ] Extract/copy book covers from Calibre library
+- [ ] Initialize Astro project with Tailwind
+
+### Phase 2: Theme Browser (Home)
+- [ ] Create theme cluster component
+- [ ] Layout themes in responsive grid
+- [ ] Add hover effects and transitions
+- [ ] Link to theme detail pages
+
+### Phase 3: Theme Detail Page
+- [ ] Create book card component
+- [ ] Vertical scrolling layout
+- [ ] Display book metadata and topics
+- [ ] Link to book detail pages
+
+### Phase 4: Book Detail Page
+- [ ] Large cover + metadata display
+- [ ] Topic tags/chips
+- [ ] "Related Books" section
+- [ ] Implement similarity lookup (semantic + topic overlap)
+
+### Phase 5: Search & Filter
+- [ ] Add Fuse.js for client-side search
+- [ ] Sticky search bar component
+- [ ] Real-time filtering on Theme Browser
+- [ ] Autocomplete suggestions
+
+### Phase 6: Polish & Deploy
+- [ ] View transitions between pages
+- [ ] Loading states and skeleton screens
+- [ ] SEO metadata
+- [ ] Deploy to AWS Lightsail
+- [ ] Custom domain setup
+
+---
+
+## Book Cover Strategy
+
+Calibre stores covers as `cover.jpg` in each book's folder.
+
+**Options**:
+
+1. **Copy covers to static folder** during export
+   - Pro: Simple, works offline
+   - Con: Duplicates data, larger repo
+
+2. **Generate optimized thumbnails**
+   - Use Sharp/ImageMagick to create 200px and 400px versions
+   - Pro: Faster loading, responsive images
+   - Con: Build step required
+
+3. **Reference Calibre library directly** (local dev only)
+   - Pro: No duplication
+   - Con: Won't work in production
+
+**Recommendation**: Option 2 - generate optimized thumbnails during export, store in `web/public/covers/`.
+
+---
+
+## Open Questions
+
+1. **Theme labeling**: Use LLM to generate human-readable cluster names, or show top topics?
+
+2. **Similarity threshold**: How many "related books" to show? Top 10? Configurable?
+
+3. **Cover fallbacks**: What to show for books without covers? Generate placeholder with title/author?
+
+4. **Mobile navigation**: Bottom tab bar or hamburger menu?
+
+5. **Dark mode**: Support system preference?
+
+---
+
+## Future Enhancements
+
+- **Reading lists**: Save books to custom collections
+- **Trails view**: Connect excerpts across books (like Pieter's trails)
+- **Import highlights**: Pull annotations from MapleRead
+- **Social features**: Share themes/trails publicly
+- **API endpoint**: Enable search from other tools (Alfred, Raycast)
+
+---
+
+## File Structure (Proposed)
+
+```
+calibre_lib/
+├── src/libtrails/          # Existing CLI
+│   └── export.py           # NEW: JSON export for web
+├── web/                    # NEW: Astro project
+│   ├── astro.config.mjs
+│   ├── package.json
+│   ├── src/
+│   │   ├── layouts/
+│   │   │   └── BaseLayout.astro
+│   │   ├── pages/
+│   │   │   ├── index.astro         # Theme Browser
+│   │   │   ├── theme/[id].astro    # Theme Detail
+│   │   │   ├── book/[id].astro     # Book Detail
+│   │   │   └── books.astro         # All Books
+│   │   ├── components/
+│   │   │   ├── ThemeCluster.astro
+│   │   │   ├── BookCard.astro
+│   │   │   ├── SearchBar.svelte    # Interactive
+│   │   │   └── RelatedBooks.astro
+│   │   └── data/                   # Exported JSON
+│   │       ├── books.json
+│   │       ├── themes.json
+│   │       └── ...
+│   └── public/
+│       └── covers/                 # Book cover images
+└── docs/
+    └── web-interface-plan.md       # This file
+```
+
+---
+
+---
+
+## Library Update Workflow
+
+### Goal
+
+A simple, semi-automated routine to add new books from iPad without remembering multiple CLI commands.
+
+### User Experience
+
+```bash
+# 1. Open MapleRead server on iPad
+# 2. Run single command:
+
+libtrails sync --ipad http://192.168.1.124:8082
+
+# That's it. Everything else is automated.
+```
+
+### What `libtrails sync` Does
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     libtrails sync                              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. SCRAPE iPad Library                                         │
+│     └─→ Fetch book list from MapleRead HTTP server              │
+│     └─→ Compare to existing books in local DB                   │
+│     └─→ Identify NEW books (not yet indexed)                    │
+│                                                                 │
+│  2. MATCH to Calibre                                            │
+│     └─→ Find each new book in Calibre library                   │
+│     └─→ Pull metadata (author, tags, description, cover)        │
+│     └─→ Locate EPUB/PDF file path                               │
+│                                                                 │
+│  3. INDEX new books                                             │
+│     └─→ Extract text from EPUB/PDF                              │
+│     └─→ Chunk into ~500 word segments                           │
+│     └─→ Extract topics via Ollama (gemma3:4b)                   │
+│     └─→ Generate embeddings (sentence-transformers)             │
+│                                                                 │
+│  4. UPDATE search indexes                                       │
+│     └─→ Add to sqlite-vec for semantic search                   │
+│     └─→ Update FTS5 full-text index                             │
+│     └─→ Re-run topic deduplication (optional)                   │
+│     └─→ Re-cluster if significant new content (optional)        │
+│                                                                 │
+│  5. REPORT summary                                              │
+│     └─→ "Added 5 new books, indexed 3, skipped 2 (no EPUB)"     │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Sync Options
+
+```bash
+# Basic sync - index new books
+libtrails sync --ipad http://192.168.1.124:8082
+
+# Sync with re-clustering (after adding many books)
+libtrails sync --ipad http://... --recluster
+
+# Dry run - show what would be added without doing it
+libtrails sync --ipad http://... --dry-run
+
+# Skip indexing (just update book list, index later)
+libtrails sync --ipad http://... --skip-index
+```
+
+### Deployment to Lightsail
+
+Processing happens on MacBook (needs Ollama/GPU), then data is pushed to server.
+
+**Option A: Database + Assets Sync**
+
+```bash
+# After sync completes, push to production
+libtrails deploy --target lightsail
+
+# This would:
+# 1. Export SQLite to production format (or copy directly)
+# 2. Rsync book covers to server
+# 3. Regenerate static Astro pages
+# 4. Upload to Lightsail
+# 5. Restart FastAPI service
+```
+
+**Option B: Export Bundle**
+
+```bash
+# Create a deployment bundle
+libtrails export --bundle ./deploy-2025-01-31/
+
+# Bundle contains:
+# - database.db (SQLite with all data)
+# - covers/ (optimized book cover images)
+# - static/ (pre-built Astro pages)
+# - config.json (API configuration)
+
+# Then manually upload or use separate deploy script
+scp -r ./deploy-2025-01-31/ lightsail:/app/
+```
+
+**Option C: Git-based Deploy**
+
+```bash
+# Commit data changes to repo
+libtrails export --to-repo
+
+# Push triggers CI/CD pipeline on Lightsail
+git push origin main
+# → GitHub Action / Lightsail deploy hook rebuilds site
+```
+
+### Recommended: Option A (Direct Deploy)
+
+For your use case (personal site, few books at a time), direct deploy is simplest:
+
+```bash
+# Full workflow after adding books to iPad:
+libtrails sync --ipad http://192.168.1.124:8082
+libtrails deploy --target lightsail
+```
+
+Two commands. Could even combine into one:
+
+```bash
+libtrails sync --ipad http://... --deploy
+```
+
+### Configuration File
+
+Store defaults so you don't have to remember the IP:
+
+**~/.libtrails/config.yaml**
+```yaml
+ipad:
+  default_url: http://192.168.1.124:8082
+
+deploy:
+  target: lightsail
+  host: your-lightsail-ip
+  user: ubuntu
+  app_path: /home/ubuntu/libtrails
+
+indexing:
+  model: gemma3:4b
+  max_words: 300000
+  min_battery: 15
+```
+
+Then just:
+```bash
+libtrails sync   # Uses saved iPad URL
+libtrails deploy # Uses saved Lightsail config
+```
+
+### Data Flow Diagram
+
+```
+┌─────────────┐     ┌─────────────┐     ┌─────────────────────────┐
+│   iPad      │     │  MacBook    │     │  Lightsail Server       │
+│  MapleRead  │────▶│  Pro        │────▶│                         │
+│  (source)   │http │  (process)  │rsync│  FastAPI + SQLite       │
+└─────────────┘     │             │     │  Astro static pages     │
+                    │  - Ollama   │     │                         │
+┌─────────────┐     │  - sqlite   │     └─────────────────────────┘
+│  Calibre    │────▶│  - covers   │                │
+│  Library    │file │             │                │
+│  (EPUBs)    │     └─────────────┘                ▼
+└─────────────┘                            ┌───────────────┐
+                                           │   Browser     │
+                                           │   (users)     │
+                                           └───────────────┘
+```
+
+### Implementation Tasks
+
+1. [ ] Refactor scraping into `libtrails sync` command
+2. [ ] Add incremental indexing (only new books)
+3. [ ] Add `--dry-run` mode
+4. [ ] Create config file support (~/.libtrails/config.yaml)
+5. [ ] Implement `libtrails deploy` command
+6. [ ] Set up Lightsail server with FastAPI
+7. [ ] Create rsync/scp deployment script
+
+---
+
+## Next Steps
+
+1. **Wait for indexing to complete** (~20 hours remaining)
+2. **Run Leiden clustering** to generate themes
+3. **Implement `libtrails export`** command
+4. **Initialize Astro project** in `web/` folder
+5. **Build Phase 2** (Theme Browser) as proof of concept
