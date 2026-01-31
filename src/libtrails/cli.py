@@ -79,12 +79,13 @@ def status():
 @click.option('--dry-run', is_flag=True, help='Parse and chunk without topic extraction')
 @click.option('--reindex', is_flag=True, help='Re-index books that are already indexed')
 @click.option('--max-words', type=int, default=None, help='Skip books with more than N words (e.g., 500000)')
-def index(book_id: int, title: str, index_all: bool, model: str, dry_run: bool, reindex: bool, max_words: int):
+@click.option('--min-battery', type=int, default=15, help='Pause if battery drops below this % (default: 15)')
+def index(book_id: int, title: str, index_all: bool, model: str, dry_run: bool, reindex: bool, max_words: int, min_battery: int):
     """Index a book (parse, chunk, extract topics)."""
     init_chunks_table()
 
     if index_all:
-        _index_all_books(model, dry_run, reindex, max_words)
+        _index_all_books(model, dry_run, reindex, max_words, min_battery)
         return
 
     # Find the book
@@ -195,7 +196,25 @@ def _index_single_book(book: dict, model: str, dry_run: bool, max_words: int = N
             console.print(f"  {topic} ({count})")
 
 
-def _index_all_books(model: str, dry_run: bool, reindex: bool = False, max_words: int = None):
+def _get_battery_level() -> int | None:
+    """Get current battery percentage on macOS. Returns None if not on battery/not macOS."""
+    import subprocess
+    try:
+        result = subprocess.run(
+            ["pmset", "-g", "batt"],
+            capture_output=True, text=True, timeout=5
+        )
+        # Parse output like: "-InternalBattery-0 (id=...)	51%; charging;"
+        import re
+        match = re.search(r'(\d+)%', result.stdout)
+        if match:
+            return int(match.group(1))
+    except Exception:
+        pass
+    return None
+
+
+def _index_all_books(model: str, dry_run: bool, reindex: bool = False, max_words: int = None, min_battery: int = 15):
     """Index all books with Calibre matches, with resume support."""
     from .database import get_db, get_book_path
     import time
@@ -204,6 +223,7 @@ def _index_all_books(model: str, dry_run: bool, reindex: bool = False, max_words
 
     if max_words:
         console.print(f"[dim]Skipping books with more than {max_words:,} words[/dim]")
+    console.print(f"[dim]Will pause if battery drops below {min_battery}%[/dim]")
 
     # Get already indexed book IDs
     with get_db() as conn:
@@ -254,6 +274,13 @@ def _index_all_books(model: str, dry_run: bool, reindex: bool = False, max_words
             eta = ""
 
         console.print(f"\n[dim]({i}/{len(processable)}) {eta}[/dim]")
+
+        # Check battery level
+        battery = _get_battery_level()
+        if battery is not None and battery < min_battery:
+            console.print(f"\n[bold red]Battery at {battery}% (below {min_battery}%). Pausing to save progress.[/bold red]")
+            console.print("[yellow]Plug in charger and run again to resume.[/yellow]")
+            break
 
         try:
             result = _index_single_book(book, model, dry_run, max_words)
