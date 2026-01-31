@@ -37,6 +37,9 @@ data/*.db
 data/*.json
 !data/.gitkeep
 
+# Cached embedding models (large files)
+models/
+
 # Jupyter
 .ipynb_checkpoints/
 

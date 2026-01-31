@@ -11,8 +11,12 @@ from .embeddings import (
 )
 
 
-def init_vector_search(conn: sqlite3.Connection):
-    """Initialize sqlite-vec extension and create vector table."""
+def init_vector_search(conn: sqlite3.Connection, force_recreate: bool = False):
+    """
+    Initialize sqlite-vec extension and create vector table.
+
+    Uses cosine distance metric for normalized embeddings.
+    """
     import sqlite_vec
 
     conn.enable_load_extension(True)
@@ -20,10 +24,16 @@ def init_vector_search(conn: sqlite3.Connection):
     conn.enable_load_extension(False)
 
     dim = get_embedding_dimension()
+
+    if force_recreate:
+        # Drop existing table to recreate with new settings
+        conn.execute("DROP TABLE IF EXISTS topic_vectors")
+
+    # Create with cosine distance metric for semantic similarity
     conn.execute(f"""
         CREATE VIRTUAL TABLE IF NOT EXISTS topic_vectors USING vec0(
             topic_id INTEGER PRIMARY KEY,
-            embedding FLOAT[{dim}]
+            embedding FLOAT[{dim}] distance_metric=cosine
         )
     """)
     conn.commit()
@@ -48,9 +58,19 @@ def index_topic_vector(conn: sqlite3.Connection, topic_id: int, embedding: bytes
     )
 
 
-def rebuild_vector_index(conn: sqlite3.Connection):
-    """Rebuild the entire vector index from the topics table."""
+def rebuild_vector_index(conn: sqlite3.Connection, force_recreate: bool = False):
+    """
+    Rebuild the entire vector index from the topics table.
+
+    Args:
+        conn: Database connection
+        force_recreate: If True, drop and recreate the table (needed for schema changes)
+    """
     cursor = conn.cursor()
+
+    if force_recreate:
+        # Recreate table with correct distance metric
+        init_vector_search(conn, force_recreate=True)
 
     # Clear existing vectors
     conn.execute("DELETE FROM topic_vectors")
@@ -78,12 +98,15 @@ def search_topics_semantic(
     """
     Search for topics semantically using vector similarity.
 
+    Uses cosine distance - lower distance = more similar.
+    For normalized embeddings: similarity = 1 - cosine_distance
+
     Args:
         query: The search query text
         limit: Maximum number of results
 
     Returns:
-        List of dicts with topic_id, label, distance, and occurrence_count
+        List of dicts with topic_id, label, similarity, and occurrence_count
     """
     conn = get_vec_db(db_path)
     cursor = conn.cursor()
@@ -108,11 +131,17 @@ def search_topics_semantic(
 
     results = []
     for row in cursor.fetchall():
+        # Cosine distance ranges from 0 (identical) to 2 (opposite)
+        # Convert to similarity: 1 - (distance / 2) gives range [0, 1]
+        # Or simpler: similarity = 1 - distance for normalized vectors
+        distance = row["distance"]
+        similarity = 1.0 - distance
+
         results.append({
             "topic_id": row["topic_id"],
             "label": row["label"],
-            "distance": row["distance"],
-            "similarity": 1.0 - row["distance"],  # Convert distance to similarity
+            "distance": distance,
+            "similarity": similarity,
             "occurrence_count": row["occurrence_count"],
             "cluster_id": row["cluster_id"],
         })

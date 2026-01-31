@@ -1,20 +1,52 @@
 """Embedding generation using sentence-transformers."""
 
+import os
+import logging
 import numpy as np
+from pathlib import Path
 from typing import Optional
-from functools import lru_cache
+
+from .config import PROJECT_ROOT
+
+# Suppress verbose HuggingFace/transformers logging
+os.environ["TOKENIZERS_PARALLELISM"] = "false"
+logging.getLogger("sentence_transformers").setLevel(logging.WARNING)
+logging.getLogger("transformers").setLevel(logging.WARNING)
+
+# Model configuration
+MODEL_NAME = "BAAI/bge-small-en-v1.5"  # Top MTEB performer for STS, 384 dims
+EMBEDDING_DIMENSION = 384
+MODEL_CACHE_DIR = PROJECT_ROOT / "models"
 
 # Lazy load the model to avoid import-time overhead
 _model = None
 
 
 def get_model():
-    """Get the sentence transformer model, loading it lazily."""
+    """
+    Get the sentence transformer model, loading it lazily.
+
+    Uses BGE-small-en-v1.5 which excels at semantic textual similarity.
+    Model is cached locally in the project's models/ directory.
+    """
     global _model
     if _model is None:
         from sentence_transformers import SentenceTransformer
-        # all-MiniLM-L6-v2: 384 dimensions, fast, good quality
-        _model = SentenceTransformer('all-MiniLM-L6-v2')
+
+        # Ensure cache directory exists
+        MODEL_CACHE_DIR.mkdir(exist_ok=True)
+
+        # Check if model is already cached locally
+        local_model_path = MODEL_CACHE_DIR / MODEL_NAME.replace("/", "_")
+
+        if local_model_path.exists():
+            # Load from local cache
+            _model = SentenceTransformer(str(local_model_path))
+        else:
+            # Download and cache locally
+            _model = SentenceTransformer(MODEL_NAME)
+            _model.save(str(local_model_path))
+
     return _model
 
 
@@ -96,5 +128,15 @@ def find_similar(
 
 
 def get_embedding_dimension() -> int:
-    """Return the embedding dimension (384 for all-MiniLM-L6-v2)."""
-    return 384
+    """Return the embedding dimension (384 for BGE-small-en-v1.5)."""
+    return EMBEDDING_DIMENSION
+
+
+def get_model_info() -> dict:
+    """Get information about the current embedding model."""
+    return {
+        "name": MODEL_NAME,
+        "dimension": EMBEDDING_DIMENSION,
+        "cache_dir": str(MODEL_CACHE_DIR),
+        "cached_locally": (MODEL_CACHE_DIR / MODEL_NAME.replace("/", "_")).exists(),
+    }

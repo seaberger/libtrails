@@ -53,6 +53,16 @@ def status():
 
     console.print(table)
 
+    # Show embedding model info
+    try:
+        from .embeddings import get_model_info
+        model_info = get_model_info()
+        console.print(f"\n[dim]Embedding model: {model_info['name']} ({model_info['dimension']} dims)[/dim]")
+        if model_info['cached_locally']:
+            console.print("[dim]Model cached locally ✓[/dim]")
+    except Exception:
+        pass
+
     # Check Ollama
     models = get_available_models()
     if models:
@@ -298,18 +308,33 @@ def models():
 # ============================================================================
 
 @main.command()
-def embed():
+@click.option('--force', is_flag=True, help='Regenerate all embeddings (use after model change)')
+def embed(force: bool):
     """Generate embeddings for all topics."""
-    from .embeddings import embed_texts, embedding_to_bytes
+    from .embeddings import embed_texts, embedding_to_bytes, get_model_info
+    from .database import get_db
 
     # Ensure tables exist
     init_chunks_table()
 
+    # Show model info
+    model_info = get_model_info()
+    console.print(f"[dim]Using model: {model_info['name']} ({model_info['dimension']} dims)[/dim]")
+    if model_info['cached_locally']:
+        console.print("[dim]Model cached locally[/dim]")
+
     # First, migrate raw topics to normalized form
-    console.print("[bold]Step 1: Normalizing topics...[/bold]")
+    console.print("\n[bold]Step 1: Normalizing topics...[/bold]")
     with console.status("Migrating raw topics..."):
         migrated = migrate_raw_topics_to_normalized()
     console.print(f"[green]Migrated {migrated} topics[/green]")
+
+    # If force, clear existing embeddings
+    if force:
+        console.print("\n[yellow]Force mode: clearing existing embeddings...[/yellow]")
+        with get_db() as conn:
+            conn.execute("UPDATE topics SET embedding = NULL")
+            conn.commit()
 
     # Get topics without embeddings
     topics = get_topics_without_embeddings()
@@ -350,12 +375,12 @@ def embed():
 
     console.print(f"\n[green]Generated embeddings for {len(topics)} topics[/green]")
 
-    # Build vector index
-    console.print("\n[bold]Step 3: Building vector index...[/bold]")
+    # Build vector index (force recreate if using --force to get cosine distance)
+    console.print("\n[bold]Step 3: Building vector index (cosine distance)...[/bold]")
     from .vector_search import get_vec_db, rebuild_vector_index
     with console.status("Rebuilding vector index..."):
         conn = get_vec_db()
-        count = rebuild_vector_index(conn)
+        count = rebuild_vector_index(conn, force_recreate=force)
         conn.close()
     console.print(f"[green]Indexed {count} topic vectors[/green]")
 
