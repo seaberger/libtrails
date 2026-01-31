@@ -302,6 +302,9 @@ def embed():
     """Generate embeddings for all topics."""
     from .embeddings import embed_texts, embedding_to_bytes
 
+    # Ensure tables exist
+    init_chunks_table()
+
     # First, migrate raw topics to normalized form
     console.print("[bold]Step 1: Normalizing topics...[/bold]")
     with console.status("Migrating raw topics..."):
@@ -607,6 +610,9 @@ def process():
     from .vector_search import get_vec_db, rebuild_vector_index
 
     console.print("[bold]Running full post-processing pipeline...[/bold]\n")
+
+    # Ensure tables exist
+    init_chunks_table()
 
     # Step 1: Embed
     console.print("[bold cyan]Step 1/3: Generating embeddings[/bold cyan]")

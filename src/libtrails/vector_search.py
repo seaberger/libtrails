@@ -92,7 +92,7 @@ def search_topics_semantic(
     query_embedding = embed_text(query)
     query_bytes = embedding_to_bytes(query_embedding)
 
-    # Vector similarity search
+    # Vector similarity search - sqlite-vec requires k=? in WHERE clause
     cursor.execute("""
         SELECT
             tv.topic_id,
@@ -102,9 +102,8 @@ def search_topics_semantic(
             t.cluster_id
         FROM topic_vectors tv
         JOIN topics t ON tv.topic_id = t.id
-        WHERE tv.embedding MATCH ?
+        WHERE tv.embedding MATCH ? AND k = ?
         ORDER BY tv.distance
-        LIMIT ?
     """, (query_bytes, limit))
 
     results = []
@@ -144,14 +143,13 @@ def search_books_by_topic_semantic(
     query_embedding = embed_text(query)
     query_bytes = embedding_to_bytes(query_embedding)
 
-    # Find matching topics first
+    # Find matching topics first - sqlite-vec requires k=? in WHERE clause
     cursor.execute("""
         SELECT tv.topic_id, tv.distance, t.label
         FROM topic_vectors tv
         JOIN topics t ON tv.topic_id = t.id
-        WHERE tv.embedding MATCH ?
+        WHERE tv.embedding MATCH ? AND k = 50
         ORDER BY tv.distance
-        LIMIT 50
     """, (query_bytes,))
 
     matching_topics = cursor.fetchall()
@@ -159,36 +157,40 @@ def search_books_by_topic_semantic(
         conn.close()
         return []
 
-    # Get books containing these topics
-    topic_ids = [row["topic_id"] for row in matching_topics]
+    # Build a mapping of topic_id to distance for scoring
+    topic_distances = {row["topic_id"]: row["distance"] for row in matching_topics}
+    topic_ids = list(topic_distances.keys())
     placeholders = ",".join("?" * len(topic_ids))
 
     cursor.execute(f"""
         SELECT
             b.id, b.title, b.author,
             GROUP_CONCAT(DISTINCT t.label) as matching_topics,
-            COUNT(DISTINCT ctl.topic_id) as match_count,
-            MIN(tv.distance) as best_distance
+            GROUP_CONCAT(DISTINCT ctl.topic_id) as topic_id_list,
+            COUNT(DISTINCT ctl.topic_id) as match_count
         FROM books b
         JOIN chunks c ON b.id = c.book_id
         JOIN chunk_topic_links ctl ON c.id = ctl.chunk_id
         JOIN topics t ON ctl.topic_id = t.id
-        JOIN topic_vectors tv ON t.id = tv.topic_id
         WHERE ctl.topic_id IN ({placeholders})
         GROUP BY b.id
-        ORDER BY match_count DESC, best_distance ASC
+        ORDER BY match_count DESC
         LIMIT ?
     """, (*topic_ids, limit))
 
     results = []
     for row in cursor.fetchall():
+        # Calculate best distance from the matched topics
+        matched_ids = [int(x) for x in row["topic_id_list"].split(",")] if row["topic_id_list"] else []
+        best_distance = min((topic_distances.get(tid, 1.0) for tid in matched_ids), default=1.0)
+
         results.append({
             "id": row["id"],
             "title": row["title"],
             "author": row["author"],
             "matching_topics": row["matching_topics"].split(",") if row["matching_topics"] else [],
             "match_count": row["match_count"],
-            "relevance": 1.0 - row["best_distance"],
+            "relevance": 1.0 - best_distance,
         })
 
     conn.close()
