@@ -45,9 +45,9 @@ def extract_text_from_epub(epub_path: Path) -> str:
                 except:
                     pass
 
-        # Fallback: get all HTML files
+        # Fallback: get all HTML/XML content files
         for name in sorted(zf.namelist()):
-            if name.endswith(('.xhtml', '.html', '.htm')) and 'toc' not in name.lower():
+            if name.endswith(('.xhtml', '.html', '.htm', '.xml')) and 'toc' not in name.lower() and 'ncx' not in name.lower() and 'opf' not in name.lower():
                 content_files.append(name)
 
         for name in content_files:
