@@ -10,12 +10,12 @@ from pathlib import Path
 from . import __version__
 from .config import DEFAULT_MODEL, CHUNK_TARGET_WORDS
 from .database import (
-    get_book, get_book_by_title, get_all_books, get_epub_path,
+    get_book, get_book_by_title, get_all_books, get_book_path,
     init_chunks_table, save_chunks, save_chunk_topics, get_indexing_status,
     get_all_topics, get_topics_without_embeddings, save_topic_embedding,
     migrate_raw_topics_to_normalized, get_topic_stats
 )
-from .epub_parser import extract_text_from_epub
+from .document_parser import extract_text
 from .chunker import chunk_text
 from .topic_extractor import extract_topics, check_ollama_available, get_available_models
 
@@ -104,21 +104,22 @@ def _index_single_book(book: dict, model: str, dry_run: bool):
     console.print(f"\n[bold]Indexing:[/bold] {book['title']}")
     console.print(f"[dim]Author: {book['author']}[/dim]")
 
-    # Get EPUB path
+    # Get book file path (EPUB or PDF)
     if not book.get('calibre_id'):
         console.print("[red]No Calibre match for this book[/red]")
         return
 
-    epub_path = get_epub_path(book['calibre_id'])
-    if not epub_path:
-        console.print("[red]EPUB not found in Calibre library[/red]")
+    book_path = get_book_path(book['calibre_id'])
+    if not book_path:
+        console.print("[red]No EPUB or PDF found in Calibre library[/red]")
         return
 
-    console.print(f"[dim]EPUB: {epub_path.name}[/dim]")
+    file_format = book_path.suffix.upper().lstrip('.')
+    console.print(f"[dim]{file_format}: {book_path.name}[/dim]")
 
     # Extract text
-    with console.status("Extracting text from EPUB..."):
-        text = extract_text_from_epub(epub_path)
+    with console.status(f"Extracting text from {file_format}..."):
+        text = extract_text(book_path)
 
     word_count = len(text.split())
     console.print(f"[green]Extracted {word_count:,} words[/green]")
@@ -301,6 +302,62 @@ def models():
             console.print(f"  {model}")
     else:
         console.print("[red]No Ollama models found. Install with 'ollama pull <model>'[/red]")
+
+
+
+@main.command()
+def formats():
+    """Show format distribution of books in library."""
+    from .database import get_db, get_book_path
+    from collections import Counter
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT id, title, calibre_id, format
+            FROM books
+            WHERE calibre_id IS NOT NULL
+        """)
+        books = cursor.fetchall()
+
+    format_counts = Counter()
+    available_counts = Counter()
+    unavailable = []
+
+    for book in books:
+        format_counts[book['format']] += 1
+        path = get_book_path(book['calibre_id'])
+        if path:
+            available_counts[path.suffix.lower().lstrip('.')] += 1
+        else:
+            unavailable.append((book['id'], book['title']))
+
+    table = Table(title="Book Formats")
+    table.add_column("Format", style="cyan")
+    table.add_column("In iPad DB", style="dim")
+    table.add_column("Available in Calibre", style="green")
+
+    for fmt in sorted(set(format_counts.keys()) | set(available_counts.keys())):
+        table.add_row(
+            fmt.upper(),
+            str(format_counts.get(fmt, 0)),
+            str(available_counts.get(fmt, 0))
+        )
+
+    console.print(table)
+
+    total_available = sum(available_counts.values())
+    console.print(f"\n[green]Ready to process: {total_available} books[/green]")
+
+    if unavailable:
+        console.print(f"[yellow]Unavailable (no EPUB/PDF): {len(unavailable)} books[/yellow]")
+        if len(unavailable) <= 5:
+            for id, title in unavailable:
+                console.print(f"  [dim]{id}: {title[:50]}[/dim]")
+        else:
+            for id, title in unavailable[:3]:
+                console.print(f"  [dim]{id}: {title[:50]}[/dim]")
+            console.print(f"  [dim]... and {len(unavailable) - 3} more[/dim]")
 
 
 # ============================================================================

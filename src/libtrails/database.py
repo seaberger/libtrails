@@ -80,6 +80,41 @@ def get_epub_path(calibre_id: int) -> Optional[Path]:
         return None
 
 
+def get_book_path(calibre_id: int) -> Optional[Path]:
+    """
+    Get the path to a book file in Calibre library.
+
+    Prefers EPUB over PDF if both exist.
+    Returns None if no supported format found.
+    """
+    with get_calibre_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT path FROM books WHERE id = ?", (calibre_id,))
+        row = cursor.fetchone()
+        if not row:
+            return None
+
+        book_dir = CALIBRE_LIBRARY_PATH / row['path']
+
+        # Prefer EPUB
+        for epub in book_dir.glob("*.epub"):
+            return epub
+
+        # Fall back to PDF
+        for pdf in book_dir.glob("*.pdf"):
+            return pdf
+
+        return None
+
+
+def get_book_format(calibre_id: int) -> Optional[str]:
+    """Get the format of the book file (epub or pdf)."""
+    path = get_book_path(calibre_id)
+    if path:
+        return path.suffix.lower().lstrip('.')
+    return None
+
+
 def init_chunks_table():
     """Create the chunks and topics tables if they don't exist."""
     with get_db() as conn:
