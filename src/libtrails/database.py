@@ -126,6 +126,7 @@ def init_chunks_table():
                 chunk_index INTEGER,
                 text TEXT NOT NULL,
                 word_count INTEGER,
+                topics_json TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 UNIQUE(book_id, chunk_index)
             );
@@ -177,6 +178,14 @@ def init_chunks_table():
             CREATE INDEX IF NOT EXISTS idx_cooccur_topic1 ON topic_cooccurrences(topic1_id);
             CREATE INDEX IF NOT EXISTS idx_cooccur_topic2 ON topic_cooccurrences(topic2_id);
         """)
+
+        # Migration: add topics_json column if it doesn't exist
+        cursor = conn.cursor()
+        cursor.execute("PRAGMA table_info(chunks)")
+        columns = [row[1] for row in cursor.fetchall()]
+        if 'topics_json' not in columns:
+            conn.execute("ALTER TABLE chunks ADD COLUMN topics_json TEXT")
+
         conn.commit()
 
 
@@ -200,14 +209,27 @@ def save_chunks(book_id: int, chunks: list[str]):
 
 
 def save_chunk_topics(chunk_id: int, topics: list[str]):
-    """Save topics for a chunk."""
+    """Save topics for a chunk (both normalized table and JSON column)."""
+    import json
+
+    cleaned_topics = [t.strip() for t in topics if t.strip()]
+
     with get_db() as conn:
         cursor = conn.cursor()
-        for topic in topics:
+
+        # Save to chunk_topics table (normalized)
+        for topic in cleaned_topics:
             cursor.execute(
                 "INSERT OR IGNORE INTO chunk_topics (chunk_id, topic) VALUES (?, ?)",
-                (chunk_id, topic.strip())
+                (chunk_id, topic)
             )
+
+        # Save JSON to chunks table (denormalized for RAG)
+        cursor.execute(
+            "UPDATE chunks SET topics_json = ? WHERE id = ?",
+            (json.dumps(cleaned_topics), chunk_id)
+        )
+
         conn.commit()
 
 
