@@ -77,12 +77,13 @@ def status():
 @click.option('--all', 'index_all', is_flag=True, help='Index all books')
 @click.option('--model', '-m', default=DEFAULT_MODEL, help='Ollama model to use')
 @click.option('--dry-run', is_flag=True, help='Parse and chunk without topic extraction')
-def index(book_id: int, title: str, index_all: bool, model: str, dry_run: bool):
+@click.option('--reindex', is_flag=True, help='Re-index books that are already indexed')
+def index(book_id: int, title: str, index_all: bool, model: str, dry_run: bool, reindex: bool):
     """Index a book (parse, chunk, extract topics)."""
     init_chunks_table()
 
     if index_all:
-        _index_all_books(model, dry_run)
+        _index_all_books(model, dry_run, reindex)
         return
 
     # Find the book
@@ -100,19 +101,17 @@ def index(book_id: int, title: str, index_all: bool, model: str, dry_run: bool):
 
 
 def _index_single_book(book: dict, model: str, dry_run: bool):
-    """Index a single book."""
-    console.print(f"\n[bold]Indexing:[/bold] {book['title']}")
-    console.print(f"[dim]Author: {book['author']}[/dim]")
+    """Index a single book. Raises exception on failure."""
+    console.print(f"[bold]Indexing:[/bold] {book['title'][:60]}")
+    console.print(f"[dim]Author: {book['author'] or 'Unknown'}[/dim]")
 
     # Get book file path (EPUB or PDF)
     if not book.get('calibre_id'):
-        console.print("[red]No Calibre match for this book[/red]")
-        return
+        raise ValueError("No Calibre match for this book")
 
     book_path = get_book_path(book['calibre_id'])
     if not book_path:
-        console.print("[red]No EPUB or PDF found in Calibre library[/red]")
-        return
+        raise FileNotFoundError("No EPUB or PDF found in Calibre library")
 
     file_format = book_path.suffix.upper().lstrip('.')
     console.print(f"[dim]{file_format}: {book_path.name}[/dim]")
@@ -122,6 +121,11 @@ def _index_single_book(book: dict, model: str, dry_run: bool):
         text = extract_text(book_path)
 
     word_count = len(text.split())
+
+    # Check minimum content
+    if word_count < 100:
+        raise ValueError(f"Insufficient content: only {word_count} words extracted")
+
     console.print(f"[green]Extracted {word_count:,} words[/green]")
 
     # Chunk
@@ -185,17 +189,88 @@ def _index_single_book(book: dict, model: str, dry_run: bool):
             console.print(f"  {topic} ({count})")
 
 
-def _index_all_books(model: str, dry_run: bool):
-    """Index all books with Calibre matches."""
-    books = get_all_books(with_calibre_match=True)
-    console.print(f"[bold]Indexing {len(books)} books...[/bold]\n")
+def _index_all_books(model: str, dry_run: bool, reindex: bool = False):
+    """Index all books with Calibre matches, with resume support."""
+    from .database import get_db, get_book_path
+    import time
 
-    for i, book in enumerate(books, 1):
-        console.print(f"\n[dim]({i}/{len(books)})[/dim]")
+    books = get_all_books(with_calibre_match=True)
+
+    # Get already indexed book IDs
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT DISTINCT book_id FROM chunks")
+        indexed_ids = {row[0] for row in cursor.fetchall()}
+
+    # Filter books to process
+    if reindex:
+        to_process = books
+        console.print(f"[bold]Re-indexing all {len(books)} books...[/bold]")
+    else:
+        to_process = [b for b in books if b['id'] not in indexed_ids]
+        skipped = len(books) - len(to_process)
+        if skipped > 0:
+            console.print(f"[dim]Skipping {skipped} already indexed books[/dim]")
+        console.print(f"[bold]Indexing {len(to_process)} books...[/bold]")
+
+    if not to_process:
+        console.print("[green]All books already indexed![/green]")
+        return
+
+    # Filter out books without available files
+    processable = []
+    no_file = []
+    for book in to_process:
+        if book.get('calibre_id') and get_book_path(book['calibre_id']):
+            processable.append(book)
+        else:
+            no_file.append(book)
+
+    if no_file:
+        console.print(f"[yellow]Skipping {len(no_file)} books without EPUB/PDF[/yellow]")
+
+    # Process books
+    successful = 0
+    failed = []
+    start_time = time.time()
+
+    for i, book in enumerate(processable, 1):
+        elapsed = time.time() - start_time
+        if i > 1:
+            avg_time = elapsed / (i - 1)
+            remaining = avg_time * (len(processable) - i + 1)
+            eta = f"ETA: {int(remaining // 60)}m {int(remaining % 60)}s"
+        else:
+            eta = ""
+
+        console.print(f"\n[dim]({i}/{len(processable)}) {eta}[/dim]")
+
         try:
             _index_single_book(book, model, dry_run)
+            successful += 1
+        except KeyboardInterrupt:
+            console.print("\n[yellow]Interrupted! Progress saved. Run again to resume.[/yellow]")
+            break
         except Exception as e:
-            console.print(f"[red]Error: {e}[/red]")
+            console.print(f"[red]Error indexing '{book['title'][:40]}': {e}[/red]")
+            failed.append((book['id'], book['title'], str(e)))
+
+    # Summary
+    total_time = time.time() - start_time
+    console.print(f"\n[bold]{'─' * 40}[/bold]")
+    console.print(f"[bold]Batch complete![/bold]")
+    console.print(f"  [green]Successful: {successful}[/green]")
+    if failed:
+        console.print(f"  [red]Failed: {len(failed)}[/red]")
+    console.print(f"  [dim]Time: {int(total_time // 60)}m {int(total_time % 60)}s[/dim]")
+
+    # Log failures
+    if failed:
+        console.print("\n[bold red]Failed books:[/bold red]")
+        for book_id, title, error in failed[:10]:
+            console.print(f"  [dim]{book_id}:[/dim] {title[:40]} - {error[:50]}")
+        if len(failed) > 10:
+            console.print(f"  [dim]... and {len(failed) - 10} more[/dim]")
 
 
 @main.command()
