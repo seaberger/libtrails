@@ -278,9 +278,21 @@ def _index_all_books(model: str, dry_run: bool, reindex: bool = False, max_words
         # Check battery level
         battery = _get_battery_level()
         if battery is not None and battery < min_battery:
-            console.print(f"\n[bold red]Battery at {battery}% (below {min_battery}%). Pausing to save progress.[/bold red]")
-            console.print("[yellow]Plug in charger and run again to resume.[/yellow]")
-            break
+            console.print(f"\n[bold yellow]Battery at {battery}% (below {min_battery}%). Pausing...[/bold yellow]")
+            console.print("[dim]Will auto-resume when battery reaches 50%[/dim]")
+
+            # Wait for battery to charge to 50%
+            import time as wait_time
+            while True:
+                wait_time.sleep(300)  # Check every 5 minutes
+                battery = _get_battery_level()
+                if battery is None:
+                    console.print("[green]Can't read battery - assuming plugged in. Resuming...[/green]")
+                    break
+                console.print(f"[dim]Battery at {battery}%... waiting for 50%[/dim]")
+                if battery >= 50:
+                    console.print(f"[green]Battery at {battery}%. Resuming![/green]")
+                    break
 
         try:
             result = _index_single_book(book, model, dry_run, max_words)
