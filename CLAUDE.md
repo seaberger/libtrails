@@ -431,6 +431,25 @@ First run downloads ~130MB model. Subsequent runs use local cache in `models/`.
 
 ---
 
+## Coding Standards
+
+### Imports
+- **All imports go at the top of the file** - never bury imports inside functions
+- Exception: Heavy ML libraries (`sentence_transformers`, `docling`) may be lazy-loaded for CLI performance
+- Use `ruff check --select=F401,F841` to find unused imports
+
+### Error Handling
+- Keep try blocks small and focused - don't wrap 20+ lines in a single try
+- Extract logic into helper functions, let the helper handle or propagate errors
+- Prefer early returns over deep nesting
+
+### Code Organization
+- Keep files under ~500 lines when practical
+- Extract reusable logic into helper functions
+- Use descriptive function names that indicate what they return
+
+---
+
 ## Notes
 
 - Calibre database should be treated as **read-only** - create separate index

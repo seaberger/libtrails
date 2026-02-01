@@ -6,7 +6,7 @@ from collections import defaultdict
 import igraph as ig
 import numpy as np
 
-from .database import get_db, get_all_topics, get_topic_embeddings, save_cooccurrence
+from .database import get_all_topics, get_db, get_topic_embeddings, save_cooccurrence
 from .embeddings import bytes_to_embedding
 
 
@@ -194,7 +194,7 @@ def get_related_topics(topic_label: str, limit: int = 10) -> list[dict]:
         node_idx = g.vs["label"].index(topic_label.lower())
     except ValueError:
         # Try partial match
-        matches = [i for i, l in enumerate(g.vs["label"]) if topic_label.lower() in l]
+        matches = [i for i, label in enumerate(g.vs["label"]) if topic_label.lower() in label]
         if not matches:
             return []
         node_idx = matches[0]

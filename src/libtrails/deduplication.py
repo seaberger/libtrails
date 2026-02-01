@@ -1,7 +1,8 @@
 """Topic deduplication using embedding similarity."""
 
-import numpy as np
 from collections import defaultdict
+
+import numpy as np
 
 from .database import get_db, get_topic_embeddings
 from .embeddings import bytes_to_embedding, cosine_similarity_matrix

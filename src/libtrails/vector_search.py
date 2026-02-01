@@ -4,9 +4,7 @@ import sqlite3
 from pathlib import Path
 
 from .config import IPAD_DB_PATH
-from .embeddings import (
-    embed_text, embedding_to_bytes, get_embedding_dimension
-)
+from .embeddings import embed_text, embedding_to_bytes, get_embedding_dimension
 
 
 def init_vector_search(conn: sqlite3.Connection, force_recreate: bool = False):

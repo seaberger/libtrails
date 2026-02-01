@@ -9,6 +9,41 @@ from typing import Optional
 from .config import DEFAULT_MODEL
 from .database import get_calibre_db, get_db
 
+# Regex pattern for parsing book entries from MapleRead HTML
+BOOK_PATTERN = re.compile(
+    r"<a class='title' href='/book\?id=([^']+)'>([^<]+)</a><br /><span class='author'>([^<]+)</span>"
+)
+
+
+def _parse_book_id(book_id: str) -> tuple[str, str]:
+    """Parse book ID into (file_id, format)."""
+    if '.' in book_id:
+        return book_id.rsplit('.', 1)
+    return book_id, 'unknown'
+
+
+def _fetch_url(url: str, timeout: int = 10) -> Optional[str]:
+    """Fetch URL and return HTML content, or None on error."""
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as response:
+            return response.read().decode('utf-8')
+    except Exception:
+        return None
+
+
+def _extract_books_from_html(html: str) -> list[tuple[str, str, str, str]]:
+    """
+    Extract book tuples from HTML.
+
+    Returns list of (file_id, title, author, format) tuples.
+    """
+    matches = BOOK_PATTERN.findall(html)
+    results = []
+    for book_id, title, author in matches:
+        file_id, fmt = _parse_book_id(book_id)
+        results.append((file_id, unescape(title), unescape(author), fmt))
+    return results
+
 
 def scrape_ipad_library(base_url: str, progress_callback: Optional[callable] = None) -> list[dict]:
     """
@@ -42,35 +77,20 @@ def scrape_ipad_library(base_url: str, progress_callback: Optional[callable] = N
         if progress_callback and i % 50 == 0:
             progress_callback(f"Processing tag {i+1}/{len(tag_matches)}...")
 
-        try:
-            tag_url = f"{base_url}/tags?set=0&tag={encoded_tag}"
-            with urllib.request.urlopen(tag_url, timeout=10) as response:
-                tag_html = response.read().decode('utf-8')
-
-            book_pattern = r"<a class='title' href='/book\?id=([^']+)'>([^<]+)</a><br /><span class='author'>([^<]+)</span>"
-            book_matches = re.findall(book_pattern, tag_html)
-
-            tag_clean = unescape(tag_name)
-            for book_id, title, author in book_matches:
-                if '.' in book_id:
-                    file_id, fmt = book_id.rsplit('.', 1)
-                else:
-                    file_id, fmt = book_id, 'unknown'
-
-                if file_id not in books_data:
-                    books_data[file_id] = {
-                        'title': unescape(title),
-                        'author': unescape(author),
-                        'format': fmt
-                    }
-
-                if file_id not in book_tags:
-                    book_tags[file_id] = []
-                if tag_clean not in book_tags[file_id]:
-                    book_tags[file_id].append(tag_clean)
-
-        except Exception:
+        tag_url = f"{base_url}/tags?set=0&tag={encoded_tag}"
+        tag_html = _fetch_url(tag_url)
+        if not tag_html:
             continue
+
+        tag_clean = unescape(tag_name)
+        for file_id, title, author, fmt in _extract_books_from_html(tag_html):
+            if file_id not in books_data:
+                books_data[file_id] = {'title': title, 'author': author, 'format': fmt}
+
+            if file_id not in book_tags:
+                book_tags[file_id] = []
+            if tag_clean not in book_tags[file_id]:
+                book_tags[file_id].append(tag_clean)
 
         time.sleep(0.05)  # Be nice to the server
 
@@ -80,29 +100,15 @@ def scrape_ipad_library(base_url: str, progress_callback: Optional[callable] = N
 
     for sec in range(28):
         url = f"{base_url}/?set=0&sort=title&sec={sec}"
-        try:
-            with urllib.request.urlopen(url, timeout=10) as response:
-                html = response.read().decode('utf-8')
-
-            book_pattern = r"<a class='title' href='/book\?id=([^']+)'>([^<]+)</a><br /><span class='author'>([^<]+)</span>"
-            matches = re.findall(book_pattern, html)
-
-            for book_id, title, author in matches:
-                if '.' in book_id:
-                    file_id, fmt = book_id.rsplit('.', 1)
-                else:
-                    file_id, fmt = book_id, 'unknown'
-
-                if file_id not in books_data:
-                    books_data[file_id] = {
-                        'title': unescape(title),
-                        'author': unescape(author),
-                        'format': fmt
-                    }
-                if file_id not in book_tags:
-                    book_tags[file_id] = []
-        except Exception:
+        html = _fetch_url(url)
+        if not html:
             continue
+
+        for file_id, title, author, fmt in _extract_books_from_html(html):
+            if file_id not in books_data:
+                books_data[file_id] = {'title': title, 'author': author, 'format': fmt}
+            if file_id not in book_tags:
+                book_tags[file_id] = []
 
     # Combine into final structure
     books = []

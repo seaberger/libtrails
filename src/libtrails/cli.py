@@ -1,22 +1,34 @@
 """Command-line interface for libtrails."""
 
+import re
+import subprocess
+import time
+from collections import Counter
+
 import click
 from rich.console import Console
+from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 from rich.table import Table
 from rich.tree import Tree
-from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
 
 from . import __version__
-from .config import DEFAULT_MODEL, CHUNK_TARGET_WORDS
+from .chunker import chunk_text
+from .config import CHUNK_TARGET_WORDS, DEFAULT_MODEL
 from .database import (
-    get_book, get_book_by_title, get_all_books, get_book_path,
-    init_chunks_table, save_chunks, save_chunk_topics, get_indexing_status,
-    get_topics_without_embeddings, save_topic_embedding,
-    migrate_raw_topics_to_normalized
+    get_all_books,
+    get_book,
+    get_book_by_title,
+    get_book_path,
+    get_indexing_status,
+    get_topics_without_embeddings,
+    init_chunks_table,
+    migrate_raw_topics_to_normalized,
+    save_chunk_topics,
+    save_chunks,
+    save_topic_embedding,
 )
 from .document_parser import extract_text
-from .chunker import chunk_text
-from .topic_extractor import extract_topics_batch, check_ollama_available, get_available_models
+from .topic_extractor import check_ollama_available, extract_topics_batch, get_available_models
 
 console = Console()
 
@@ -78,8 +90,8 @@ def status():
 @click.option('--save-url', is_flag=True, help='Save the iPad URL to config for future use')
 def sync(ipad: str, dry_run: bool, skip_index: bool, model: str, save_url: bool):
     """Sync new books from iPad MapleRead library."""
-    from .sync import sync_ipad_library
     from .config import get_ipad_url, set_ipad_url
+    from .sync import sync_ipad_library
 
     # Get iPad URL from argument or config
     if not ipad:
@@ -93,7 +105,7 @@ def sync(ipad: str, dry_run: bool, skip_index: bool, model: str, save_url: bool)
     # Save URL if requested
     if save_url:
         set_ipad_url(ipad)
-        console.print(f"[green]Saved iPad URL to ~/.libtrails/config.yaml[/green]")
+        console.print("[green]Saved iPad URL to ~/.libtrails/config.yaml[/green]")
 
     console.print(f"\n[bold]Syncing from iPad[/bold]: {ipad}")
 
@@ -275,7 +287,6 @@ def _index_single_book(book: dict, model: str, dry_run: bool, max_words: int = N
 
     # Show top topics
     if unique_topics:
-        from collections import Counter
         topic_counts = Counter(all_topics)
         console.print("\n[bold]Top topics:[/bold]")
         for topic, count in topic_counts.most_common(10):
@@ -284,14 +295,12 @@ def _index_single_book(book: dict, model: str, dry_run: bool, max_words: int = N
 
 def _get_battery_level() -> int | None:
     """Get current battery percentage on macOS. Returns None if not on battery/not macOS."""
-    import subprocess
     try:
         result = subprocess.run(
             ["pmset", "-g", "batt"],
             capture_output=True, text=True, timeout=5
         )
         # Parse output like: "-InternalBattery-0 (id=...)	51%; charging;"
-        import re
         match = re.search(r'(\d+)%', result.stdout)
         if match:
             return int(match.group(1))
@@ -302,8 +311,7 @@ def _get_battery_level() -> int | None:
 
 def _index_all_books(model: str, dry_run: bool, reindex: bool = False, max_words: int = None, min_battery: int = 15):
     """Index all books with Calibre matches, with resume support."""
-    from .database import get_db, get_book_path
-    import time
+    from .database import get_book_path, get_db
 
     books = get_all_books(with_calibre_match=True)
 
@@ -368,9 +376,8 @@ def _index_all_books(model: str, dry_run: bool, reindex: bool = False, max_words
             console.print("[dim]Will auto-resume when battery reaches 50%[/dim]")
 
             # Wait for battery to charge to 50%
-            import time as wait_time
             while True:
-                wait_time.sleep(300)  # Check every 5 minutes
+                time.sleep(300)  # Check every 5 minutes
                 battery = _get_battery_level()
                 if battery is None:
                     console.print("[green]Can't read battery - assuming plugged in. Resuming...[/green]")
@@ -396,7 +403,7 @@ def _index_all_books(model: str, dry_run: bool, reindex: bool = False, max_words
     # Summary
     total_time = time.time() - start_time
     console.print(f"\n[bold]{'─' * 40}[/bold]")
-    console.print(f"[bold]Batch complete![/bold]")
+    console.print("[bold]Batch complete![/bold]")
     console.print(f"  [green]Successful: {successful}[/green]")
     if skipped_large:
         console.print(f"  [yellow]Skipped (too large): {skipped_large}[/yellow]")
@@ -523,8 +530,7 @@ def models():
 @main.command()
 def formats():
     """Show format distribution of books in library."""
-    from .database import get_db, get_book_path
-    from collections import Counter
+    from .database import get_book_path, get_db
 
     with get_db() as conn:
         cursor = conn.cursor()
@@ -583,8 +589,8 @@ def formats():
 @click.option('--force', is_flag=True, help='Regenerate all embeddings (use after model change)')
 def embed(force: bool):
     """Generate embeddings for all topics."""
-    from .embeddings import embed_texts, embedding_to_bytes, get_model_info
     from .database import get_db
+    from .embeddings import embed_texts, embedding_to_bytes, get_model_info
 
     # Ensure tables exist
     init_chunks_table()
@@ -662,7 +668,7 @@ def embed(force: bool):
 @click.option('--limit', '-n', default=20, help='Number of results')
 def search_semantic(query: str, limit: int):
     """Semantic search for topics using embeddings."""
-    from .vector_search import search_topics_semantic, search_books_by_topic_semantic
+    from .vector_search import search_books_by_topic_semantic, search_topics_semantic
 
     console.print(f"\n[bold]Semantic search:[/bold] {query}\n")
 
@@ -883,7 +889,7 @@ def cooccur(topic: str):
         results = cursor.fetchall()
 
         if not results:
-            console.print(f"[yellow]No co-occurring topics found. Run 'libtrails cluster' first.[/yellow]")
+            console.print("[yellow]No co-occurring topics found. Run 'libtrails cluster' first.[/yellow]")
             return
 
         table = Table(title=f"Topics co-occurring with: {topic}")
@@ -900,9 +906,9 @@ def cooccur(topic: str):
 @main.command()
 def process():
     """Run the full post-processing pipeline (embed, dedupe, cluster)."""
-    from .embeddings import embed_texts, embedding_to_bytes
-    from .deduplication import deduplicate_topics
     from .clustering import cluster_topics
+    from .deduplication import deduplicate_topics
+    from .embeddings import embed_texts, embedding_to_bytes
     from .topic_graph import compute_cooccurrences
     from .vector_search import get_vec_db, rebuild_vector_index
 

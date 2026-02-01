@@ -1,7 +1,8 @@
 """Text chunking for topic extraction."""
 
 import re
-from .config import CHUNK_TARGET_WORDS, CHUNK_MIN_WORDS
+
+from .config import CHUNK_MIN_WORDS, CHUNK_TARGET_WORDS
 
 
 def chunk_text(text: str, target_words: int = CHUNK_TARGET_WORDS) -> list[str]:

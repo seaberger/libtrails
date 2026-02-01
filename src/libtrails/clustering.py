@@ -1,7 +1,7 @@
 """Leiden clustering for hierarchical topic organization."""
 
-from typing import Optional
 from collections import defaultdict
+from typing import Optional
 
 import leidenalg
 
@@ -252,7 +252,7 @@ Respond with ONLY the category label, nothing else."""
 
         if result.returncode == 0:
             return result.stdout.strip()
-    except:
+    except Exception:
         pass
 
     return None

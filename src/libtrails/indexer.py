@@ -1,5 +1,6 @@
 """Book indexing functionality - parse, chunk, extract topics."""
 
+import time
 from typing import Callable, Optional
 
 from .chunker import chunk_text
@@ -237,8 +238,6 @@ def index_books_batch(
     Returns:
         Summary dict with success/failure counts
     """
-    import time
-
     successful = 0
     skipped = 0
     failed = []

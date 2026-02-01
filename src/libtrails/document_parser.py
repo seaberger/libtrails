@@ -1,8 +1,9 @@
 """Document parsing for EPUB and PDF files."""
 
-import zipfile
 import re
+import zipfile
 from pathlib import Path
+
 from selectolax.parser import HTMLParser
 
 
@@ -123,7 +124,7 @@ def get_book_metadata_from_epub(epub_path: Path) -> dict:
                     if creator:
                         metadata['author'] = creator.text()
 
-                except:
+                except Exception:
                     pass
 
     return metadata

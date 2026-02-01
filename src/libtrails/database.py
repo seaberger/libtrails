@@ -1,11 +1,11 @@
 """Database operations for libtrails."""
 
 import sqlite3
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Optional
-from contextlib import contextmanager
 
-from .config import IPAD_DB_PATH, CALIBRE_DB_PATH, CALIBRE_LIBRARY_PATH
+from .config import CALIBRE_DB_PATH, CALIBRE_LIBRARY_PATH, IPAD_DB_PATH
 
 
 @contextmanager
@@ -279,7 +279,7 @@ def get_or_create_topic(label: str) -> int:
         row = cursor.fetchone()
         if row:
             return row[0]
-        
+
         cursor.execute(
             "INSERT INTO topics (label, occurrence_count) VALUES (?, 1)",
             (label,)
@@ -367,7 +367,7 @@ def save_cooccurrence(topic1_id: int, topic2_id: int, count: int, pmi: Optional[
     # Ensure consistent ordering
     if topic1_id > topic2_id:
         topic1_id, topic2_id = topic2_id, topic1_id
-    
+
     with get_db() as conn:
         conn.execute("""
             INSERT INTO topic_cooccurrences (topic1_id, topic2_id, count, pmi)
@@ -398,7 +398,7 @@ def migrate_raw_topics_to_normalized():
     """Migrate existing raw topics from chunk_topics to normalized topics table."""
     with get_db() as conn:
         cursor = conn.cursor()
-        
+
         # Get all unique raw topics with their counts
         cursor.execute("""
             SELECT topic, COUNT(*) as count
@@ -406,13 +406,13 @@ def migrate_raw_topics_to_normalized():
             GROUP BY topic
         """)
         raw_topics = cursor.fetchall()
-        
+
         migrated = 0
         for topic, count in raw_topics:
             # Normalize and insert
             from .topic_extractor import normalize_topic
             normalized = normalize_topic(topic)
-            
+
             # Get or create the normalized topic
             cursor.execute("SELECT id FROM topics WHERE label = ?", (normalized,))
             row = cursor.fetchone()
@@ -428,15 +428,15 @@ def migrate_raw_topics_to_normalized():
                     (normalized, count)
                 )
                 topic_id = cursor.lastrowid
-            
+
             # Link chunks to the normalized topic
             cursor.execute("""
                 INSERT OR IGNORE INTO chunk_topic_links (chunk_id, topic_id)
                 SELECT chunk_id, ? FROM chunk_topics WHERE topic = ?
             """, (topic_id, topic))
-            
+
             migrated += 1
-        
+
         conn.commit()
         return migrated
 
@@ -445,7 +445,7 @@ def get_topic_stats() -> dict:
     """Get statistics about the topics table."""
     with get_db() as conn:
         cursor = conn.cursor()
-        
+
         # Check if topics table exists
         cursor.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='topics'")
         if not cursor.fetchone():
@@ -455,19 +455,19 @@ def get_topic_stats() -> dict:
                 "clustered": 0,
                 "total_cooccurrences": 0,
             }
-        
+
         cursor.execute("SELECT COUNT(*) FROM topics")
         total = cursor.fetchone()[0]
-        
+
         cursor.execute("SELECT COUNT(*) FROM topics WHERE embedding IS NOT NULL")
         with_embeddings = cursor.fetchone()[0]
-        
+
         cursor.execute("SELECT COUNT(*) FROM topics WHERE cluster_id IS NOT NULL")
         clustered = cursor.fetchone()[0]
-        
+
         cursor.execute("SELECT COUNT(*) FROM topic_cooccurrences")
         cooccurrences = cursor.fetchone()[0]
-        
+
         return {
             "total_topics": total,
             "with_embeddings": with_embeddings,

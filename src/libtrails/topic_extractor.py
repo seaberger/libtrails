@@ -67,7 +67,7 @@ def extract_topics_batch(
 def normalize_topic(topic: str) -> str:
     """
     Normalize a topic label for deduplication.
-    
+
     - Strips whitespace
     - Converts to lowercase
     - Replaces underscores with spaces
@@ -155,7 +155,7 @@ def check_ollama_available(model: str = DEFAULT_MODEL) -> bool:
             timeout=5
         )
         return model.split(':')[0] in result.stdout
-    except:
+    except Exception:
         return False
 
 
@@ -171,6 +171,6 @@ def get_available_models() -> list[str]:
         if result.returncode == 0:
             lines = result.stdout.strip().split('\n')[1:]  # Skip header
             return [line.split()[0] for line in lines if line]
-    except:
+    except Exception:
         pass
     return []

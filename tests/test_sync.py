@@ -8,6 +8,7 @@ from libtrails.sync import (
     normalize_for_matching,
     find_new_books,
     get_existing_ipad_ids,
+    match_to_calibre,
 )
 
 
@@ -220,3 +221,182 @@ class TestGetExistingIpadIds:
 
         ids = get_existing_ipad_ids()
         assert ids == {'abc123', 'def456'}
+
+
+class TestMatchToCalibre:
+    """Tests for Calibre matching logic."""
+
+    @patch('libtrails.sync.get_calibre_metadata')
+    @patch('libtrails.sync.get_calibre_db')
+    def test_exact_title_and_author_match(self, mock_calibre_db, mock_get_metadata):
+        """Test matching when title and author match exactly."""
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+
+        # Return a matching book from Calibre
+        mock_cursor.fetchall.return_value = [
+            {'id': 42, 'title': 'Siddhartha', 'author_sort': 'Hesse, Hermann'}
+        ]
+        mock_conn.cursor.return_value = mock_cursor
+        mock_calibre_db.return_value.__enter__ = MagicMock(return_value=mock_conn)
+        mock_calibre_db.return_value.__exit__ = MagicMock(return_value=False)
+
+        mock_get_metadata.return_value = {
+            'id': 42,
+            'title': 'Siddhartha',
+            'author': 'Hermann Hesse',
+        }
+
+        book = {'title': 'Siddhartha', 'author': 'Hermann Hesse'}
+        result = match_to_calibre(book)
+
+        assert result is not None
+        assert result['id'] == 42
+        mock_get_metadata.assert_called_once()
+
+    @patch('libtrails.sync.get_calibre_metadata')
+    @patch('libtrails.sync.get_calibre_db')
+    def test_no_match_returns_none(self, mock_calibre_db, mock_get_metadata):
+        """Test that no candidates returns None."""
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = []  # No matches
+        mock_conn.cursor.return_value = mock_cursor
+        mock_calibre_db.return_value.__enter__ = MagicMock(return_value=mock_conn)
+        mock_calibre_db.return_value.__exit__ = MagicMock(return_value=False)
+
+        book = {'title': 'Nonexistent Book', 'author': 'Unknown Author'}
+        result = match_to_calibre(book)
+
+        assert result is None
+        mock_get_metadata.assert_not_called()
+
+    @patch('libtrails.sync.get_calibre_metadata')
+    @patch('libtrails.sync.get_calibre_db')
+    def test_partial_author_match_book_in_calibre(self, mock_calibre_db, mock_get_metadata):
+        """Test matching when book author is substring of Calibre author."""
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+
+        # Calibre has "Hesse, Hermann" but book just says "Hesse"
+        mock_cursor.fetchall.return_value = [
+            {'id': 42, 'title': 'Siddhartha', 'author_sort': 'Hesse, Hermann'}
+        ]
+        mock_conn.cursor.return_value = mock_cursor
+        mock_calibre_db.return_value.__enter__ = MagicMock(return_value=mock_conn)
+        mock_calibre_db.return_value.__exit__ = MagicMock(return_value=False)
+
+        mock_get_metadata.return_value = {'id': 42, 'title': 'Siddhartha'}
+
+        book = {'title': 'Siddhartha', 'author': 'Hesse'}
+        result = match_to_calibre(book)
+
+        assert result is not None
+        assert result['id'] == 42
+
+    @patch('libtrails.sync.get_calibre_metadata')
+    @patch('libtrails.sync.get_calibre_db')
+    def test_partial_author_match_calibre_in_book(self, mock_calibre_db, mock_get_metadata):
+        """Test matching when Calibre author is substring of book author."""
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+
+        # Calibre has just "Hesse" but book says "Hermann Hesse"
+        mock_cursor.fetchall.return_value = [
+            {'id': 42, 'title': 'Siddhartha', 'author_sort': 'Hesse'}
+        ]
+        mock_conn.cursor.return_value = mock_cursor
+        mock_calibre_db.return_value.__enter__ = MagicMock(return_value=mock_conn)
+        mock_calibre_db.return_value.__exit__ = MagicMock(return_value=False)
+
+        mock_get_metadata.return_value = {'id': 42, 'title': 'Siddhartha'}
+
+        book = {'title': 'Siddhartha', 'author': 'Hermann Hesse'}
+        result = match_to_calibre(book)
+
+        assert result is not None
+        assert result['id'] == 42
+
+    @patch('libtrails.sync.get_calibre_metadata')
+    @patch('libtrails.sync.get_calibre_db')
+    def test_falls_back_to_first_candidate(self, mock_calibre_db, mock_get_metadata):
+        """Test that first candidate is used when no author match."""
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+
+        # Multiple candidates, none with matching author
+        mock_cursor.fetchall.return_value = [
+            {'id': 100, 'title': 'Siddhartha', 'author_sort': 'Wrong Author'},
+            {'id': 101, 'title': 'Siddhartha', 'author_sort': 'Another Wrong'},
+        ]
+        mock_conn.cursor.return_value = mock_cursor
+        mock_calibre_db.return_value.__enter__ = MagicMock(return_value=mock_conn)
+        mock_calibre_db.return_value.__exit__ = MagicMock(return_value=False)
+
+        mock_get_metadata.return_value = {'id': 100, 'title': 'Siddhartha'}
+
+        book = {'title': 'Siddhartha', 'author': 'Hermann Hesse'}
+        result = match_to_calibre(book)
+
+        # Should fall back to first candidate (id=100)
+        assert result is not None
+        mock_get_metadata.assert_called_once()
+        # Verify it was called with the first candidate's ID
+        call_args = mock_get_metadata.call_args[0]
+        assert call_args[1] == 100  # Second arg is the book ID
+
+    @patch('libtrails.sync.get_calibre_metadata')
+    @patch('libtrails.sync.get_calibre_db')
+    def test_picks_best_author_match_from_multiple(self, mock_calibre_db, mock_get_metadata):
+        """Test that best author match is selected from multiple candidates."""
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+
+        # Multiple candidates, second one has matching author (same word order)
+        mock_cursor.fetchall.return_value = [
+            {'id': 100, 'title': 'Siddhartha', 'author_sort': 'Wrong Author'},
+            {'id': 101, 'title': 'Siddhartha', 'author_sort': 'Hermann Hesse'},
+        ]
+        mock_conn.cursor.return_value = mock_cursor
+        mock_calibre_db.return_value.__enter__ = MagicMock(return_value=mock_conn)
+        mock_calibre_db.return_value.__exit__ = MagicMock(return_value=False)
+
+        mock_get_metadata.return_value = {'id': 101, 'title': 'Siddhartha'}
+
+        book = {'title': 'Siddhartha', 'author': 'Hermann Hesse'}
+        result = match_to_calibre(book)
+
+        # Should select the matching author (id=101), not first candidate
+        assert result is not None
+        call_args = mock_get_metadata.call_args[0]
+        assert call_args[1] == 101  # Should use second candidate with matching author
+
+    @patch('libtrails.sync.get_calibre_metadata')
+    @patch('libtrails.sync.get_calibre_db')
+    def test_name_order_variation_falls_back(self, mock_calibre_db, mock_get_metadata):
+        """Test that 'Hesse, Hermann' vs 'Hermann Hesse' doesn't match (known limitation).
+
+        Note: The current matching logic uses substring matching, which doesn't handle
+        name order variations like 'Last, First' vs 'First Last'. This test documents
+        this behavior - the code falls back to the first candidate.
+        """
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+
+        # Calibre uses "Last, First" format but book has "First Last"
+        mock_cursor.fetchall.return_value = [
+            {'id': 100, 'title': 'Siddhartha', 'author_sort': 'Hesse, Hermann'},
+        ]
+        mock_conn.cursor.return_value = mock_cursor
+        mock_calibre_db.return_value.__enter__ = MagicMock(return_value=mock_conn)
+        mock_calibre_db.return_value.__exit__ = MagicMock(return_value=False)
+
+        mock_get_metadata.return_value = {'id': 100, 'title': 'Siddhartha'}
+
+        book = {'title': 'Siddhartha', 'author': 'Hermann Hesse'}
+        result = match_to_calibre(book)
+
+        # Falls back to first candidate since author substring match fails
+        # "hesse hermann" is not a substring of "hermann hesse" and vice versa
+        assert result is not None
+        assert result['id'] == 100

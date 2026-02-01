@@ -1,7 +1,8 @@
 """Embedding generation using sentence-transformers."""
 
-import os
 import logging
+import os
+
 import numpy as np
 
 from .config import PROJECT_ROOT
