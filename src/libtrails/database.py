@@ -395,47 +395,52 @@ def get_cooccurrences() -> list[dict]:
 
 
 def migrate_raw_topics_to_normalized():
-    """Migrate existing raw topics from chunk_topics to normalized topics table."""
+    """
+    Migrate existing raw topics from chunk_topics to normalized topics table.
+
+    This function is idempotent - running it multiple times produces the same result.
+    It creates normalized topics, links chunks to them, and recalculates occurrence
+    counts based on actual links (not by summing, which would cause double-counting).
+    """
     with get_db() as conn:
         cursor = conn.cursor()
 
-        # Get all unique raw topics with their counts
-        cursor.execute("""
-            SELECT topic, COUNT(*) as count
-            FROM chunk_topics
-            GROUP BY topic
-        """)
+        # Get all unique raw topics
+        cursor.execute("SELECT DISTINCT topic FROM chunk_topics")
         raw_topics = cursor.fetchall()
 
+        from .topic_extractor import normalize_topic
+
         migrated = 0
-        for topic, count in raw_topics:
-            # Normalize and insert
-            from .topic_extractor import normalize_topic
+        for (topic,) in raw_topics:
             normalized = normalize_topic(topic)
 
-            # Get or create the normalized topic
+            # Get or create the normalized topic (with initial count of 0)
             cursor.execute("SELECT id FROM topics WHERE label = ?", (normalized,))
             row = cursor.fetchone()
             if row:
                 topic_id = row[0]
-                cursor.execute(
-                    "UPDATE topics SET occurrence_count = occurrence_count + ? WHERE id = ?",
-                    (count, topic_id)
-                )
             else:
                 cursor.execute(
-                    "INSERT INTO topics (label, occurrence_count) VALUES (?, ?)",
-                    (normalized, count)
+                    "INSERT INTO topics (label, occurrence_count) VALUES (?, 0)",
+                    (normalized,)
                 )
                 topic_id = cursor.lastrowid
+                migrated += 1
 
-            # Link chunks to the normalized topic
+            # Link chunks to the normalized topic (INSERT OR IGNORE is idempotent)
             cursor.execute("""
                 INSERT OR IGNORE INTO chunk_topic_links (chunk_id, topic_id)
                 SELECT chunk_id, ? FROM chunk_topics WHERE topic = ?
             """, (topic_id, topic))
 
-            migrated += 1
+        # Recalculate all occurrence_counts from actual links (idempotent)
+        cursor.execute("""
+            UPDATE topics
+            SET occurrence_count = (
+                SELECT COUNT(*) FROM chunk_topic_links WHERE topic_id = topics.id
+            )
+        """)
 
         conn.commit()
         return migrated
