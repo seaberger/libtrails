@@ -6,6 +6,7 @@ from unittest.mock import patch, MagicMock
 from libtrails.sync import (
     scrape_ipad_library,
     normalize_for_matching,
+    authors_match,
     find_new_books,
     get_existing_ipad_ids,
     match_to_calibre,
@@ -373,13 +374,8 @@ class TestMatchToCalibre:
 
     @patch('libtrails.sync.get_calibre_metadata')
     @patch('libtrails.sync.get_calibre_db')
-    def test_name_order_variation_falls_back(self, mock_calibre_db, mock_get_metadata):
-        """Test that 'Hesse, Hermann' vs 'Hermann Hesse' doesn't match (known limitation).
-
-        Note: The current matching logic uses substring matching, which doesn't handle
-        name order variations like 'Last, First' vs 'First Last'. This test documents
-        this behavior - the code falls back to the first candidate.
-        """
+    def test_name_order_variation_matches(self, mock_calibre_db, mock_get_metadata):
+        """Test that 'Hesse, Hermann' matches 'Hermann Hesse' (word-set matching)."""
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
 
@@ -396,7 +392,50 @@ class TestMatchToCalibre:
         book = {'title': 'Siddhartha', 'author': 'Hermann Hesse'}
         result = match_to_calibre(book)
 
-        # Falls back to first candidate since author substring match fails
-        # "hesse hermann" is not a substring of "hermann hesse" and vice versa
+        # Should match despite different word order
         assert result is not None
         assert result['id'] == 100
+
+
+class TestAuthorsMatch:
+    """Tests for author matching logic."""
+
+    def test_exact_match(self):
+        """Test exact author name match."""
+        assert authors_match("Hermann Hesse", "Hermann Hesse") is True
+
+    def test_different_word_order(self):
+        """Test that word order doesn't matter."""
+        assert authors_match("Hermann Hesse", "Hesse, Hermann") is True
+        assert authors_match("Hesse, Hermann", "Hermann Hesse") is True
+
+    def test_partial_match_subset(self):
+        """Test that partial names match (subset)."""
+        assert authors_match("Hesse", "Hermann Hesse") is True
+        assert authors_match("Hermann Hesse", "Hesse") is True
+
+    def test_initials_with_full_name(self):
+        """Test matching with initials."""
+        # "jrr tolkien" vs "tolkien j r r" - high overlap
+        assert authors_match("J.R.R. Tolkien", "Tolkien, J. R. R.") is True
+
+    def test_completely_different_authors(self):
+        """Test that different authors don't match."""
+        assert authors_match("Hermann Hesse", "Stephen King") is False
+        assert authors_match("Jane Austen", "Mark Twain") is False
+
+    def test_empty_strings(self):
+        """Test handling of empty strings."""
+        assert authors_match("", "Hermann Hesse") is False
+        assert authors_match("Hermann Hesse", "") is False
+        assert authors_match("", "") is False
+
+    def test_case_insensitive(self):
+        """Test that matching is case insensitive."""
+        assert authors_match("HERMANN HESSE", "hermann hesse") is True
+        assert authors_match("Hermann Hesse", "HESSE, HERMANN") is True
+
+    def test_punctuation_ignored(self):
+        """Test that punctuation is ignored."""
+        assert authors_match("O'Brien, Patrick", "Patrick OBrien") is True
+        assert authors_match("Ursula K. Le Guin", "Le Guin, Ursula K") is True

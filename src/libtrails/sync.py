@@ -148,6 +148,40 @@ def normalize_for_matching(s: str) -> str:
     return s
 
 
+def authors_match(author1: str, author2: str) -> bool:
+    """
+    Match authors regardless of word order.
+
+    Handles variations like:
+    - "Hermann Hesse" vs "Hesse, Hermann"
+    - "J.R.R. Tolkien" vs "Tolkien, J. R. R."
+    - "Hesse" vs "Hermann Hesse" (partial match)
+
+    Returns True if authors are likely the same person.
+    """
+    words1 = set(normalize_for_matching(author1).split())
+    words2 = set(normalize_for_matching(author2).split())
+
+    if not words1 or not words2:
+        return False
+
+    # Exact match (same words, any order)
+    if words1 == words2:
+        return True
+
+    # One is subset of other (handles "Hesse" matching "Hermann Hesse")
+    if words1 <= words2 or words2 <= words1:
+        return True
+
+    # High overlap (handles minor variations)
+    overlap = len(words1 & words2)
+    min_words = min(len(words1), len(words2))
+    if min_words > 0 and overlap / min_words >= 0.5:
+        return True
+
+    return False
+
+
 def match_to_calibre(book: dict) -> Optional[dict]:
     """
     Match a book to Calibre library.
@@ -174,10 +208,7 @@ def match_to_calibre(book: dict) -> Optional[dict]:
         # Find best match by author
         match = None
         for c in candidates:
-            c_author_norm = normalize_for_matching(c['author_sort'])
-            if c_author_norm == author_norm or \
-               author_norm in c_author_norm or \
-               c_author_norm in author_norm:
+            if authors_match(book['author'], c['author_sort']):
                 match = c
                 break
 
