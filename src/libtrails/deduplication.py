@@ -42,12 +42,17 @@ def find_duplicate_groups(threshold: float = 0.85) -> list[list[dict]]:
     """
     Find groups of topics that should be merged based on embedding similarity.
 
+    Uses Union-Find for initial grouping, then validates that all members
+    are directly similar to the canonical topic (highest occurrence count).
+    This prevents transitive chains where A~B and B~C would group A,B,C
+    even when A and C aren't similar.
+
     Args:
         threshold: Cosine similarity threshold for merging (0.85 = very similar)
 
     Returns:
         List of groups, where each group is a list of topic dicts
-        that should be merged together
+        that should be merged together. First topic in each group is canonical.
     """
     # Get all topic embeddings
     topic_data = get_topic_embeddings()
@@ -57,10 +62,13 @@ def find_duplicate_groups(threshold: float = 0.85) -> list[list[dict]]:
     topic_ids = [t[0] for t in topic_data]
     embeddings = np.array([bytes_to_embedding(t[1]) for t in topic_data])
 
+    # Build index mapping topic_id -> array index
+    id_to_idx = {tid: idx for idx, tid in enumerate(topic_ids)}
+
     # Compute similarity matrix
     sim_matrix = cosine_similarity_matrix(embeddings)
 
-    # Use Union-Find to group similar topics
+    # Use Union-Find to group similar topics (initial pass)
     n = len(topic_ids)
     uf = UnionFind(n)
 
@@ -72,13 +80,13 @@ def find_duplicate_groups(threshold: float = 0.85) -> list[list[dict]]:
     # Get groups and fetch topic details
     groups = uf.groups()
 
-    # Get topic details
+    # Get topic details and validate groups
     with get_db() as conn:
         cursor = conn.cursor()
 
         result = []
         for root, members in groups.items():
-            if len(members) > 1:  # Only return groups with duplicates
+            if len(members) > 1:  # Only process groups with potential duplicates
                 group_topics = []
                 for idx in members:
                     topic_id = topic_ids[idx]
@@ -92,10 +100,29 @@ def find_duplicate_groups(threshold: float = 0.85) -> list[list[dict]]:
                             "id": row[0],
                             "label": row[1],
                             "occurrence_count": row[2],
+                            "_idx": idx,  # Keep track of embedding index
                         })
+
                 # Sort by occurrence count (keep most frequent as canonical)
                 group_topics.sort(key=lambda x: x["occurrence_count"], reverse=True)
-                result.append(group_topics)
+
+                # Validate: only keep members that are similar to canonical
+                canonical = group_topics[0]
+                canonical_idx = canonical["_idx"]
+
+                validated_group = [canonical]
+                for topic in group_topics[1:]:
+                    topic_idx = topic["_idx"]
+                    if sim_matrix[canonical_idx, topic_idx] >= threshold:
+                        validated_group.append(topic)
+
+                # Clean up internal index before returning
+                for topic in validated_group:
+                    del topic["_idx"]
+
+                # Only include groups with actual duplicates after validation
+                if len(validated_group) > 1:
+                    result.append(validated_group)
 
         return result
 
