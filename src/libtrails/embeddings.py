@@ -3,8 +3,6 @@
 import os
 import logging
 import numpy as np
-from pathlib import Path
-from typing import Optional
 
 from .config import PROJECT_ROOT
 

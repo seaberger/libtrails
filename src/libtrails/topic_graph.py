@@ -2,7 +2,6 @@
 
 import math
 from collections import defaultdict
-from typing import Optional
 
 import igraph as ig
 import numpy as np

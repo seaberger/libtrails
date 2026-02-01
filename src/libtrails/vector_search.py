@@ -1,13 +1,11 @@
 """Vector search using sqlite-vec for semantic topic search."""
 
 import sqlite3
-from typing import Optional
 from pathlib import Path
 
 from .config import IPAD_DB_PATH
 from .embeddings import (
-    embed_text, embedding_to_bytes, bytes_to_embedding,
-    get_embedding_dimension
+    embed_text, embedding_to_bytes, get_embedding_dimension
 )
 
 

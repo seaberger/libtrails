@@ -113,7 +113,7 @@ Topics:'''
 
     except httpx.TimeoutException:
         return []
-    except Exception as e:
+    except Exception:
         return []
 
 

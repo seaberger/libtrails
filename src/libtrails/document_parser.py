@@ -34,18 +34,7 @@ def extract_text_from_epub(epub_path: Path) -> str:
         # Get content files in reading order if possible
         content_files = []
 
-        # Try to read the spine from content.opf
-        for name in zf.namelist():
-            if name.endswith('.opf'):
-                try:
-                    opf_content = zf.read(name).decode('utf-8', errors='ignore')
-                    # Extract itemrefs from spine
-                    # This is a simple extraction - could be improved
-                    pass
-                except:
-                    pass
-
-        # Fallback: get all HTML/XML content files
+        # Get all HTML/XML content files (sorted for consistent ordering)
         for name in sorted(zf.namelist()):
             if name.endswith(('.xhtml', '.html', '.htm', '.xml')) and 'toc' not in name.lower() and 'ncx' not in name.lower() and 'opf' not in name.lower():
                 content_files.append(name)
@@ -66,7 +55,7 @@ def extract_text_from_epub(epub_path: Path) -> str:
                 if len(text) > 50:
                     text_parts.append(text)
 
-            except Exception as e:
+            except Exception:
                 continue
 
     return '\n\n'.join(text_parts)

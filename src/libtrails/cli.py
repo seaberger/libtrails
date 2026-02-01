@@ -5,19 +5,18 @@ from rich.console import Console
 from rich.table import Table
 from rich.tree import Tree
 from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn
-from pathlib import Path
 
 from . import __version__
 from .config import DEFAULT_MODEL, CHUNK_TARGET_WORDS
 from .database import (
     get_book, get_book_by_title, get_all_books, get_book_path,
     init_chunks_table, save_chunks, save_chunk_topics, get_indexing_status,
-    get_all_topics, get_topics_without_embeddings, save_topic_embedding,
-    migrate_raw_topics_to_normalized, get_topic_stats
+    get_topics_without_embeddings, save_topic_embedding,
+    migrate_raw_topics_to_normalized
 )
 from .document_parser import extract_text
 from .chunker import chunk_text
-from .topic_extractor import extract_topics, extract_topics_batch, check_ollama_available, get_available_models
+from .topic_extractor import extract_topics_batch, check_ollama_available, get_available_models
 
 console = Console()
 
@@ -775,7 +774,7 @@ def cluster():
 @click.argument('topic', required=False)
 def tree(topic: str):
     """Browse the topic hierarchy."""
-    from .clustering import get_topic_tree, get_cluster_topics
+    from .clustering import get_topic_tree
 
     if topic:
         # Show topics in a specific cluster/category
@@ -903,7 +902,7 @@ def process():
     """Run the full post-processing pipeline (embed, dedupe, cluster)."""
     from .embeddings import embed_texts, embedding_to_bytes
     from .deduplication import deduplicate_topics
-    from .clustering import cluster_topics, get_cluster_summary
+    from .clustering import cluster_topics
     from .topic_graph import compute_cooccurrences
     from .vector_search import get_vec_db, rebuild_vector_index
 

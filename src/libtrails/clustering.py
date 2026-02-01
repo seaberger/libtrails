@@ -3,11 +3,10 @@
 from typing import Optional
 from collections import defaultdict
 
-import igraph as ig
 import leidenalg
 
 from .database import get_db, update_topic_cluster
-from .topic_graph import build_topic_graph, get_graph_stats
+from .topic_graph import build_topic_graph
 
 
 def cluster_topics(
@@ -229,7 +228,6 @@ def label_cluster_with_llm(cluster_id: int, model: str = "gemma3:4b") -> Optiona
         A descriptive label for the cluster
     """
     import subprocess
-    import json
 
     topics = get_cluster_topics(cluster_id)
     if not topics:
