@@ -72,6 +72,77 @@ def status():
 
 
 @main.command()
+@click.option('--ipad', '-i', default=None, help='iPad MapleRead server URL (e.g., http://192.168.1.124:8082)')
+@click.option('--dry-run', is_flag=True, help='Show what would be added without making changes')
+@click.option('--skip-index', is_flag=True, help='Add books to database but skip indexing')
+@click.option('--model', '-m', default=DEFAULT_MODEL, help='Ollama model for indexing new books')
+@click.option('--save-url', is_flag=True, help='Save the iPad URL to config for future use')
+def sync(ipad: str, dry_run: bool, skip_index: bool, model: str, save_url: bool):
+    """Sync new books from iPad MapleRead library."""
+    from .sync import sync_ipad_library
+    from .config import get_ipad_url, set_ipad_url
+
+    # Get iPad URL from argument or config
+    if not ipad:
+        ipad = get_ipad_url()
+        if not ipad:
+            console.print("[red]Error:[/red] No iPad URL provided.")
+            console.print("Use: [cyan]libtrails sync --ipad http://192.168.1.124:8082[/cyan]")
+            console.print("Or save a default: [cyan]libtrails sync --ipad <url> --save-url[/cyan]")
+            return
+
+    # Save URL if requested
+    if save_url:
+        set_ipad_url(ipad)
+        console.print(f"[green]Saved iPad URL to ~/.libtrails/config.yaml[/green]")
+
+    console.print(f"\n[bold]Syncing from iPad[/bold]: {ipad}")
+
+    if dry_run:
+        console.print("[yellow]Dry run mode - no changes will be made[/yellow]\n")
+
+    def progress_callback(message: str):
+        console.print(f"  {message}")
+
+    try:
+        result = sync_ipad_library(
+            ipad_url=ipad,
+            dry_run=dry_run,
+            skip_index=skip_index,
+            progress_callback=progress_callback
+        )
+    except ConnectionError as e:
+        console.print(f"\n[red]Error:[/red] {e}")
+        console.print("[dim]Make sure MapleRead server is running on iPad[/dim]")
+        return
+
+    # Show results
+    console.print("\n[bold]Sync Summary[/bold]")
+    table = Table()
+    table.add_column("Metric", style="cyan")
+    table.add_column("Value", style="green")
+
+    table.add_row("Books on iPad", str(result['total_on_ipad']))
+    table.add_row("New books found", str(result['new_books']))
+    table.add_row("Matched to Calibre", str(result['matched_to_calibre']))
+    table.add_row("Added to database", str(result['added_to_db']))
+
+    console.print(table)
+
+    if dry_run and result.get('new_book_titles'):
+        console.print("\n[bold]New books that would be added:[/bold]")
+        for title in result['new_book_titles'][:20]:
+            console.print(f"  • {title}")
+        if len(result['new_book_titles']) > 20:
+            console.print(f"  ... and {len(result['new_book_titles']) - 20} more")
+
+    # Offer to index new books
+    if not dry_run and not skip_index and result.get('books_to_index'):
+        console.print(f"\n[bold]{len(result['books_to_index'])} new books ready to index[/bold]")
+        console.print(f"Run: [cyan]libtrails index --all --model {model}[/cyan]")
+
+
+@main.command()
 @click.argument('book_id', type=int, required=False)
 @click.option('--title', '-t', help='Search by title')
 @click.option('--all', 'index_all', is_flag=True, help='Index all books')
