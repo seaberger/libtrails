@@ -7,7 +7,13 @@ from html import unescape
 from typing import Optional
 
 from .config import DEFAULT_MODEL
-from .database import get_calibre_db, get_db
+from .database import (
+    get_calibre_db,
+    get_db,
+    migrate_raw_topics_to_normalized,
+    get_topics_without_embeddings,
+    save_topic_embedding,
+)
 
 # Regex pattern for parsing book entries from MapleRead HTML
 BOOK_PATTERN = re.compile(
@@ -389,6 +395,76 @@ def sync_ipad_library(
         indexed = batch_result['successful']
         index_failed = batch_result.get('failed_details', [])
 
+    # Run post-processing pipeline if any books were indexed
+    post_processing_stats = {}
+    if indexed > 0:
+        if progress_callback:
+            progress_callback("Running post-processing pipeline...")
+
+        # Step 7: Normalize topics
+        if progress_callback:
+            progress_callback("  Normalizing topics...")
+        migrated = migrate_raw_topics_to_normalized()
+        post_processing_stats['topics_normalized'] = migrated
+
+        # Step 8: Generate embeddings
+        if progress_callback:
+            progress_callback("  Generating embeddings...")
+
+        from .embeddings import embed_texts, embedding_to_bytes, get_model
+
+        topics = get_topics_without_embeddings()
+        if topics:
+            get_model()  # Pre-load model
+            labels = [t["label"] for t in topics]
+            topic_ids = [t["id"] for t in topics]
+
+            batch_size = 64
+            for i in range(0, len(labels), batch_size):
+                batch_labels = labels[i:i + batch_size]
+                batch_ids = topic_ids[i:i + batch_size]
+                embeddings = embed_texts(batch_labels)
+                for topic_id, embedding in zip(batch_ids, embeddings):
+                    save_topic_embedding(topic_id, embedding_to_bytes(embedding))
+
+            post_processing_stats['topics_embedded'] = len(topics)
+
+            # Build vector index
+            from .vector_search import get_vec_db, rebuild_vector_index
+            conn = get_vec_db()
+            vector_count = rebuild_vector_index(conn)
+            conn.close()
+            post_processing_stats['vectors_indexed'] = vector_count
+        else:
+            post_processing_stats['topics_embedded'] = 0
+
+        # Step 9: Deduplicate
+        if progress_callback:
+            progress_callback("  Deduplicating topics...")
+
+        from .deduplication import deduplicate_topics
+        dedupe_result = deduplicate_topics(threshold=0.85, dry_run=False)
+        post_processing_stats['topics_merged'] = dedupe_result.get('topics_merged', 0)
+
+        # Step 10-11: Compute co-occurrences and build graph
+        if progress_callback:
+            progress_callback("  Computing topic co-occurrences...")
+
+        from .topic_graph import compute_cooccurrences
+        cooccur_stats = compute_cooccurrences()
+        post_processing_stats['cooccurrence_pairs'] = cooccur_stats.get('cooccurrence_pairs', 0)
+
+        # Step 12: Cluster topics
+        if progress_callback:
+            progress_callback("  Clustering topics...")
+
+        from .clustering import cluster_topics
+        cluster_result = cluster_topics()
+        if "error" not in cluster_result:
+            post_processing_stats['num_clusters'] = cluster_result.get('num_clusters', 0)
+        else:
+            post_processing_stats['cluster_error'] = cluster_result.get('error')
+
     result = {
         "total_on_ipad": len(scraped_books),
         "new_books": len(new_books),
@@ -397,7 +473,8 @@ def sync_ipad_library(
         "indexed": indexed,
         "index_failed": len(index_failed),
         "dry_run": False,
-        "books_to_index": books_to_index
+        "books_to_index": books_to_index,
+        **post_processing_stats
     }
 
     return result
