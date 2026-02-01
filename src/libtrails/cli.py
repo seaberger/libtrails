@@ -109,6 +109,7 @@ def sync(ipad: str, dry_run: bool, skip_index: bool, model: str, save_url: bool)
             ipad_url=ipad,
             dry_run=dry_run,
             skip_index=skip_index,
+            model=model,
             progress_callback=progress_callback
         )
     except ConnectionError as e:
@@ -127,6 +128,11 @@ def sync(ipad: str, dry_run: bool, skip_index: bool, model: str, save_url: bool)
     table.add_row("Matched to Calibre", str(result['matched_to_calibre']))
     table.add_row("Added to database", str(result['added_to_db']))
 
+    if not skip_index and not dry_run:
+        table.add_row("Indexed", str(result.get('indexed', 0)))
+        if result.get('index_failed', 0) > 0:
+            table.add_row("Index failed", str(result['index_failed']))
+
     console.print(table)
 
     if dry_run and result.get('new_book_titles'):
@@ -136,8 +142,12 @@ def sync(ipad: str, dry_run: bool, skip_index: bool, model: str, save_url: bool)
         if len(result['new_book_titles']) > 20:
             console.print(f"  ... and {len(result['new_book_titles']) - 20} more")
 
-    # Offer to index new books
-    if not dry_run and not skip_index and result.get('books_to_index'):
+    # Summary message for indexing
+    if not dry_run and result.get('indexed', 0) > 0:
+        console.print(f"\n[green]Successfully indexed {result['indexed']} new books![/green]")
+
+    # If there are unindexed books (skip_index was used or indexing failed)
+    if not dry_run and skip_index and result.get('books_to_index'):
         console.print(f"\n[bold]{len(result['books_to_index'])} new books ready to index[/bold]")
         console.print(f"Run: [cyan]libtrails index --all --model {model}[/cyan]")
 

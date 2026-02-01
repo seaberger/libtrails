@@ -1,15 +1,13 @@
 """iPad library sync functionality."""
 
 import re
-import json
+import time
 import urllib.request
 from html import unescape
-from pathlib import Path
 from typing import Optional
-import time
 
-from .config import IPAD_DB_PATH, CALIBRE_DB_PATH, CALIBRE_LIBRARY_PATH
-from .database import get_db, get_calibre_db
+from .config import DEFAULT_MODEL
+from .database import get_calibre_db, get_db
 
 
 def scrape_ipad_library(base_url: str, progress_callback: Optional[callable] = None) -> list[dict]:
@@ -269,6 +267,7 @@ def sync_ipad_library(
     ipad_url: str,
     dry_run: bool = False,
     skip_index: bool = False,
+    model: str = DEFAULT_MODEL,
     progress_callback: Optional[callable] = None
 ) -> dict:
     """
@@ -327,12 +326,41 @@ def sync_ipad_library(
                 'title': book['title']
             })
 
+    # Index new books if requested
+    indexed = 0
+    index_failed = []
+
+    if books_to_index and not skip_index:
+        if progress_callback:
+            progress_callback(f"Indexing {len(books_to_index)} new books...")
+
+        from .indexer import index_book
+
+        for i, book_info in enumerate(books_to_index):
+            if progress_callback:
+                progress_callback(f"Indexing {i+1}/{len(books_to_index)}: {book_info['title'][:40]}...")
+
+            try:
+                result = index_book(
+                    book_info['id'],
+                    model=model,
+                    progress_callback=None  # Use parent callback instead
+                )
+
+                if result.success:
+                    indexed += 1
+                elif result.error:
+                    index_failed.append((book_info['id'], result.error))
+            except Exception as e:
+                index_failed.append((book_info['id'], str(e)))
+
     result = {
         "total_on_ipad": len(scraped_books),
         "new_books": len(new_books),
         "matched_to_calibre": matched,
         "added_to_db": added,
-        "indexed": 0,
+        "indexed": indexed,
+        "index_failed": len(index_failed),
         "dry_run": False,
         "books_to_index": books_to_index
     }
