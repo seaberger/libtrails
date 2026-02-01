@@ -334,25 +334,23 @@ def sync_ipad_library(
         if progress_callback:
             progress_callback(f"Indexing {len(books_to_index)} new books...")
 
-        from .indexer import index_book
+        from .indexer import index_books_batch
 
-        for i, book_info in enumerate(books_to_index):
+        def book_progress(current, total, result):
             if progress_callback:
-                progress_callback(f"Indexing {i+1}/{len(books_to_index)}: {book_info['title'][:40]}...")
+                status = "✓" if result.success else ("⊘" if result.skipped else "✗")
+                progress_callback(f"  [{current}/{total}] {status} {result.book_id}")
 
-            try:
-                result = index_book(
-                    book_info['id'],
-                    model=model,
-                    progress_callback=None  # Use parent callback instead
-                )
+        book_ids = [b['id'] for b in books_to_index]
+        batch_result = index_books_batch(
+            book_ids,
+            model=model,
+            progress_callback=progress_callback,
+            book_callback=book_progress,
+        )
 
-                if result.success:
-                    indexed += 1
-                elif result.error:
-                    index_failed.append((book_info['id'], result.error))
-            except Exception as e:
-                index_failed.append((book_info['id'], str(e)))
+        indexed = batch_result['successful']
+        index_failed = batch_result.get('failed_details', [])
 
     result = {
         "total_on_ipad": len(scraped_books),
