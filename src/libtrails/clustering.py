@@ -6,7 +6,15 @@ from typing import Optional
 
 import leidenalg
 
-from .config import COOCCURRENCE_MIN_COUNT, EMBEDDING_EDGE_THRESHOLD, PMI_MIN_THRESHOLD
+from .config import (
+    CLUSTER_KNN_K,
+    CLUSTER_MODE,
+    CLUSTER_PARTITION_TYPE,
+    CLUSTER_RESOLUTION,
+    COOCCURRENCE_MIN_COUNT,
+    EMBEDDING_EDGE_THRESHOLD,
+    PMI_MIN_THRESHOLD,
+)
 from .database import get_db, update_topic_cluster
 
 
@@ -23,11 +31,11 @@ def _log_memory(label: str):
 
 def cluster_topics(
     min_cluster_size: int = 3,
-    resolution: float = 1.0,
-    mode: str = "cooccurrence",
-    partition_type: str = "modularity",
+    resolution: float = None,
+    mode: str = None,
+    partition_type: str = None,
     cooccurrence_min: int = None,
-    knn_k: int = 10,
+    knn_k: int = None,
 ) -> dict:
     """
     Cluster topics using the Leiden algorithm.
@@ -44,6 +52,16 @@ def cluster_topics(
         Statistics about the clustering
     """
     from .topic_graph import build_topic_graph, build_topic_graph_cooccurrence_only
+
+    # Apply config defaults for None parameters
+    if mode is None:
+        mode = CLUSTER_MODE
+    if partition_type is None:
+        partition_type = CLUSTER_PARTITION_TYPE
+    if resolution is None:
+        resolution = CLUSTER_RESOLUTION
+    if knn_k is None:
+        knn_k = CLUSTER_KNN_K
 
     # Determine co-occurrence threshold
     min_cooccur = cooccurrence_min if cooccurrence_min is not None else COOCCURRENCE_MIN_COUNT

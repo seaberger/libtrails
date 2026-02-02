@@ -953,32 +953,32 @@ def process():
 @click.option(
     "--mode",
     type=click.Choice(["cooccurrence", "knn", "full"]),
-    default="cooccurrence",
-    help="Graph construction mode: cooccurrence (fast), knn (balanced), full (slow)",
+    default=None,
+    help="Graph construction mode (default: knn)",
 )
 @click.option(
     "--partition-type",
     type=click.Choice(["modularity", "surprise", "cpm"]),
-    default="modularity",
-    help="Leiden partition type: modularity (fastest), surprise, cpm (tunable)",
+    default=None,
+    help="Leiden partition type (default: cpm)",
 )
 @click.option(
     "--min-cooccur",
     type=int,
     default=None,
-    help="Minimum co-occurrence count for edges (default: 5)",
+    help="Minimum co-occurrence count for edges (default: 2)",
 )
 @click.option(
     "--resolution",
     type=float,
-    default=1.0,
-    help="Resolution parameter for CPM partition type (higher = more clusters)",
+    default=None,
+    help="Resolution for CPM partition (default: 0.001, lower = fewer clusters)",
 )
 @click.option(
     "--knn-k",
     type=int,
-    default=10,
-    help="Number of neighbors for k-NN mode",
+    default=None,
+    help="Number of neighbors for k-NN mode (default: 10)",
 )
 @click.option(
     "--skip-cooccur",
@@ -988,15 +988,17 @@ def process():
 def cluster(mode, partition_type, min_cooccur, resolution, knn_k, skip_cooccur):
     """Run topic clustering with configurable options.
 
+    Defaults are optimized for ~300-400 coherent topic clusters.
+
     Examples:
-        libtrails cluster                              # Quick: cooccurrence only
-        libtrails cluster --mode knn --knn-k 10        # Balanced: add k-NN edges
-        libtrails cluster --partition-type cpm --resolution 0.01
-        libtrails cluster --skip-cooccur               # Skip co-occurrence recompute
+        libtrails cluster                              # Use optimized defaults
+        libtrails cluster --skip-cooccur               # Reuse existing co-occurrences
+        libtrails cluster --resolution 0.0005          # Fewer, larger clusters (~170)
+        libtrails cluster --mode cooccurrence          # Fast, sparse clustering
     """
     from .clustering import cluster_topics
-    from .topic_graph import compute_cooccurrences
     from .database import get_db
+    from .topic_graph import compute_cooccurrences
 
     console.print(f"[bold]Running clustering (mode={mode}, partition={partition_type})...[/bold]\n")
 
@@ -1021,7 +1023,7 @@ def cluster(mode, partition_type, min_cooccur, resolution, knn_k, skip_cooccur):
             cooccur_stats = compute_cooccurrences()
             console.print(f"  [green]Found {cooccur_stats['cooccurrence_pairs']} co-occurrence pairs[/green]")
         else:
-            console.print(f"[bold cyan]Step 1/2: Using existing co-occurrences[/bold cyan]")
+            console.print("[bold cyan]Step 1/2: Using existing co-occurrences[/bold cyan]")
             console.print(f"  [green]Found {cooccur_count} existing co-occurrence pairs[/green]")
     else:
         console.print("[bold cyan]Step 1/2: Computing co-occurrences[/bold cyan]")

@@ -72,6 +72,12 @@ EMBEDDING_DIMENSION = 384
 DEDUP_SIMILARITY_THRESHOLD = 0.85
 
 # Graph/clustering settings
-EMBEDDING_EDGE_THRESHOLD = 0.7  # Raised from 0.5 to reduce graph density
-COOCCURRENCE_MIN_COUNT = 5      # Raised from 2 to reduce graph density
+EMBEDDING_EDGE_THRESHOLD = 0.7  # For full mode only
+COOCCURRENCE_MIN_COUNT = 2      # Lowered for better connectivity
 PMI_MIN_THRESHOLD = 0.0
+
+# Clustering defaults (optimized for ~300-400 coherent clusters)
+CLUSTER_MODE = "knn"            # "cooccurrence", "knn", or "full"
+CLUSTER_KNN_K = 10              # k neighbors for knn mode
+CLUSTER_PARTITION_TYPE = "cpm"  # "modularity", "surprise", or "cpm"
+CLUSTER_RESOLUTION = 0.001      # Resolution for CPM (lower = fewer clusters)
