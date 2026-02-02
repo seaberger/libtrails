@@ -3,6 +3,7 @@
 from collections import defaultdict
 
 import numpy as np
+from rich.progress import Progress, SpinnerColumn, TextColumn, BarColumn, TaskProgressColumn
 
 from .database import get_db, get_topic_embeddings
 from .embeddings import bytes_to_embedding, cosine_similarity_matrix
@@ -38,7 +39,7 @@ class UnionFind:
         return dict(result)
 
 
-def find_duplicate_groups(threshold: float = 0.85) -> list[list[dict]]:
+def find_duplicate_groups(threshold: float = 0.85, show_progress: bool = True) -> list[list[dict]]:
     """
     Find groups of topics that should be merged based on embedding similarity.
 
@@ -49,6 +50,7 @@ def find_duplicate_groups(threshold: float = 0.85) -> list[list[dict]]:
 
     Args:
         threshold: Cosine similarity threshold for merging (0.85 = very similar)
+        show_progress: Whether to show progress bars
 
     Returns:
         List of groups, where each group is a list of topic dicts
@@ -60,22 +62,46 @@ def find_duplicate_groups(threshold: float = 0.85) -> list[list[dict]]:
         return []
 
     topic_ids = [t[0] for t in topic_data]
-    embeddings = np.array([bytes_to_embedding(t[1]) for t in topic_data])
+    
+    with Progress(
+        SpinnerColumn(),
+        TextColumn("[progress.description]{task.description}"),
+        BarColumn(),
+        TaskProgressColumn(),
+        disable=not show_progress,
+    ) as progress:
+        # Convert embeddings with progress
+        embed_task = progress.add_task("Converting embeddings...", total=len(topic_data))
+        embeddings_list = []
+        for t in topic_data:
+            embeddings_list.append(bytes_to_embedding(t[1]))
+            progress.advance(embed_task)
+        embeddings = np.array(embeddings_list)
 
-    # Build index mapping topic_id -> array index
-    id_to_idx = {tid: idx for idx, tid in enumerate(topic_ids)}
+        # Build index mapping topic_id -> array index
+        id_to_idx = {tid: idx for idx, tid in enumerate(topic_ids)}
 
-    # Compute similarity matrix
-    sim_matrix = cosine_similarity_matrix(embeddings)
+        # Compute similarity matrix
+        progress.add_task("Computing similarity matrix...", total=None)
+        sim_matrix = cosine_similarity_matrix(embeddings)
 
-    # Use Union-Find to group similar topics (initial pass)
-    n = len(topic_ids)
-    uf = UnionFind(n)
+        # Use Union-Find to group similar topics (initial pass)
+        n = len(topic_ids)
+        uf = UnionFind(n)
 
-    for i in range(n):
-        for j in range(i + 1, n):
-            if sim_matrix[i, j] >= threshold:
-                uf.union(i, j)
+        # Calculate total pairs for progress
+        total_pairs = n * (n - 1) // 2
+        pair_task = progress.add_task("Finding similar pairs...", total=total_pairs)
+        
+        pairs_checked = 0
+        for i in range(n):
+            for j in range(i + 1, n):
+                if sim_matrix[i, j] >= threshold:
+                    uf.union(i, j)
+                pairs_checked += 1
+                if pairs_checked % 100000 == 0:  # Update every 100k pairs
+                    progress.update(pair_task, completed=pairs_checked)
+        progress.update(pair_task, completed=total_pairs)
 
     # Get groups and fetch topic details
     groups = uf.groups()
