@@ -1,5 +1,7 @@
 """Leiden clustering for hierarchical topic organization."""
 
+import os
+import sys
 from collections import defaultdict
 from typing import Optional
 
@@ -7,6 +9,17 @@ import leidenalg
 
 from .database import get_db, update_topic_cluster
 from .topic_graph import build_topic_graph
+
+
+def _log_memory(label: str):
+    """Log current memory usage for debugging OOM issues."""
+    try:
+        import resource
+        # Get memory in MB
+        mem_mb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / (1024 * 1024)
+        print(f"  [{label}] Memory: {mem_mb:.0f} MB", file=sys.stderr)
+    except Exception:
+        pass  # Not available on all platforms
 
 
 def cluster_topics(
@@ -23,15 +36,22 @@ def cluster_topics(
     Returns:
         Statistics about the clustering
     """
+    _log_memory("Before build_topic_graph")
     g = build_topic_graph()
+    _log_memory(f"After build_topic_graph: {g.vcount()} nodes, {g.ecount()} edges")
+    
     if g.vcount() == 0:
         return {"error": "No topics in graph"}
 
+    print(f"  Running Leiden on graph with {g.vcount()} nodes and {g.ecount()} edges...")
+    _log_memory("Before Leiden")
+    
     # Run Leiden clustering with Surprise (recommended for topic clustering)
     partition = leidenalg.find_partition(
         g,
         leidenalg.SurpriseVertexPartition,
     )
+    _log_memory("After Leiden")
 
     # Assign cluster IDs to topics
     cluster_sizes = defaultdict(int)

@@ -72,6 +72,6 @@ EMBEDDING_DIMENSION = 384
 DEDUP_SIMILARITY_THRESHOLD = 0.85
 
 # Graph/clustering settings
-EMBEDDING_EDGE_THRESHOLD = 0.5
-COOCCURRENCE_MIN_COUNT = 2
+EMBEDDING_EDGE_THRESHOLD = 0.7  # Raised from 0.5 to reduce graph density
+COOCCURRENCE_MIN_COUNT = 5      # Raised from 2 to reduce graph density
 PMI_MIN_THRESHOLD = 0.0
