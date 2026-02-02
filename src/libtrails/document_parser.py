@@ -37,12 +37,30 @@ def extract_text_from_epub(epub_path: Path) -> str:
 
         # Get all HTML/XML content files (sorted for consistent ordering)
         for name in sorted(zf.namelist()):
-            if name.endswith(('.xhtml', '.html', '.htm', '.xml')) and 'toc' not in name.lower() and 'ncx' not in name.lower() and 'opf' not in name.lower():
-                content_files.append(name)
+            if not name.endswith(('.xhtml', '.html', '.htm', '.xml')):
+                continue
+            # Skip TOC, NCX, and OPF files by checking filename (not full path)
+            filename = name.split('/')[-1].lower()
+            if filename.startswith('toc') or '.ncx' in filename or '.opf' in filename:
+                continue
+            content_files.append(name)
 
         for name in content_files:
             try:
                 content = zf.read(name).decode('utf-8', errors='ignore')
+                # Strip XML namespaces that break selectolax parsing
+                # (e.g., xmlns:epub="http://www.idpf.org/2007/ops" causes empty text extraction)
+                content = re.sub(r'\s+xmlns(?::[a-zA-Z]+)?="[^"]*"', '', content)
+                # Convert XHTML self-closing tags to proper HTML
+                # (e.g., <title/> becomes <title></title> - void elements excluded)
+                void_elements = {'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 
+                                'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'}
+                def fix_self_closing(match):
+                    tag = match.group(1).lower()
+                    if tag in void_elements:
+                        return match.group(0)  # Keep void elements as-is
+                    return f'<{match.group(1)}{match.group(2)}></{match.group(1)}>'
+                content = re.sub(r'<([a-zA-Z][a-zA-Z0-9]*)([^>]*)/>', fix_self_closing, content)
                 tree = HTMLParser(content)
 
                 # Remove non-content elements
