@@ -980,16 +980,23 @@ def process():
     default=10,
     help="Number of neighbors for k-NN mode",
 )
-def cluster(mode, partition_type, min_cooccur, resolution, knn_k):
+@click.option(
+    "--skip-cooccur",
+    is_flag=True,
+    help="Skip co-occurrence computation (use existing data)",
+)
+def cluster(mode, partition_type, min_cooccur, resolution, knn_k, skip_cooccur):
     """Run topic clustering with configurable options.
 
     Examples:
         libtrails cluster                              # Quick: cooccurrence only
         libtrails cluster --mode knn --knn-k 10        # Balanced: add k-NN edges
         libtrails cluster --partition-type cpm --resolution 0.01
+        libtrails cluster --skip-cooccur               # Skip co-occurrence recompute
     """
     from .clustering import cluster_topics
     from .topic_graph import compute_cooccurrences
+    from .database import get_db
 
     console.print(f"[bold]Running clustering (mode={mode}, partition={partition_type})...[/bold]\n")
 
@@ -1001,10 +1008,25 @@ def cluster(mode, partition_type, min_cooccur, resolution, knn_k):
 
     console.print(f"[dim]Found {stats['topics_with_embeddings']} topics with embeddings[/dim]\n")
 
-    # Compute co-occurrences
-    console.print("[bold cyan]Step 1/2: Computing co-occurrences[/bold cyan]")
-    cooccur_stats = compute_cooccurrences()
-    console.print(f"  [green]Found {cooccur_stats['cooccurrence_pairs']} co-occurrence pairs[/green]")
+    # Compute or check co-occurrences
+    if skip_cooccur:
+        # Check if co-occurrences exist
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM topic_cooccurrences")
+            cooccur_count = cursor.fetchone()[0]
+
+        if cooccur_count == 0:
+            console.print("[yellow]Warning: No co-occurrences found. Computing now...[/yellow]")
+            cooccur_stats = compute_cooccurrences()
+            console.print(f"  [green]Found {cooccur_stats['cooccurrence_pairs']} co-occurrence pairs[/green]")
+        else:
+            console.print(f"[bold cyan]Step 1/2: Using existing co-occurrences[/bold cyan]")
+            console.print(f"  [green]Found {cooccur_count} existing co-occurrence pairs[/green]")
+    else:
+        console.print("[bold cyan]Step 1/2: Computing co-occurrences[/bold cyan]")
+        cooccur_stats = compute_cooccurrences()
+        console.print(f"  [green]Found {cooccur_stats['cooccurrence_pairs']} co-occurrence pairs[/green]")
 
     # Run clustering
     console.print("\n[bold cyan]Step 2/2: Clustering topics[/bold cyan]")
