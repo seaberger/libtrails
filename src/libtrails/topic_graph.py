@@ -6,6 +6,7 @@ from collections import defaultdict
 import igraph as ig
 import numpy as np
 
+from .config import EMBEDDING_EDGE_THRESHOLD, COOCCURRENCE_MIN_COUNT, PMI_MIN_THRESHOLD
 from .database import get_all_topics, get_db, get_topic_embeddings, save_cooccurrence
 from .embeddings import bytes_to_embedding
 
@@ -185,7 +186,11 @@ def get_related_topics(topic_label: str, limit: int = 10) -> list[dict]:
     Returns:
         List of related topics with connection info
     """
-    g = build_topic_graph()
+    g = build_topic_graph(
+        embedding_threshold=EMBEDDING_EDGE_THRESHOLD,
+        cooccurrence_min=COOCCURRENCE_MIN_COUNT,
+        pmi_min=PMI_MIN_THRESHOLD,
+    )
     if g.vcount() == 0:
         return []
 
@@ -223,6 +228,10 @@ def get_related_topics(topic_label: str, limit: int = 10) -> list[dict]:
 
 def export_graph_gml(output_path: str) -> str:
     """Export the topic graph to GML format for visualization."""
-    g = build_topic_graph()
+    g = build_topic_graph(
+        embedding_threshold=EMBEDDING_EDGE_THRESHOLD,
+        cooccurrence_min=COOCCURRENCE_MIN_COUNT,
+        pmi_min=PMI_MIN_THRESHOLD,
+    )
     g.write_gml(output_path)
     return output_path

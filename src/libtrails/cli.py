@@ -978,5 +978,39 @@ def process():
     console.print(f"\n[dim]Final stats: {stats['normalized_topics']} topics, {stats['topics_with_embeddings']} embedded, {stats['clustered_topics']} clustered[/dim]")
 
 
+@main.command()
+def cluster():
+    """Run only the clustering step (skip embeddings and deduplication)."""
+    from .clustering import cluster_topics
+    from .topic_graph import compute_cooccurrences
+
+    console.print("[bold]Running clustering only...[/bold]\n")
+
+    # Check if embeddings exist
+    stats = get_indexing_status()
+    if stats['topics_with_embeddings'] == 0:
+        console.print("[red]Error: No topic embeddings found. Run 'libtrails process' first.[/red]")
+        return
+
+    console.print(f"[dim]Found {stats['topics_with_embeddings']} topics with embeddings[/dim]\n")
+
+    # Compute co-occurrences
+    console.print("[bold cyan]Step 1/2: Computing co-occurrences[/bold cyan]")
+    cooccur_stats = compute_cooccurrences()
+    console.print(f"  [green]Found {cooccur_stats['cooccurrence_pairs']} co-occurrence pairs[/green]")
+
+    # Run clustering
+    console.print("\n[bold cyan]Step 2/2: Clustering topics[/bold cyan]")
+    console.print("  Running Leiden clustering...")
+    cluster_result = cluster_topics()
+    if "error" not in cluster_result:
+        console.print(f"  [green]Created {cluster_result['num_clusters']} clusters[/green]")
+        console.print(f"  [dim]Quality score: {cluster_result['modularity']:.4f}[/dim]")
+    else:
+        console.print(f"  [red]Error: {cluster_result['error']}[/red]")
+
+    console.print("\n[bold green]Clustering complete![/bold green]")
+
+
 if __name__ == '__main__':
     main()

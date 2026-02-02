@@ -7,6 +7,7 @@ from typing import Optional
 
 import leidenalg
 
+from .config import EMBEDDING_EDGE_THRESHOLD, COOCCURRENCE_MIN_COUNT, PMI_MIN_THRESHOLD
 from .database import get_db, update_topic_cluster
 from .topic_graph import build_topic_graph
 
@@ -37,7 +38,11 @@ def cluster_topics(
         Statistics about the clustering
     """
     _log_memory("Before build_topic_graph")
-    g = build_topic_graph()
+    g = build_topic_graph(
+        embedding_threshold=EMBEDDING_EDGE_THRESHOLD,
+        cooccurrence_min=COOCCURRENCE_MIN_COUNT,
+        pmi_min=PMI_MIN_THRESHOLD,
+    )
     _log_memory(f"After build_topic_graph: {g.vcount()} nodes, {g.ecount()} edges")
     
     if g.vcount() == 0:
@@ -207,7 +212,11 @@ def recursive_cluster(
     Returns:
         Statistics about the recursive clustering
     """
-    g = build_topic_graph()
+    g = build_topic_graph(
+        embedding_threshold=EMBEDDING_EDGE_THRESHOLD,
+        cooccurrence_min=COOCCURRENCE_MIN_COUNT,
+        pmi_min=PMI_MIN_THRESHOLD,
+    )
     if g.vcount() == 0:
         return {"error": "No topics in graph"}
 
