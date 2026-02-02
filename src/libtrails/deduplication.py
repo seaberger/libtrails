@@ -197,18 +197,54 @@ def merge_topic_group(group: list[dict], dry_run: bool = False) -> dict:
                 (dup["id"],)
             )
 
-            # Update cooccurrences
+            # Handle cooccurrences - merge counts for conflicts, then delete duplicates
+            # First, update cooccurrences where canonical doesn't already have a relationship
+            # For topic1_id updates
             cursor.execute("""
                 UPDATE topic_cooccurrences
                 SET topic1_id = ?
                 WHERE topic1_id = ?
-            """, (canonical["id"], dup["id"]))
+                AND NOT EXISTS (
+                    SELECT 1 FROM topic_cooccurrences tc2
+                    WHERE tc2.topic1_id = ? AND tc2.topic2_id = topic_cooccurrences.topic2_id
+                )
+            """, (canonical["id"], dup["id"], canonical["id"]))
 
+            # For topic2_id updates
             cursor.execute("""
                 UPDATE topic_cooccurrences
                 SET topic2_id = ?
                 WHERE topic2_id = ?
-            """, (canonical["id"], dup["id"]))
+                AND NOT EXISTS (
+                    SELECT 1 FROM topic_cooccurrences tc2
+                    WHERE tc2.topic1_id = topic_cooccurrences.topic1_id AND tc2.topic2_id = ?
+                )
+            """, (canonical["id"], dup["id"], canonical["id"]))
+
+            # Add counts from duplicate's cooccurrences to canonical's existing ones
+            cursor.execute("""
+                UPDATE topic_cooccurrences
+                SET count = count + COALESCE((
+                    SELECT count FROM topic_cooccurrences dup_co
+                    WHERE dup_co.topic1_id = ? AND dup_co.topic2_id = topic_cooccurrences.topic2_id
+                ), 0)
+                WHERE topic1_id = ?
+            """, (dup["id"], canonical["id"]))
+
+            cursor.execute("""
+                UPDATE topic_cooccurrences
+                SET count = count + COALESCE((
+                    SELECT count FROM topic_cooccurrences dup_co
+                    WHERE dup_co.topic1_id = topic_cooccurrences.topic1_id AND dup_co.topic2_id = ?
+                ), 0)
+                WHERE topic2_id = ?
+            """, (dup["id"], canonical["id"]))
+
+            # Delete all remaining cooccurrences for the duplicate topic
+            cursor.execute(
+                "DELETE FROM topic_cooccurrences WHERE topic1_id = ? OR topic2_id = ?",
+                (dup["id"], dup["id"])
+            )
 
             # Add occurrence count to canonical
             cursor.execute("""
