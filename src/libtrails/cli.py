@@ -744,36 +744,7 @@ def dedupe(threshold: float, dry_run: bool):
         console.print(f"[green]Merged {result['topics_merged']} topics into {result['duplicate_groups']} canonical topics[/green]")
 
 
-@main.command()
-def cluster():
-    """Cluster topics using Leiden algorithm."""
-    from .clustering import cluster_topics, get_cluster_summary
-    from .topic_graph import compute_cooccurrences
 
-    console.print("[bold]Step 1: Computing topic co-occurrences...[/bold]")
-    with console.status("Analyzing chunk co-occurrences..."):
-        cooccur_stats = compute_cooccurrences()
-    console.print(f"[green]Found {cooccur_stats['cooccurrence_pairs']} co-occurrence pairs[/green]")
-
-    console.print("\n[bold]Step 2: Clustering topics...[/bold]")
-    with console.status("Running Leiden clustering..."):
-        result = cluster_topics()
-
-    if "error" in result:
-        console.print(f"[red]Error: {result['error']}[/red]")
-        return
-
-    console.print(f"[green]Created {result['num_clusters']} clusters from {result['total_topics']} topics[/green]")
-    console.print(f"[dim]Modularity: {result['modularity']:.4f}[/dim]")
-    console.print(f"[dim]Cluster sizes: {result['min_cluster_size']} - {result['max_cluster_size']}[/dim]")
-
-    # Show cluster summary
-    console.print("\n[bold]Top clusters:[/bold]")
-    summary = get_cluster_summary()[:10]
-
-    for cluster in summary:
-        topics_str = ", ".join([t["label"] for t in cluster["top_topics"][:3]])
-        console.print(f"  [cyan]Cluster {cluster['cluster_id']}[/cyan] ({cluster['size']} topics): {topics_str}")
 
 
 @main.command()
@@ -979,12 +950,48 @@ def process():
 
 
 @main.command()
-def cluster():
-    """Run only the clustering step (skip embeddings and deduplication)."""
+@click.option(
+    "--mode",
+    type=click.Choice(["cooccurrence", "knn", "full"]),
+    default="cooccurrence",
+    help="Graph construction mode: cooccurrence (fast), knn (balanced), full (slow)",
+)
+@click.option(
+    "--partition-type",
+    type=click.Choice(["modularity", "surprise", "cpm"]),
+    default="modularity",
+    help="Leiden partition type: modularity (fastest), surprise, cpm (tunable)",
+)
+@click.option(
+    "--min-cooccur",
+    type=int,
+    default=None,
+    help="Minimum co-occurrence count for edges (default: 5)",
+)
+@click.option(
+    "--resolution",
+    type=float,
+    default=1.0,
+    help="Resolution parameter for CPM partition type (higher = more clusters)",
+)
+@click.option(
+    "--knn-k",
+    type=int,
+    default=10,
+    help="Number of neighbors for k-NN mode",
+)
+def cluster(mode, partition_type, min_cooccur, resolution, knn_k):
+    """Run topic clustering with configurable options.
+
+    Examples:
+        libtrails cluster                              # Quick: cooccurrence only
+        libtrails cluster --mode knn --knn-k 10        # Balanced: add k-NN edges
+        libtrails cluster --partition-type cpm --resolution 0.01
+    """
     from .clustering import cluster_topics
     from .topic_graph import compute_cooccurrences
 
-    console.print("[bold]Running clustering only...[/bold]\n")
+    console.print(f"[bold]Running clustering (mode={mode}, partition={partition_type})...[/bold]\n")
 
     # Check if embeddings exist
     stats = get_indexing_status()
@@ -1001,11 +1008,25 @@ def cluster():
 
     # Run clustering
     console.print("\n[bold cyan]Step 2/2: Clustering topics[/bold cyan]")
-    console.print("  Running Leiden clustering...")
-    cluster_result = cluster_topics()
+    cluster_result = cluster_topics(
+        mode=mode,
+        partition_type=partition_type,
+        cooccurrence_min=min_cooccur,
+        resolution=resolution,
+        knn_k=knn_k,
+    )
+
     if "error" not in cluster_result:
-        console.print(f"  [green]Created {cluster_result['num_clusters']} clusters[/green]")
+        console.print(f"\n  [green]Created {cluster_result['num_clusters']} clusters[/green]")
         console.print(f"  [dim]Quality score: {cluster_result['modularity']:.4f}[/dim]")
+        console.print(f"  [dim]Edges: {cluster_result['total_edges']} ({cluster_result.get('edge_types', {})})[/dim]")
+        console.print(f"  [dim]Time: {cluster_result.get('leiden_time_seconds', 0):.1f}s[/dim]")
+
+        # Show top clusters
+        if cluster_result.get("cluster_sizes"):
+            console.print("\n  [bold]Top clusters by size:[/bold]")
+            for cluster_id, size in list(cluster_result["cluster_sizes"].items())[:5]:
+                console.print(f"    Cluster {cluster_id}: {size} topics")
     else:
         console.print(f"  [red]Error: {cluster_result['error']}[/red]")
 

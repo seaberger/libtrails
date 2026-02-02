@@ -9,10 +9,10 @@ class TestClusterTopics:
     """Tests for Leiden clustering."""
 
     @patch('libtrails.clustering.update_topic_cluster')
-    @patch('libtrails.clustering.build_topic_graph')
     @patch('libtrails.clustering.leidenalg')
-    def test_cluster_returns_stats(self, mock_leidenalg, mock_build_graph, mock_update_cluster):
-        """Test that clustering returns statistics."""
+    @patch('libtrails.topic_graph.build_topic_graph_cooccurrence_only')
+    def test_cluster_returns_stats_cooccurrence_mode(self, mock_build_graph, mock_leidenalg, mock_update_cluster):
+        """Test that clustering returns statistics in cooccurrence mode."""
         from libtrails.clustering import cluster_topics
         import igraph as ig
 
@@ -20,32 +20,152 @@ class TestClusterTopics:
         mock_graph = ig.Graph()
         mock_graph.add_vertices(10)
         mock_graph.vs["topic_id"] = list(range(10))
+        mock_graph.add_edges([(0, 1), (1, 2), (2, 3)])
+        mock_graph.es["type"] = ["cooccurrence", "cooccurrence", "cooccurrence"]
         mock_build_graph.return_value = mock_graph
 
         # Mock partition
         mock_partition = MagicMock()
         mock_partition.membership = [0, 0, 1, 1, 2, 2, 2, 3, 3, 3]
-        mock_partition.modularity = 0.5
+        mock_partition.quality.return_value = 0.5
         mock_leidenalg.find_partition.return_value = mock_partition
+        mock_leidenalg.ModularityVertexPartition = MagicMock()
 
-        result = cluster_topics()
+        result = cluster_topics(mode="cooccurrence")
 
         assert 'num_clusters' in result
         assert 'total_topics' in result
         assert 'modularity' in result
+        assert result['mode'] == 'cooccurrence'
 
-    @patch('libtrails.clustering.build_topic_graph')
-    def test_handles_empty_graph(self, mock_build_graph):
-        """Test handling of empty graph."""
+    @patch('libtrails.clustering.update_topic_cluster')
+    @patch('libtrails.clustering.leidenalg')
+    @patch('libtrails.topic_graph.build_topic_graph_cooccurrence_only')
+    def test_cluster_with_partition_types(self, mock_build_graph, mock_leidenalg, mock_update_cluster):
+        """Test clustering with different partition types."""
+        from libtrails.clustering import cluster_topics
+        import igraph as ig
+
+        mock_graph = ig.Graph()
+        mock_graph.add_vertices(5)
+        mock_graph.vs["topic_id"] = list(range(5))
+        mock_graph.add_edges([(0, 1), (1, 2)])
+        mock_graph.es["type"] = ["cooccurrence", "cooccurrence"]
+        mock_build_graph.return_value = mock_graph
+
+        mock_partition = MagicMock()
+        mock_partition.membership = [0, 0, 1, 1, 1]
+        mock_partition.quality.return_value = 0.4
+        mock_leidenalg.find_partition.return_value = mock_partition
+        mock_leidenalg.ModularityVertexPartition = MagicMock()
+        mock_leidenalg.SurpriseVertexPartition = MagicMock()
+        mock_leidenalg.CPMVertexPartition = MagicMock()
+
+        # Test modularity (default)
+        result = cluster_topics(partition_type="modularity")
+        assert result['partition_type'] == 'modularity'
+
+        # Test surprise
+        result = cluster_topics(partition_type="surprise")
+        assert result['partition_type'] == 'surprise'
+
+        # Test CPM with resolution
+        result = cluster_topics(partition_type="cpm", resolution=0.5)
+        assert result['partition_type'] == 'cpm'
+
+    @patch('libtrails.clustering.update_topic_cluster')
+    @patch('libtrails.clustering.leidenalg')
+    @patch('libtrails.topic_graph.build_topic_graph_knn')
+    def test_cluster_with_knn_mode(self, mock_build_graph, mock_leidenalg, mock_update_cluster):
+        """Test clustering with k-NN mode."""
+        from libtrails.clustering import cluster_topics
+        import igraph as ig
+
+        mock_graph = ig.Graph()
+        mock_graph.add_vertices(5)
+        mock_graph.vs["topic_id"] = list(range(5))
+        mock_graph.add_edges([(0, 1), (1, 2), (2, 3)])
+        mock_graph.es["type"] = ["embedding_knn", "embedding_knn", "cooccurrence"]
+        mock_build_graph.return_value = mock_graph
+
+        mock_partition = MagicMock()
+        mock_partition.membership = [0, 0, 1, 1, 1]
+        mock_partition.quality.return_value = 0.4
+        mock_leidenalg.find_partition.return_value = mock_partition
+        mock_leidenalg.ModularityVertexPartition = MagicMock()
+
+        result = cluster_topics(mode="knn", knn_k=10)
+
+        assert result['mode'] == 'knn'
+        assert 'edge_types' in result
+        assert 'embedding_knn' in result['edge_types']
+
+    @patch('libtrails.topic_graph.build_topic_graph_cooccurrence_only')
+    def test_handles_empty_graph_cooccurrence(self, mock_build_graph):
+        """Test handling of empty graph in cooccurrence mode."""
         from libtrails.clustering import cluster_topics
         import igraph as ig
 
         mock_graph = ig.Graph()  # Empty graph
         mock_build_graph.return_value = mock_graph
 
-        result = cluster_topics()
+        result = cluster_topics(mode="cooccurrence")
 
-        assert 'error' in result or result['total_topics'] == 0
+        assert 'error' in result
+
+    def test_invalid_mode_returns_error(self):
+        """Test that invalid mode returns an error."""
+        from libtrails.clustering import cluster_topics
+
+        result = cluster_topics(mode="invalid_mode")
+
+        assert 'error' in result
+        assert 'Unknown mode' in result['error']
+
+    @patch('libtrails.topic_graph.build_topic_graph_cooccurrence_only')
+    def test_invalid_partition_type_returns_error(self, mock_build_graph):
+        """Test that invalid partition type returns an error."""
+        from libtrails.clustering import cluster_topics
+        import igraph as ig
+
+        mock_graph = ig.Graph()
+        mock_graph.add_vertices(5)
+        mock_graph.vs["topic_id"] = list(range(5))
+        mock_graph.add_edges([(0, 1)])
+        mock_graph.es["type"] = ["cooccurrence"]
+        mock_build_graph.return_value = mock_graph
+
+        result = cluster_topics(partition_type="invalid_partition")
+
+        assert 'error' in result
+        assert 'Unknown partition type' in result['error']
+
+    @patch('libtrails.clustering.update_topic_cluster')
+    @patch('libtrails.clustering.leidenalg')
+    @patch('libtrails.topic_graph.build_topic_graph_cooccurrence_only')
+    def test_cluster_with_custom_cooccurrence_min(self, mock_build_graph, mock_leidenalg, mock_update_cluster):
+        """Test clustering with custom cooccurrence minimum."""
+        from libtrails.clustering import cluster_topics
+        import igraph as ig
+
+        mock_graph = ig.Graph()
+        mock_graph.add_vertices(5)
+        mock_graph.vs["topic_id"] = list(range(5))
+        mock_graph.add_edges([(0, 1)])
+        mock_graph.es["type"] = ["cooccurrence"]
+        mock_build_graph.return_value = mock_graph
+
+        mock_partition = MagicMock()
+        mock_partition.membership = [0, 0, 1, 1, 1]
+        mock_partition.quality.return_value = 0.4
+        mock_leidenalg.find_partition.return_value = mock_partition
+        mock_leidenalg.ModularityVertexPartition = MagicMock()
+
+        result = cluster_topics(cooccurrence_min=10)
+        # Verify the custom value was passed
+        mock_build_graph.assert_called_once()
+        call_args = mock_build_graph.call_args
+        assert call_args.kwargs.get('cooccurrence_min') == 10
 
 
 class TestGetClusterSummary:

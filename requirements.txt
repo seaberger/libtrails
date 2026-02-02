@@ -7,6 +7,7 @@ numpy>=1.24.0
 sqlite-vec>=0.1.0
 python-igraph>=0.11.0
 leidenalg>=0.10.0
+scikit-learn>=1.0.0
 docling>=2.71.0
 pyyaml>=6.0
 

@@ -1,15 +1,13 @@
 """Leiden clustering for hierarchical topic organization."""
 
-import os
 import sys
 from collections import defaultdict
 from typing import Optional
 
 import leidenalg
 
-from .config import EMBEDDING_EDGE_THRESHOLD, COOCCURRENCE_MIN_COUNT, PMI_MIN_THRESHOLD
+from .config import COOCCURRENCE_MIN_COUNT, EMBEDDING_EDGE_THRESHOLD, PMI_MIN_THRESHOLD
 from .database import get_db, update_topic_cluster
-from .topic_graph import build_topic_graph
 
 
 def _log_memory(label: str):
@@ -26,37 +24,104 @@ def _log_memory(label: str):
 def cluster_topics(
     min_cluster_size: int = 3,
     resolution: float = 1.0,
+    mode: str = "cooccurrence",
+    partition_type: str = "modularity",
+    cooccurrence_min: int = None,
+    knn_k: int = 10,
 ) -> dict:
     """
-    Cluster topics using the Leiden algorithm with Surprise quality function.
+    Cluster topics using the Leiden algorithm.
 
     Args:
         min_cluster_size: Minimum size for a cluster
-        resolution: Resolution parameter (higher = more clusters)
+        resolution: Resolution parameter for CPM (higher = more clusters)
+        mode: Graph construction mode - "cooccurrence", "knn", or "full"
+        partition_type: Leiden partition type - "modularity", "surprise", or "cpm"
+        cooccurrence_min: Minimum co-occurrence count (overrides config if set)
+        knn_k: Number of nearest neighbors for k-NN mode
 
     Returns:
         Statistics about the clustering
     """
+    from .topic_graph import build_topic_graph, build_topic_graph_cooccurrence_only
+
+    # Determine co-occurrence threshold
+    min_cooccur = cooccurrence_min if cooccurrence_min is not None else COOCCURRENCE_MIN_COUNT
+
     _log_memory("Before build_topic_graph")
-    g = build_topic_graph(
-        embedding_threshold=EMBEDDING_EDGE_THRESHOLD,
-        cooccurrence_min=COOCCURRENCE_MIN_COUNT,
-        pmi_min=PMI_MIN_THRESHOLD,
-    )
+
+    # Build graph based on mode
+    if mode == "cooccurrence":
+        g = build_topic_graph_cooccurrence_only(
+            cooccurrence_min=min_cooccur,
+            pmi_min=PMI_MIN_THRESHOLD,
+        )
+    elif mode == "full":
+        g = build_topic_graph(
+            embedding_threshold=EMBEDDING_EDGE_THRESHOLD,
+            cooccurrence_min=min_cooccur,
+            pmi_min=PMI_MIN_THRESHOLD,
+        )
+    elif mode == "knn":
+        # k-NN mode: co-occurrence + k-nearest neighbor embedding edges
+        from .topic_graph import build_topic_graph_knn
+        g = build_topic_graph_knn(
+            cooccurrence_min=min_cooccur,
+            pmi_min=PMI_MIN_THRESHOLD,
+            k=knn_k,
+        )
+    else:
+        return {"error": f"Unknown mode: {mode}. Use 'cooccurrence', 'knn', or 'full'"}
+
     _log_memory(f"After build_topic_graph: {g.vcount()} nodes, {g.ecount()} edges")
-    
+
     if g.vcount() == 0:
         return {"error": "No topics in graph"}
 
-    print(f"  Running Leiden on graph with {g.vcount()} nodes and {g.ecount()} edges...")
+    # Log graph statistics
+    edge_type_counts = {}
+    if g.ecount() > 0:
+        for t in g.es["type"]:
+            edge_type_counts[t] = edge_type_counts.get(t, 0) + 1
+
+    print(f"  Graph: {g.vcount()} nodes, {g.ecount()} edges")
+    for edge_type, count in edge_type_counts.items():
+        print(f"    - {edge_type}: {count}")
+
+    # Select partition type
+    partition_types = {
+        "modularity": leidenalg.ModularityVertexPartition,
+        "surprise": leidenalg.SurpriseVertexPartition,
+        "cpm": leidenalg.CPMVertexPartition,
+    }
+
+    if partition_type not in partition_types:
+        return {"error": f"Unknown partition type: {partition_type}. Use 'modularity', 'surprise', or 'cpm'"}
+
+    partition_class = partition_types[partition_type]
+
+    print(f"  Running Leiden ({partition_type}) on graph...")
     _log_memory("Before Leiden")
-    
-    # Run Leiden clustering with Surprise (recommended for topic clustering)
-    partition = leidenalg.find_partition(
-        g,
-        leidenalg.SurpriseVertexPartition,
-    )
+
+    # Run Leiden clustering
+    import time
+    start_time = time.time()
+
+    if partition_type == "cpm":
+        partition = leidenalg.find_partition(
+            g,
+            partition_class,
+            resolution_parameter=resolution,
+        )
+    else:
+        partition = leidenalg.find_partition(
+            g,
+            partition_class,
+        )
+
+    elapsed = time.time() - start_time
     _log_memory("After Leiden")
+    print(f"  Leiden completed in {elapsed:.1f}s")
 
     # Assign cluster IDs to topics
     cluster_sizes = defaultdict(int)
@@ -72,8 +137,13 @@ def cluster_topics(
 
     return {
         "total_topics": g.vcount(),
+        "total_edges": g.ecount(),
+        "edge_types": edge_type_counts,
         "num_clusters": len(set(partition.membership)),
         "modularity": partition.quality(),
+        "partition_type": partition_type,
+        "mode": mode,
+        "leiden_time_seconds": elapsed,
         "cluster_sizes": dict(sorted(cluster_sizes.items(), key=lambda x: x[1], reverse=True)[:10]),
         "min_cluster_size": min(cluster_sizes.values()) if cluster_sizes else 0,
         "max_cluster_size": max(cluster_sizes.values()) if cluster_sizes else 0,
@@ -212,6 +282,8 @@ def recursive_cluster(
     Returns:
         Statistics about the recursive clustering
     """
+    from .topic_graph import build_topic_graph
+
     g = build_topic_graph(
         embedding_threshold=EMBEDDING_EDGE_THRESHOLD,
         cooccurrence_min=COOCCURRENCE_MIN_COUNT,

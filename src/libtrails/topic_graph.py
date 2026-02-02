@@ -6,7 +6,7 @@ from collections import defaultdict
 import igraph as ig
 import numpy as np
 
-from .config import EMBEDDING_EDGE_THRESHOLD, COOCCURRENCE_MIN_COUNT, PMI_MIN_THRESHOLD
+from .config import COOCCURRENCE_MIN_COUNT, EMBEDDING_EDGE_THRESHOLD, PMI_MIN_THRESHOLD
 from .database import get_all_topics, get_db, get_topic_embeddings, save_cooccurrence
 from .embeddings import bytes_to_embedding
 
@@ -150,6 +150,177 @@ def build_topic_graph(
                     weight = row[3] if row[3] else math.log(row[2] + 1)
                     weights.append(float(max(0.1, weight)))
                     edge_types.append("cooccurrence")
+
+    if edges:
+        g.add_edges(edges)
+        g.es["weight"] = weights
+        g.es["type"] = edge_types
+
+    return g
+
+
+def build_topic_graph_cooccurrence_only(
+    cooccurrence_min: int = 5,
+    pmi_min: float = 0.0,
+) -> ig.Graph:
+    """
+    Build a topic graph using ONLY co-occurrence edges.
+
+    This is much faster than the full graph builder because it skips
+    the O(n²) embedding similarity computation.
+
+    Args:
+        cooccurrence_min: Minimum co-occurrence count for edges
+        pmi_min: Minimum PMI for co-occurrence edges
+
+    Returns:
+        igraph.Graph with topic nodes and weighted edges
+    """
+    topics = get_all_topics()
+    if not topics:
+        return ig.Graph()
+
+    topic_ids = [t["id"] for t in topics]
+    topic_labels = [t["label"] for t in topics]
+    id_to_idx = {tid: idx for idx, tid in enumerate(topic_ids)}
+
+    # Create graph with topic nodes
+    g = ig.Graph()
+    g.add_vertices(len(topics))
+    g.vs["topic_id"] = topic_ids
+    g.vs["label"] = topic_labels
+    g.vs["occurrence_count"] = [t["occurrence_count"] for t in topics]
+    g.vs["cluster_id"] = [t.get("cluster_id") for t in topics]
+
+    edges = []
+    weights = []
+    edge_types = []
+
+    # Add edges from co-occurrence only
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT topic1_id, topic2_id, count, pmi
+            FROM topic_cooccurrences
+            WHERE count >= ? AND (pmi >= ? OR pmi IS NULL)
+        """, (cooccurrence_min, pmi_min))
+
+        for row in cursor.fetchall():
+            t1, t2 = row[0], row[1]
+            if t1 in id_to_idx and t2 in id_to_idx:
+                idx1, idx2 = id_to_idx[t1], id_to_idx[t2]
+                edges.append((idx1, idx2))
+                # Weight by normalized PMI (or count if PMI is null)
+                weight = row[3] if row[3] else math.log(row[2] + 1)
+                weights.append(float(max(0.1, weight)))
+                edge_types.append("cooccurrence")
+
+    if edges:
+        g.add_edges(edges)
+        g.es["weight"] = weights
+        g.es["type"] = edge_types
+
+    return g
+
+
+def build_topic_graph_knn(
+    cooccurrence_min: int = 5,
+    pmi_min: float = 0.0,
+    k: int = 10,
+) -> ig.Graph:
+    """
+    Build a topic graph with co-occurrence edges plus k-nearest neighbor embedding edges.
+
+    This adds a controlled number of embedding-based edges (k per topic) instead of
+    the O(n²) all-pairs comparison in the full graph.
+
+    Args:
+        cooccurrence_min: Minimum co-occurrence count for edges
+        pmi_min: Minimum PMI for co-occurrence edges
+        k: Number of nearest neighbors per topic
+
+    Returns:
+        igraph.Graph with topic nodes and weighted edges
+    """
+    from sklearn.neighbors import NearestNeighbors
+
+    topics = get_all_topics()
+    if not topics:
+        return ig.Graph()
+
+    topic_ids = [t["id"] for t in topics]
+    topic_labels = [t["label"] for t in topics]
+    id_to_idx = {tid: idx for idx, tid in enumerate(topic_ids)}
+
+    # Create graph with topic nodes
+    g = ig.Graph()
+    g.add_vertices(len(topics))
+    g.vs["topic_id"] = topic_ids
+    g.vs["label"] = topic_labels
+    g.vs["occurrence_count"] = [t["occurrence_count"] for t in topics]
+    g.vs["cluster_id"] = [t.get("cluster_id") for t in topics]
+
+    edges = []
+    weights = []
+    edge_types = []
+    edge_set = set()  # Track added edges to avoid duplicates
+
+    # Add edges from co-occurrence
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT topic1_id, topic2_id, count, pmi
+            FROM topic_cooccurrences
+            WHERE count >= ? AND (pmi >= ? OR pmi IS NULL)
+        """, (cooccurrence_min, pmi_min))
+
+        for row in cursor.fetchall():
+            t1, t2 = row[0], row[1]
+            if t1 in id_to_idx and t2 in id_to_idx:
+                idx1, idx2 = id_to_idx[t1], id_to_idx[t2]
+                edge_key = (min(idx1, idx2), max(idx1, idx2))
+                if edge_key not in edge_set:
+                    edges.append((idx1, idx2))
+                    weight = row[3] if row[3] else math.log(row[2] + 1)
+                    weights.append(float(max(0.1, weight)))
+                    edge_types.append("cooccurrence")
+                    edge_set.add(edge_key)
+
+    # Add k-NN embedding edges
+    topic_data = get_topic_embeddings()
+    if topic_data:
+        topic_id_to_embedding = {t[0]: bytes_to_embedding(t[1]) for t in topic_data}
+        embedding_ids = [t[0] for t in topic_data]
+        embeddings = np.array([topic_id_to_embedding[tid] for tid in embedding_ids])
+
+        # Build k-NN index with cosine metric
+        # Note: sklearn's NearestNeighbors uses "cosine" which is (1 - cosine_similarity)
+        knn = NearestNeighbors(n_neighbors=min(k + 1, len(embeddings)), metric="cosine")
+        knn.fit(embeddings)
+
+        # Query k nearest neighbors for each topic
+        distances, indices = knn.kneighbors(embeddings)
+
+        for i, topic_id in enumerate(embedding_ids):
+            if topic_id not in id_to_idx:
+                continue
+            idx1 = id_to_idx[topic_id]
+
+            # Skip self (first neighbor) and add edges to k nearest
+            for j in range(1, len(indices[i])):
+                neighbor_topic_id = embedding_ids[indices[i][j]]
+                if neighbor_topic_id not in id_to_idx:
+                    continue
+                idx2 = id_to_idx[neighbor_topic_id]
+
+                edge_key = (min(idx1, idx2), max(idx1, idx2))
+                if edge_key not in edge_set:
+                    # Convert distance to similarity: sim = 1 - distance
+                    similarity = 1.0 - distances[i][j]
+                    edges.append((idx1, idx2))
+                    weights.append(float(max(0.1, similarity)))
+                    edge_types.append("embedding_knn")
+                    edge_set.add(edge_key)
 
     if edges:
         g.add_edges(edges)

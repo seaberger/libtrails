@@ -216,3 +216,203 @@ class TestGetGraphStats:
 
         assert stats['nodes'] == 0
         assert stats['edges'] == 0
+
+
+class TestBuildTopicGraphCooccurrenceOnly:
+    """Tests for the fast co-occurrence-only graph builder."""
+
+    @patch('libtrails.topic_graph.get_all_topics')
+    @patch('libtrails.topic_graph.get_db')
+    def test_returns_igraph(self, mock_db, mock_get_topics):
+        """Test that cooccurrence-only build returns an igraph Graph."""
+        from libtrails.topic_graph import build_topic_graph_cooccurrence_only
+        import igraph as ig
+
+        mock_get_topics.return_value = [
+            {'id': 1, 'label': 'topic1', 'occurrence_count': 10, 'cluster_id': None},
+            {'id': 2, 'label': 'topic2', 'occurrence_count': 5, 'cluster_id': None},
+        ]
+
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = []
+        mock_conn.cursor.return_value = mock_cursor
+        mock_db.return_value.__enter__ = MagicMock(return_value=mock_conn)
+        mock_db.return_value.__exit__ = MagicMock(return_value=False)
+
+        graph = build_topic_graph_cooccurrence_only()
+
+        assert isinstance(graph, ig.Graph)
+        assert graph.vcount() == 2
+
+    @patch('libtrails.topic_graph.get_all_topics')
+    @patch('libtrails.topic_graph.get_db')
+    def test_adds_cooccurrence_edges(self, mock_db, mock_get_topics):
+        """Test that cooccurrence edges are added correctly."""
+        from libtrails.topic_graph import build_topic_graph_cooccurrence_only
+
+        mock_get_topics.return_value = [
+            {'id': 1, 'label': 'topic1', 'occurrence_count': 10, 'cluster_id': None},
+            {'id': 2, 'label': 'topic2', 'occurrence_count': 5, 'cluster_id': None},
+            {'id': 3, 'label': 'topic3', 'occurrence_count': 3, 'cluster_id': None},
+        ]
+
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        # Return cooccurrence data: (topic1_id, topic2_id, count, pmi)
+        mock_cursor.fetchall.return_value = [
+            (1, 2, 10, 0.5),
+            (2, 3, 5, 0.3),
+        ]
+        mock_conn.cursor.return_value = mock_cursor
+        mock_db.return_value.__enter__ = MagicMock(return_value=mock_conn)
+        mock_db.return_value.__exit__ = MagicMock(return_value=False)
+
+        graph = build_topic_graph_cooccurrence_only(cooccurrence_min=3)
+
+        assert graph.ecount() == 2
+        assert all(t == "cooccurrence" for t in graph.es["type"])
+
+    @patch('libtrails.topic_graph.get_all_topics')
+    @patch('libtrails.topic_graph.get_db')
+    def test_respects_min_count_threshold(self, mock_db, mock_get_topics):
+        """Test that minimum count threshold is respected."""
+        from libtrails.topic_graph import build_topic_graph_cooccurrence_only
+
+        mock_get_topics.return_value = [
+            {'id': 1, 'label': 'topic1', 'occurrence_count': 10, 'cluster_id': None},
+            {'id': 2, 'label': 'topic2', 'occurrence_count': 5, 'cluster_id': None},
+        ]
+
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        # This cooccurrence has count=2, below threshold of 5
+        mock_cursor.fetchall.return_value = []
+        mock_conn.cursor.return_value = mock_cursor
+        mock_db.return_value.__enter__ = MagicMock(return_value=mock_conn)
+        mock_db.return_value.__exit__ = MagicMock(return_value=False)
+
+        graph = build_topic_graph_cooccurrence_only(cooccurrence_min=5)
+
+        # No edges should be added
+        assert graph.ecount() == 0
+
+
+class TestBuildTopicGraphKNN:
+    """Tests for the k-NN embedding graph builder."""
+
+    @patch('libtrails.topic_graph.get_topic_embeddings')
+    @patch('libtrails.topic_graph.get_all_topics')
+    @patch('libtrails.topic_graph.get_db')
+    def test_returns_igraph(self, mock_db, mock_get_topics, mock_get_embeddings):
+        """Test that k-NN build returns an igraph Graph."""
+        from libtrails.topic_graph import build_topic_graph_knn
+        import igraph as ig
+
+        mock_get_topics.return_value = [
+            {'id': 1, 'label': 'topic1', 'occurrence_count': 10, 'cluster_id': None},
+            {'id': 2, 'label': 'topic2', 'occurrence_count': 5, 'cluster_id': None},
+            {'id': 3, 'label': 'topic3', 'occurrence_count': 3, 'cluster_id': None},
+        ]
+
+        # Create normalized embeddings (unit vectors for cosine similarity)
+        emb1 = np.array([1.0, 0.0, 0.0], dtype=np.float32)
+        emb2 = np.array([0.9, 0.4, 0.0], dtype=np.float32)
+        emb2 = emb2 / np.linalg.norm(emb2)
+        emb3 = np.array([0.0, 1.0, 0.0], dtype=np.float32)
+
+        mock_get_embeddings.return_value = [
+            (1, emb1.tobytes()),
+            (2, emb2.tobytes()),
+            (3, emb3.tobytes()),
+        ]
+
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = []
+        mock_conn.cursor.return_value = mock_cursor
+        mock_db.return_value.__enter__ = MagicMock(return_value=mock_conn)
+        mock_db.return_value.__exit__ = MagicMock(return_value=False)
+
+        graph = build_topic_graph_knn(k=2)
+
+        assert isinstance(graph, ig.Graph)
+        assert graph.vcount() == 3
+
+    @patch('libtrails.topic_graph.get_topic_embeddings')
+    @patch('libtrails.topic_graph.get_all_topics')
+    @patch('libtrails.topic_graph.get_db')
+    def test_adds_knn_edges(self, mock_db, mock_get_topics, mock_get_embeddings):
+        """Test that k-NN edges are added."""
+        from libtrails.topic_graph import build_topic_graph_knn
+
+        mock_get_topics.return_value = [
+            {'id': 1, 'label': 'topic1', 'occurrence_count': 10, 'cluster_id': None},
+            {'id': 2, 'label': 'topic2', 'occurrence_count': 5, 'cluster_id': None},
+            {'id': 3, 'label': 'topic3', 'occurrence_count': 3, 'cluster_id': None},
+        ]
+
+        # Normalized embeddings
+        emb1 = np.array([1.0, 0.0, 0.0], dtype=np.float32)
+        emb2 = np.array([0.9, 0.4, 0.0], dtype=np.float32)
+        emb2 = emb2 / np.linalg.norm(emb2)
+        emb3 = np.array([0.0, 1.0, 0.0], dtype=np.float32)
+
+        mock_get_embeddings.return_value = [
+            (1, emb1.tobytes()),
+            (2, emb2.tobytes()),
+            (3, emb3.tobytes()),
+        ]
+
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.fetchall.return_value = []  # No cooccurrence edges
+        mock_conn.cursor.return_value = mock_cursor
+        mock_db.return_value.__enter__ = MagicMock(return_value=mock_conn)
+        mock_db.return_value.__exit__ = MagicMock(return_value=False)
+
+        graph = build_topic_graph_knn(k=2)
+
+        # Should have some k-NN edges
+        assert graph.ecount() > 0
+        # All edges should be embedding_knn type (no cooccurrence data)
+        assert all(t == "embedding_knn" for t in graph.es["type"])
+
+    @patch('libtrails.topic_graph.get_topic_embeddings')
+    @patch('libtrails.topic_graph.get_all_topics')
+    @patch('libtrails.topic_graph.get_db')
+    def test_combines_cooccurrence_and_knn(self, mock_db, mock_get_topics, mock_get_embeddings):
+        """Test that both cooccurrence and k-NN edges are added."""
+        from libtrails.topic_graph import build_topic_graph_knn
+
+        mock_get_topics.return_value = [
+            {'id': 1, 'label': 'topic1', 'occurrence_count': 10, 'cluster_id': None},
+            {'id': 2, 'label': 'topic2', 'occurrence_count': 5, 'cluster_id': None},
+            {'id': 3, 'label': 'topic3', 'occurrence_count': 3, 'cluster_id': None},
+        ]
+
+        emb1 = np.array([1.0, 0.0, 0.0], dtype=np.float32)
+        emb2 = np.array([0.9, 0.4, 0.0], dtype=np.float32)
+        emb2 = emb2 / np.linalg.norm(emb2)
+        emb3 = np.array([0.0, 1.0, 0.0], dtype=np.float32)
+
+        mock_get_embeddings.return_value = [
+            (1, emb1.tobytes()),
+            (2, emb2.tobytes()),
+            (3, emb3.tobytes()),
+        ]
+
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        # Add one cooccurrence edge
+        mock_cursor.fetchall.return_value = [(1, 3, 10, 0.5)]
+        mock_conn.cursor.return_value = mock_cursor
+        mock_db.return_value.__enter__ = MagicMock(return_value=mock_conn)
+        mock_db.return_value.__exit__ = MagicMock(return_value=False)
+
+        graph = build_topic_graph_knn(k=2, cooccurrence_min=5)
+
+        # Should have both edge types
+        edge_types = set(graph.es["type"])
+        assert "cooccurrence" in edge_types
+        assert "embedding_knn" in edge_types
