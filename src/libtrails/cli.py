@@ -1061,5 +1061,31 @@ def cluster(mode, partition_type, min_cooccur, resolution, knn_k, skip_cooccur):
     console.print("\n[bold green]Clustering complete![/bold green]")
 
 
+@main.command()
+@click.option("--host", default="127.0.0.1", help="Host to bind to")
+@click.option("--port", default=8000, type=int, help="Port to bind to")
+@click.option("--reload", is_flag=True, help="Enable auto-reload for development")
+def serve(host: str, port: int, reload: bool):
+    """Start the API server."""
+    try:
+        import uvicorn
+    except ImportError:
+        console.print("[red]Error: uvicorn not installed.[/red]")
+        console.print("Install API dependencies with: [cyan]uv pip install -e '.[api]'[/cyan]")
+        return
+
+    console.print(f"[bold]Starting LibTrails API server...[/bold]")
+    console.print(f"  API: [cyan]http://{host}:{port}/api/v1[/cyan]")
+    console.print(f"  Docs: [cyan]http://{host}:{port}/docs[/cyan]")
+    console.print()
+
+    uvicorn.run(
+        "libtrails.api:app",
+        host=host,
+        port=port,
+        reload=reload,
+    )
+
+
 if __name__ == '__main__':
     main()

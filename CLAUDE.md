@@ -332,7 +332,7 @@ CALIBRE_LIBRARY_PATH = Path.home() / "Calibre_Main_Library"
 CALIBRE_DB_PATH = CALIBRE_LIBRARY_PATH / "metadata.db"
 
 # LLM settings
-DEFAULT_MODEL = "gemma3:27b"
+DEFAULT_MODEL = "gemma3:4b"  # Use 4b for topic extraction (faster, sufficient quality)
 OLLAMA_HOST = "http://localhost:11434"
 
 # Chunking settings

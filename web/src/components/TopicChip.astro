@@ -1,0 +1,29 @@
+---
+interface Props {
+  label: string;
+  count?: number;
+  small?: boolean;
+  href?: string;
+}
+
+const { label, count, small = false, href } = Astro.props;
+
+const Tag = href ? 'a' : 'span';
+const sizeClass = small ? 'text-xs px-2 py-0.5' : 'text-sm px-3 py-1';
+---
+
+<Tag
+  href={href}
+  class:list={[
+    'topic-chip inline-flex items-center gap-1.5',
+    sizeClass,
+    href && 'cursor-pointer',
+  ]}
+>
+  <span>{label}</span>
+  {count !== undefined && (
+    <span class="text-[var(--color-text-muted)] opacity-60">
+      {count}
+    </span>
+  )}
+</Tag>

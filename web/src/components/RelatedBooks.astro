@@ -1,0 +1,51 @@
+---
+import type { RelatedBook } from '../lib/types';
+import BookCover from './BookCover.astro';
+
+interface Props {
+  books: RelatedBook[];
+}
+
+const { books } = Astro.props;
+---
+
+{books.length > 0 && (
+  <section class="mt-8">
+    <h2 class="text-lg font-medium text-[var(--color-text)] mb-4">
+      Related Books
+    </h2>
+    <div class="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2">
+      {books.map(book => (
+        <a
+          href={`/books/${book.id}`}
+          class="flex-shrink-0 group"
+        >
+          <div class="book-cover">
+            <BookCover
+              calibreId={book.calibre_id}
+              title={book.title}
+              size="md"
+            />
+          </div>
+          <div class="mt-2 w-24">
+            <p class="text-xs font-medium text-[var(--color-text)] line-clamp-2 group-hover:text-[var(--color-accent)] transition-colors">
+              {book.title}
+            </p>
+            <p class="text-xs text-[var(--color-text-muted)] mt-0.5">
+              {Math.round(book.similarity * 100)}% match
+            </p>
+          </div>
+        </a>
+      ))}
+    </div>
+  </section>
+)}
+
+<style>
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+</style>

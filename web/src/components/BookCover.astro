@@ -1,0 +1,39 @@
+---
+import { getCoverUrl } from '../lib/api';
+
+interface Props {
+  calibreId: number | null;
+  title: string;
+  class?: string;
+  size?: 'sm' | 'md' | 'lg';
+}
+
+const { calibreId, title, class: className = '', size = 'md' } = Astro.props;
+
+const sizeClasses = {
+  sm: 'w-16 h-24',
+  md: 'w-24 h-36',
+  lg: 'w-32 h-48',
+};
+
+const coverUrl = getCoverUrl(calibreId);
+---
+
+<div class:list={['relative overflow-hidden rounded-sm shadow-md bg-[var(--color-border)]', sizeClasses[size], className]}>
+  {calibreId ? (
+    <img
+      src={coverUrl}
+      alt={`Cover of ${title}`}
+      class="w-full h-full object-cover"
+      loading="lazy"
+      onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';"
+    />
+    <div class="absolute inset-0 flex items-center justify-center text-[var(--color-text-muted)] text-xs text-center p-2 hidden">
+      {title}
+    </div>
+  ) : (
+    <div class="absolute inset-0 flex items-center justify-center text-[var(--color-text-muted)] text-xs text-center p-2">
+      {title}
+    </div>
+  )}
+</div>

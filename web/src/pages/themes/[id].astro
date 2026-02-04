@@ -1,0 +1,56 @@
+---
+// Server-rendered dynamic route
+export const prerender = false;
+
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import BookCard from '../../components/BookCard.astro';
+import TopicChip from '../../components/TopicChip.astro';
+import { getTheme } from '../../lib/api';
+
+const { id } = Astro.params;
+
+if (!id) {
+  return Astro.redirect('/');
+}
+
+const clusterId = parseInt(id, 10);
+
+let theme;
+try {
+  theme = await getTheme(clusterId);
+} catch (e) {
+  return Astro.redirect('/');
+}
+---
+
+<BaseLayout title={theme.label} description={`Browse ${theme.books.length} books in the "${theme.label}" theme`}>
+  <header class="mb-8">
+    <nav class="text-sm text-[var(--color-text-muted)] mb-4">
+      <a href="/" class="hover:text-[var(--color-text)] transition-colors">Themes</a>
+      <span class="mx-2">/</span>
+      <span class="text-[var(--color-text)]">{theme.label}</span>
+    </nav>
+
+    <h1 class="text-2xl font-medium text-[var(--color-text)] mb-2">
+      {theme.label}
+    </h1>
+    <p class="text-[var(--color-text-muted)] mb-4">
+      {theme.books.length} books · {theme.size} topics in this cluster
+    </p>
+
+    <!-- Top topics in this theme -->
+    {theme.topics.length > 0 && (
+      <div class="flex flex-wrap gap-2">
+        {theme.topics.slice(0, 15).map(topic => (
+          <TopicChip label={topic.label} count={topic.count} />
+        ))}
+      </div>
+    )}
+  </header>
+
+  <div class="space-y-3">
+    {theme.books.map(book => (
+      <BookCard book={book} />
+    ))}
+  </div>
+</BaseLayout>

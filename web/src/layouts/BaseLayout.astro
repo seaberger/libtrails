@@ -1,0 +1,54 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+  description?: string;
+}
+
+const { title, description = 'Discover books by themes and topics' } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <title>{title} | LibTrails</title>
+  </head>
+  <body class="min-h-screen bg-[var(--color-bg)]">
+    <!-- Navigation -->
+    <nav class="sticky top-0 z-50 bg-[var(--color-surface)] border-b border-[var(--color-border)]">
+      <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
+        <a href="/" class="text-xl font-medium text-[var(--color-text)] hover:text-[var(--color-accent)] transition-colors">
+          LibTrails
+        </a>
+        <div class="flex items-center gap-6">
+          <a href="/" class="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
+            Themes
+          </a>
+          <a href="/books" class="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
+            All Books
+          </a>
+        </div>
+      </div>
+    </nav>
+
+    <!-- Main content -->
+    <main class="max-w-6xl mx-auto px-6 py-8">
+      <slot />
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-16 border-t border-[var(--color-border)] py-8">
+      <div class="max-w-6xl mx-auto px-6 text-center text-sm text-[var(--color-text-muted)]">
+        <p>LibTrails — Discover trails across your book library</p>
+      </div>
+    </footer>
+  </body>
+</html>

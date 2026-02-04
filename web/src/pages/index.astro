@@ -1,0 +1,25 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import ThemeCard from '../components/ThemeCard.astro';
+import { getThemes } from '../lib/api';
+
+// Fetch themes at build time (SSR) or request time
+const themes = await getThemes(48, 3);
+---
+
+<BaseLayout title="Themes" description="Browse your book library by themes and topics">
+  <header class="mb-8">
+    <h1 class="text-2xl font-medium text-[var(--color-text)] mb-2">
+      Themes
+    </h1>
+    <p class="text-[var(--color-text-muted)]">
+      Discover connections across {themes.length} topic clusters from your library
+    </p>
+  </header>
+
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
+    {themes.map(theme => (
+      <ThemeCard theme={theme} />
+    ))}
+  </div>
+</BaseLayout>

@@ -1,0 +1,108 @@
+@import "tailwindcss";
+
+/* LibTrails Design System - Inspired by trails.pieterma.es */
+
+@theme {
+  /* Warm, book-friendly color palette */
+  --color-bg: #fafaf9;
+  --color-surface: #ffffff;
+  --color-text: #1c1917;
+  --color-text-muted: #78716c;
+  --color-accent: #57534e;
+  --color-border: #e7e5e4;
+
+  /* Semantic colors */
+  --color-primary: #78716c;
+  --color-primary-hover: #57534e;
+}
+
+/* Base styles */
+html {
+  font-family: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  background-color: var(--color-bg);
+  color: var(--color-text);
+}
+
+body {
+  line-height: 1.6;
+}
+
+/* Typography refinements */
+h1, h2, h3, h4 {
+  font-weight: 500;
+  letter-spacing: -0.025em;
+}
+
+/* Card hover effect */
+.card-hover {
+  transition: transform 180ms ease-out, box-shadow 180ms ease-out;
+}
+
+.card-hover:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Book cover 3D effect */
+.book-cover {
+  transition: transform 250ms ease-out;
+  transform-style: preserve-3d;
+}
+
+.book-cover:hover {
+  transform: rotateY(-5deg) translateY(-4px);
+}
+
+/* Stacked covers effect for theme cards */
+.cover-stack {
+  position: relative;
+}
+
+.cover-stack > * {
+  position: absolute;
+  transition: transform 200ms ease-out;
+}
+
+.cover-stack:hover > *:nth-child(1) {
+  transform: translateX(-8px) rotate(-3deg);
+}
+
+.cover-stack:hover > *:nth-child(3) {
+  transform: translateX(8px) rotate(3deg);
+}
+
+/* Topic chip styles */
+.topic-chip {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8125rem;
+  background-color: var(--color-bg);
+  border: 1px solid var(--color-border);
+  border-radius: 9999px;
+  color: var(--color-text-muted);
+  transition: background-color 150ms ease, color 150ms ease;
+}
+
+.topic-chip:hover {
+  background-color: var(--color-border);
+  color: var(--color-text);
+}
+
+/* Scrollbar styling */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-border);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-text-muted);
+}

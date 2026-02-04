@@ -1,0 +1,51 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import BookCard from '../../components/BookCard.astro';
+import { getBooks } from '../../lib/api';
+
+// Get page from URL params
+const url = new URL(Astro.request.url);
+const page = parseInt(url.searchParams.get('page') || '1', 10);
+const pageSize = 50;
+
+const books = await getBooks(page, pageSize, true);
+const hasMore = books.length === pageSize;
+---
+
+<BaseLayout title="All Books" description="Browse all indexed books in your library">
+  <header class="mb-8">
+    <h1 class="text-2xl font-medium text-[var(--color-text)] mb-2">
+      All Books
+    </h1>
+    <p class="text-[var(--color-text-muted)]">
+      Browse indexed books in your library
+    </p>
+  </header>
+
+  <div class="space-y-3">
+    {books.map(book => (
+      <BookCard book={book} />
+    ))}
+  </div>
+
+  <!-- Pagination -->
+  <div class="flex justify-center items-center gap-4 mt-8 pt-8 border-t border-[var(--color-border)]">
+    {page > 1 && (
+      <a
+        href={`/books?page=${page - 1}`}
+        class="px-4 py-2 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] border border-[var(--color-border)] rounded-md transition-colors"
+      >
+        Previous
+      </a>
+    )}
+    <span class="text-sm text-[var(--color-text-muted)]">Page {page}</span>
+    {hasMore && (
+      <a
+        href={`/books?page=${page + 1}`}
+        class="px-4 py-2 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] border border-[var(--color-border)] rounded-md transition-colors"
+      >
+        Next
+      </a>
+    )}
+  </div>
+</BaseLayout>

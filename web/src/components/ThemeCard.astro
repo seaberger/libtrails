@@ -1,0 +1,56 @@
+---
+import type { ThemeSummary } from '../lib/types';
+import BookCover from './BookCover.astro';
+
+interface Props {
+  theme: ThemeSummary;
+}
+
+const { theme } = Astro.props;
+
+// Get up to 3 books for the cover stack
+const stackBooks = theme.sample_books.slice(0, 3);
+---
+
+<a
+  href={`/themes/${theme.cluster_id}`}
+  class="block bg-[var(--color-surface)] rounded-lg p-5 border border-[var(--color-border)] card-hover"
+>
+  <!-- Cover stack -->
+  <div class="relative h-36 mb-4 flex items-center justify-center">
+    <div class="cover-stack flex items-end justify-center" style="width: 120px; height: 140px;">
+      {stackBooks.map((book, index) => (
+        <div
+          class="absolute"
+          style={`
+            z-index: ${3 - index};
+            transform: translateX(${(index - 1) * 20}px) rotate(${(index - 1) * 4}deg);
+          `}
+        >
+          <BookCover
+            calibreId={book.calibre_id}
+            title={book.title}
+            size="md"
+          />
+        </div>
+      ))}
+    </div>
+  </div>
+
+  <!-- Theme info -->
+  <h3 class="font-medium text-[var(--color-text)] text-sm leading-tight mb-1 line-clamp-2">
+    {theme.label}
+  </h3>
+  <p class="text-xs text-[var(--color-text-muted)]">
+    {theme.book_count} books · {theme.size} topics
+  </p>
+</a>
+
+<style>
+  .line-clamp-2 {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+</style>

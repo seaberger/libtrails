@@ -1,0 +1,46 @@
+---
+import type { BookSummary, TopicInfo } from '../lib/types';
+import BookCover from './BookCover.astro';
+import TopicChip from './TopicChip.astro';
+
+interface Props {
+  book: BookSummary;
+  topics?: TopicInfo[];
+  showTopics?: boolean;
+}
+
+const { book, topics = [], showTopics = false } = Astro.props;
+
+// Get top 5 topics to display
+const displayTopics = topics.slice(0, 5);
+---
+
+<a
+  href={`/books/${book.id}`}
+  class="flex gap-4 bg-[var(--color-surface)] rounded-lg p-4 border border-[var(--color-border)] card-hover"
+>
+  <div class="flex-shrink-0 book-cover">
+    <BookCover
+      calibreId={book.calibre_id}
+      title={book.title}
+      size="md"
+    />
+  </div>
+
+  <div class="flex-1 min-w-0">
+    <h3 class="font-medium text-[var(--color-text)] leading-tight mb-1">
+      {book.title}
+    </h3>
+    <p class="text-sm text-[var(--color-text-muted)] mb-3">
+      {book.author}
+    </p>
+
+    {showTopics && displayTopics.length > 0 && (
+      <div class="flex flex-wrap gap-1.5">
+        {displayTopics.map(topic => (
+          <TopicChip label={topic.label} small />
+        ))}
+      </div>
+    )}
+  </div>
+</a>
