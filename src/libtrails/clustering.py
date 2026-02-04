@@ -40,6 +40,170 @@ def _log_memory(label: str) -> float:
         return 0
 
 
+def diagnose_hubs(g: ig.Graph, top_n: int = 50) -> dict:
+    """
+    Analyze hub topics to understand what's creating transitivity problems.
+    
+    Args:
+        g: The topic graph
+        top_n: Number of top hubs to show
+        
+    Returns:
+        Dictionary with degree distribution stats and top hubs
+    """
+    import numpy as np
+    
+    degrees = [(v.index, v['label'], v.degree()) for v in g.vs]
+    degrees.sort(key=lambda x: x[2], reverse=True)
+    
+    all_degrees = [d[2] for d in degrees]
+    
+    stats = {
+        "min": int(min(all_degrees)),
+        "median": int(np.median(all_degrees)),
+        "mean": float(np.mean(all_degrees)),
+        "p95": int(np.percentile(all_degrees, 95)),
+        "p99": int(np.percentile(all_degrees, 99)),
+        "max": int(max(all_degrees)),
+    }
+    
+    top_hubs = [
+        {"label": label, "degree": deg}
+        for idx, label, deg in degrees[:top_n]
+    ]
+    
+    return {
+        "degree_stats": stats,
+        "top_hubs": top_hubs,
+        "total_nodes": g.vcount(),
+        "total_edges": g.ecount(),
+    }
+
+
+def identify_hub_topics(
+    g: ig.Graph,
+    method: str = "degree",
+    percentile: float = 95,
+    generic_patterns: set = None,
+) -> set[int]:
+    """
+    Identify hub topics that should be excluded from clustering.
+    
+    Args:
+        g: The topic graph
+        method: "degree" (by connection count), "generic" (by term patterns), or "both"
+        percentile: Percentile threshold for degree-based hub detection
+        generic_patterns: Set of generic term patterns to match (for "generic" or "both")
+        
+    Returns:
+        Set of node indices identified as hubs
+    """
+    import numpy as np
+    
+    hub_indices = set()
+    
+    if method in ("degree", "both"):
+        degrees = g.degree()
+        threshold = np.percentile(degrees, percentile)
+        
+        for i, d in enumerate(degrees):
+            if d > threshold:
+                hub_indices.add(i)
+        print(f"  Degree hubs (>{threshold:.0f} edges, top {100-percentile}%): {len(hub_indices)}")
+    
+    if method in ("generic", "both"):
+        if generic_patterns is None:
+            # Default generic terms that create false connections
+            generic_patterns = {
+                "relationships", "technology", "society", "culture", 
+                "history", "nature", "life", "death", "love", "war",
+                "family", "work", "home", "money", "power", "time",
+                "people", "world", "change", "future", "past",
+                "furniture", "food", "travel", "art", "music",
+                "communication", "education", "health", "science",
+                "problem", "solution", "idea", "concept", "experience",
+            }
+        
+        generic_count = 0
+        for v in g.vs:
+            label = v["label"].lower() if "label" in v.attributes() else ""
+            if label in generic_patterns:
+                hub_indices.add(v.index)
+                generic_count += 1
+        print(f"  Generic term hubs: {generic_count}")
+    
+    return hub_indices
+
+
+def cluster_without_hubs(
+    g: ig.Graph,
+    hub_indices: set[int],
+    partition_type: str = "cpm",
+    resolution: float = 0.005,
+) -> tuple[dict, leidenalg.VertexPartition]:
+    """
+    Cluster with hub topics removed, then assign hubs to nearest cluster.
+    
+    Args:
+        g: The full topic graph
+        hub_indices: Set of node indices to exclude from clustering
+        partition_type: Leiden partition type
+        resolution: Resolution parameter
+        
+    Returns:
+        Tuple of (assignments dict mapping topic_id -> cluster_id, partition object)
+    """
+    from collections import Counter
+    
+    # Create subgraph without hubs
+    non_hub_indices = [i for i in range(g.vcount()) if i not in hub_indices]
+    subgraph = g.subgraph(non_hub_indices)
+    
+    # Map between subgraph and original indices
+    orig_to_sub = {orig: sub for sub, orig in enumerate(non_hub_indices)}
+    sub_to_orig = {sub: orig for orig, sub in orig_to_sub.items()}
+    
+    print(f"  Clustering {subgraph.vcount()} non-hub topics (excluded {len(hub_indices)} hubs)...")
+    print(f"  Subgraph edges: {subgraph.ecount()} (original: {g.ecount()})")
+    
+    # Cluster the non-hub subgraph
+    partition = _get_partition(subgraph, partition_type, resolution)
+    
+    # Assign clusters to non-hub topics
+    assignments = {}
+    for sub_idx, cluster_id in enumerate(partition.membership):
+        orig_idx = sub_to_orig[sub_idx]
+        topic_id = g.vs[orig_idx]['topic_id']
+        assignments[topic_id] = cluster_id
+    
+    # Assign each hub to its most common neighbor cluster (or -1 for "unclustered")
+    hubs_assigned = 0
+    hubs_orphaned = 0
+    
+    for hub_idx in hub_indices:
+        neighbor_clusters = []
+        for neighbor_idx in g.neighbors(hub_idx):
+            if neighbor_idx in orig_to_sub:
+                sub_idx = orig_to_sub[neighbor_idx]
+                neighbor_clusters.append(partition.membership[sub_idx])
+        
+        hub_topic_id = g.vs[hub_idx]['topic_id']
+        
+        if neighbor_clusters:
+            # Assign to most common neighboring cluster
+            most_common = Counter(neighbor_clusters).most_common(1)[0][0]
+            assignments[hub_topic_id] = most_common
+            hubs_assigned += 1
+        else:
+            # Hub has no non-hub neighbors; mark as unclustered
+            assignments[hub_topic_id] = -1
+            hubs_orphaned += 1
+    
+    print(f"  Assigned {hubs_assigned} hubs to neighboring clusters, {hubs_orphaned} orphaned")
+    
+    return assignments, partition
+
+
 def _get_partition(
     g: ig.Graph,
     partition_type: str,
@@ -98,6 +262,9 @@ def cluster_topics(
     knn_k: int = None,
     dry_run: bool = False,
     sample_size: int = None,
+    remove_hubs: bool = False,
+    hub_percentile: float = 95,
+    hub_method: str = "degree",
 ) -> dict:
     """
     Cluster topics using the Leiden algorithm.
@@ -111,6 +278,9 @@ def cluster_topics(
         knn_k: Number of nearest neighbors for k-NN mode
         dry_run: If True, don't save results to database
         sample_size: If set, only cluster this many topics (for testing)
+        remove_hubs: If True, exclude hub topics from clustering then assign post-hoc
+        hub_percentile: Percentile threshold for hub detection (default 95 = top 5%)
+        hub_method: Hub detection method - "degree", "generic", or "both"
 
     Returns:
         Statistics about the clustering
@@ -188,11 +358,26 @@ def cluster_topics(
     print(f"  Running Leiden ({partition_type}, resolution={resolution}) on graph...")
     _log_memory("Before Leiden")
 
-    # Run Leiden clustering using helper
+    # Run Leiden clustering
     import time
     start_time = time.time()
 
-    partition = _get_partition(g, partition_type, resolution)
+    if remove_hubs:
+        # Hub removal approach: cluster without hubs, then assign hubs post-hoc
+        print(f"\n  [HUB REMOVAL] Identifying hubs (method={hub_method}, percentile={hub_percentile})...")
+        hub_indices = identify_hub_topics(g, method=hub_method, percentile=hub_percentile)
+        
+        assignments, partition = cluster_without_hubs(
+            g, hub_indices, partition_type=partition_type, resolution=resolution
+        )
+        
+        # Build membership list for result calculation
+        membership = [assignments.get(g.vs[i]['topic_id'], -1) for i in range(g.vcount())]
+    else:
+        # Standard clustering
+        partition = _get_partition(g, partition_type, resolution)
+        membership = partition.membership
+        assignments = None
 
     elapsed = time.time() - start_time
     mem_after_leiden = _log_memory("After Leiden")
@@ -200,15 +385,16 @@ def cluster_topics(
 
     # Calculate cluster sizes
     cluster_sizes = defaultdict(int)
-    for cluster_id in partition.membership:
-        cluster_sizes[cluster_id] += 1
+    for cluster_id in membership:
+        if cluster_id >= 0:  # Skip unclustered (-1)
+            cluster_sizes[cluster_id] += 1
 
     # Build result
     result = {
         "total_topics": g.vcount(),
         "total_edges": g.ecount(),
         "edge_types": edge_type_counts,
-        "num_clusters": len(set(partition.membership)),
+        "num_clusters": len(set(c for c in membership if c >= 0)),
         "modularity": partition.quality(),
         "partition_type": partition_type,
         "resolution": resolution,
@@ -219,6 +405,11 @@ def cluster_topics(
         "max_cluster_size": max(cluster_sizes.values()) if cluster_sizes else 0,
         "dry_run": dry_run or (sample_size is not None),
     }
+
+    if remove_hubs:
+        result["hubs_removed"] = len(hub_indices) if hub_indices else 0
+        result["hub_method"] = hub_method
+        result["hub_percentile"] = hub_percentile
 
     # Add memory and scaling estimates for dry runs
     if sample_size and sample_size < full_node_count:
@@ -239,13 +430,19 @@ def cluster_topics(
     # Save results to database (unless dry run)
     if not dry_run and not sample_size:
         with get_db() as conn:
-            for node_idx, cluster_id in enumerate(partition.membership):
-                topic_id = g.vs[node_idx]["topic_id"]
-                update_topic_cluster(topic_id, cluster_id)
+            if remove_hubs and assignments:
+                # Use assignments dict from hub removal
+                for topic_id, cluster_id in assignments.items():
+                    update_topic_cluster(topic_id, cluster_id)
+            else:
+                # Standard membership list
+                for node_idx, cluster_id in enumerate(membership):
+                    topic_id = g.vs[node_idx]["topic_id"]
+                    update_topic_cluster(topic_id, cluster_id)
             conn.commit()
 
         # Update graph vertex attributes
-        g.vs["cluster"] = partition.membership
+        g.vs["cluster"] = membership
     else:
         print(f"\n  [DRY RUN] Skipping database update")
 
@@ -309,6 +506,164 @@ def get_cluster_summary() -> list[dict]:
             })
 
         return clusters
+
+
+def recluster_mega_clusters(
+    size_threshold: int = 1000,
+    sub_resolution: float = 0.05,
+    dry_run: bool = False,
+) -> dict:
+    """
+    Re-cluster only oversized clusters, preserving good smaller clusters.
+
+    This is the fastest path to fixing mega-clusters without re-running
+    the entire clustering pipeline.
+
+    Args:
+        size_threshold: Clusters with more topics than this get re-clustered
+        sub_resolution: Resolution for sub-clustering (higher = more splits)
+        dry_run: If True, don't save changes to database
+
+    Returns:
+        Statistics about the re-clustering
+    """
+    from .topic_graph import build_topic_graph_knn
+
+    _log_memory("Before recluster_mega_clusters")
+
+    # 1. Identify mega-clusters from database
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT cluster_id, COUNT(*) as size
+            FROM topics
+            WHERE cluster_id IS NOT NULL
+            GROUP BY cluster_id
+            HAVING COUNT(*) >= ?
+            ORDER BY size DESC
+        """, (size_threshold,))
+
+        mega_clusters = [(row[0], row[1]) for row in cursor.fetchall()]
+
+    if not mega_clusters:
+        return {
+            "mega_clusters_found": 0,
+            "message": f"No clusters with {size_threshold}+ topics found",
+        }
+
+    print(f"  Found {len(mega_clusters)} mega-clusters to re-cluster:")
+    for cid, size in mega_clusters:
+        print(f"    Cluster {cid}: {size} topics")
+
+    # 2. Build full graph (needed to extract subgraphs with edges)
+    print("\n  Building topic graph...")
+    g = build_topic_graph_knn(
+        cooccurrence_min=COOCCURRENCE_MIN_COUNT,
+        pmi_min=PMI_MIN_THRESHOLD,
+        k=CLUSTER_KNN_K,
+    )
+
+    _log_memory("After build_topic_graph")
+
+    # Create topic_id -> node_idx mapping
+    topic_id_to_idx = {v["topic_id"]: v.index for v in g.vs}
+
+    # 3. Get max existing cluster ID (for new cluster numbering)
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT MAX(cluster_id) FROM topics")
+        max_cluster_id = cursor.fetchone()[0] or 0
+
+    new_cluster_id_start = max_cluster_id + 1
+    new_assignments = {}  # topic_id -> new_cluster_id
+    stats_per_mega = []
+
+    # 4. Re-cluster each mega-cluster
+    for mega_id, mega_size in mega_clusters:
+        print(f"\n  Re-clustering mega-cluster {mega_id} ({mega_size} topics)...")
+
+        # Get topic IDs in this cluster
+        with get_db() as conn:
+            cursor = conn.cursor()
+            cursor.execute("""
+                SELECT id FROM topics WHERE cluster_id = ?
+            """, (mega_id,))
+            mega_topic_ids = [row[0] for row in cursor.fetchall()]
+
+        # Map to graph node indices (some topics might not be in graph)
+        mega_node_indices = [
+            topic_id_to_idx[tid]
+            for tid in mega_topic_ids
+            if tid in topic_id_to_idx
+        ]
+
+        if len(mega_node_indices) < 10:
+            print(f"    Skipping: only {len(mega_node_indices)} topics found in graph")
+            continue
+
+        # Extract subgraph
+        subgraph = g.subgraph(mega_node_indices)
+        print(f"    Subgraph: {subgraph.vcount()} nodes, {subgraph.ecount()} edges")
+
+        if subgraph.ecount() == 0:
+            print(f"    Skipping: no edges in subgraph")
+            continue
+
+        # Run Leiden with higher resolution
+        weights = subgraph.es['weight'] if 'weight' in subgraph.es.attributes() else None
+        sub_partition = leidenalg.find_partition(
+            subgraph,
+            leidenalg.CPMVertexPartition,
+            weights=weights,
+            resolution_parameter=sub_resolution,
+        )
+
+        num_sub_clusters = len(set(sub_partition.membership))
+        print(f"    Split into {num_sub_clusters} sub-clusters")
+
+        # Map sub-cluster assignments back to topic IDs
+        sub_cluster_sizes = defaultdict(int)
+        for sub_idx, sub_cluster in enumerate(sub_partition.membership):
+            original_node_idx = mega_node_indices[sub_idx]
+            topic_id = g.vs[original_node_idx]["topic_id"]
+            new_cluster = new_cluster_id_start + sub_cluster
+            new_assignments[topic_id] = new_cluster
+            sub_cluster_sizes[new_cluster] += 1
+
+        # Update for next mega-cluster
+        new_cluster_id_start += num_sub_clusters
+
+        stats_per_mega.append({
+            "original_cluster_id": mega_id,
+            "original_size": mega_size,
+            "sub_clusters": num_sub_clusters,
+            "largest_sub": max(sub_cluster_sizes.values()) if sub_cluster_sizes else 0,
+        })
+
+    # 5. Update database (unless dry run)
+    if not dry_run and new_assignments:
+        print(f"\n  Updating {len(new_assignments)} topic cluster assignments...")
+        with get_db() as conn:
+            cursor = conn.cursor()
+            for topic_id, new_cluster in new_assignments.items():
+                cursor.execute(
+                    "UPDATE topics SET cluster_id = ? WHERE id = ?",
+                    (new_cluster, topic_id)
+                )
+            conn.commit()
+        print("  Database updated.")
+    elif dry_run:
+        print(f"\n  [DRY RUN] Would update {len(new_assignments)} topics")
+
+    _log_memory("After recluster_mega_clusters")
+
+    return {
+        "mega_clusters_processed": len(mega_clusters),
+        "topics_reassigned": len(new_assignments),
+        "new_clusters_created": new_cluster_id_start - max_cluster_id - 1,
+        "stats_per_mega": stats_per_mega,
+        "dry_run": dry_run,
+    }
 
 
 def get_topic_tree() -> dict:

@@ -470,6 +470,87 @@ def topics(book_id: int, title: str):
         console.print(table)
 
 
+@main.command("book-clusters")
+@click.argument('book_id', type=int, required=False)
+@click.option('--title', '-t', help='Search by title')
+@click.option('--limit', '-n', default=20, help='Max clusters to show')
+def book_clusters(book_id: int, title: str, limit: int):
+    """Show which theme clusters a book belongs to.
+    
+    Lists clusters containing topics from this book, ranked by
+    how many of the book's topics are in each cluster.
+    
+    Example:
+        libtrails book-clusters --title "Anathem"
+        libtrails book-clusters 123
+    """
+    book = None
+    if book_id:
+        book = get_book(book_id)
+    elif title:
+        book = get_book_by_title(title)
+
+    if not book:
+        console.print("[red]Book not found[/red]")
+        return
+
+    console.print(f"\n[bold]{book['title']}[/bold]")
+    console.print(f"[dim]{book['author']}[/dim]\n")
+
+    from .database import get_db
+    with get_db() as conn:
+        cursor = conn.cursor()
+        
+        # Get clusters this book belongs to, ranked by topic count
+        cursor.execute("""
+            SELECT 
+                t.cluster_id,
+                COUNT(DISTINCT t.id) as topic_count,
+                GROUP_CONCAT(t.label, ', ') as sample_topics
+            FROM chunks c
+            JOIN chunk_topic_links ctl ON ctl.chunk_id = c.id
+            JOIN topics t ON t.id = ctl.topic_id
+            WHERE c.book_id = ? AND t.cluster_id IS NOT NULL
+            GROUP BY t.cluster_id
+            ORDER BY topic_count DESC
+            LIMIT ?
+        """, (book['id'], limit))
+
+        clusters = cursor.fetchall()
+
+        if not clusters:
+            console.print("[yellow]No cluster assignments found. Run 'libtrails cluster' first.[/yellow]")
+            return
+
+        # Get total unique clusters
+        cursor.execute("""
+            SELECT COUNT(DISTINCT t.cluster_id)
+            FROM chunks c
+            JOIN chunk_topic_links ctl ON ctl.chunk_id = c.id
+            JOIN topics t ON t.id = ctl.topic_id
+            WHERE c.book_id = ? AND t.cluster_id IS NOT NULL
+        """, (book['id'],))
+        total_clusters = cursor.fetchone()[0]
+
+        console.print(f"[dim]Book spans {total_clusters} clusters (showing top {min(limit, len(clusters))})[/dim]\n")
+
+        table = Table(title="Theme Clusters")
+        table.add_column("Cluster", style="dim", justify="right")
+        table.add_column("Topics", style="green", justify="right")
+        table.add_column("Sample Topics", style="cyan", max_width=60)
+
+        for cluster_id, topic_count, sample_topics in clusters:
+            # Truncate sample topics list
+            topics_list = sample_topics.split(', ')[:5]
+            topics_display = ', '.join(topics_list)
+            if len(sample_topics.split(', ')) > 5:
+                topics_display += '...'
+            
+            table.add_row(str(cluster_id), str(topic_count), topics_display)
+
+        console.print(table)
+
+
 @main.command()
 @click.argument('query')
 def search(query: str):
@@ -803,6 +884,87 @@ def tree(topic: str):
         console.print(rich_tree)
 
 
+@main.command("diagnose-hubs")
+@click.option(
+    "--top-n",
+    type=int,
+    default=50,
+    help="Number of top hubs to display",
+)
+def diagnose_hubs(top_n):
+    """Analyze hub topics that may be causing clustering problems.
+    
+    Hub topics are highly connected nodes that create "short circuits" 
+    between unrelated topic communities. This diagnostic shows:
+    
+    - Degree distribution (connections per topic)
+    - Top hub topics by connection count
+    - Recommendations for hub removal
+    
+    Example:
+        libtrails diagnose-hubs --top-n 100
+    """
+    from .clustering import diagnose_hubs as _diagnose_hubs
+    from .config import COOCCURRENCE_MIN_COUNT, CLUSTER_KNN_K, PMI_MIN_THRESHOLD
+    from .topic_graph import build_topic_graph_knn
+    
+    console.print("[bold]Building topic graph for hub analysis...[/bold]\n")
+    
+    # Build the graph
+    g = build_topic_graph_knn(
+        cooccurrence_min=COOCCURRENCE_MIN_COUNT,
+        pmi_min=PMI_MIN_THRESHOLD,
+        k=CLUSTER_KNN_K,
+    )
+    
+    if g.vcount() == 0:
+        console.print("[red]Error: No topics in graph. Run 'libtrails process' first.[/red]")
+        return
+    
+    console.print(f"[dim]Graph: {g.vcount():,} nodes, {g.ecount():,} edges[/dim]\n")
+    
+    # Run diagnosis
+    result = _diagnose_hubs(g, top_n=top_n)
+    
+    # Display degree distribution
+    stats = result["degree_stats"]
+    console.print("[bold cyan]Degree Distribution (connections per topic)[/bold cyan]")
+    table = Table(show_header=False, box=None)
+    table.add_column("Metric", style="dim")
+    table.add_column("Value", style="green")
+    
+    table.add_row("Minimum", str(stats["min"]))
+    table.add_row("Median", str(stats["median"]))
+    table.add_row("Mean", f"{stats['mean']:.1f}")
+    table.add_row("95th percentile", str(stats["p95"]))
+    table.add_row("99th percentile", str(stats["p99"]))
+    table.add_row("Maximum", str(stats["max"]))
+    
+    console.print(table)
+    
+    # Display top hubs
+    console.print(f"\n[bold cyan]Top {top_n} Hub Topics (by degree)[/bold cyan]")
+    
+    hub_table = Table()
+    hub_table.add_column("Degree", style="yellow", justify="right")
+    hub_table.add_column("Topic Label", style="cyan")
+    
+    for hub in result["top_hubs"]:
+        hub_table.add_row(str(hub["degree"]), hub["label"])
+    
+    console.print(hub_table)
+    
+    # Recommendations
+    p95_threshold = stats["p95"]
+    hubs_at_95 = sum(1 for h in result["top_hubs"] if h["degree"] > p95_threshold)
+    
+    console.print(f"\n[bold]Recommendations:[/bold]")
+    console.print(f"  • At 95th percentile ({p95_threshold} edges), ~{int(g.vcount() * 0.05):,} topics are hubs")
+    console.print(f"  • Try: [dim]libtrails cluster --remove-hubs --hub-percentile 95 --dry-run[/dim]")
+    console.print(f"  • For tighter clusters: [dim]--hub-percentile 90[/dim] (removes top 10%)")
+    console.print(f"  • Also try: [dim]--hub-method both[/dim] to include generic term patterns")
+
+
 @main.command()
 @click.argument('topic')
 @click.option('--limit', '-n', default=10, help='Number of related topics')
@@ -1000,7 +1162,24 @@ def process():
     default=None,
     help="Test on a random sample of N topics (implies --dry-run)",
 )
-def cluster(mode, partition_type, min_cooccur, resolution, knn_k, skip_cooccur, dry_run, sample_size):
+@click.option(
+    "--remove-hubs",
+    is_flag=True,
+    help="Remove hub topics before clustering to prevent transitivity chains",
+)
+@click.option(
+    "--hub-percentile",
+    type=float,
+    default=95,
+    help="Hub detection threshold: top N% by degree are hubs (default: 95 = top 5%)",
+)
+@click.option(
+    "--hub-method",
+    type=click.Choice(["degree", "generic", "both"]),
+    default="degree",
+    help="Hub detection method (default: degree)",
+)
+def cluster(mode, partition_type, min_cooccur, resolution, knn_k, skip_cooccur, dry_run, sample_size, remove_hubs, hub_percentile, hub_method):
     """Run topic clustering with configurable options.
 
     Defaults are optimized for ~300-400 coherent topic clusters.
@@ -1012,6 +1191,7 @@ def cluster(mode, partition_type, min_cooccur, resolution, knn_k, skip_cooccur, 
         libtrails cluster --mode cooccurrence          # Fast, sparse clustering
         libtrails cluster --sample-size 5000           # Test on 5K topics (dry run)
         libtrails cluster --dry-run --resolution 0.2   # Test params without saving
+        libtrails cluster --remove-hubs --dry-run      # Test hub removal approach
     """
     from .clustering import cluster_topics
     from .database import get_db
@@ -1061,6 +1241,9 @@ def cluster(mode, partition_type, min_cooccur, resolution, knn_k, skip_cooccur, 
         knn_k=knn_k,
         dry_run=dry_run,
         sample_size=sample_size,
+        remove_hubs=remove_hubs,
+        hub_percentile=hub_percentile,
+        hub_method=hub_method,
     )
 
     if "error" not in cluster_result:
@@ -1069,6 +1252,10 @@ def cluster(mode, partition_type, min_cooccur, resolution, knn_k, skip_cooccur, 
         console.print(f"  [dim]Edges: {cluster_result['total_edges']} ({cluster_result.get('edge_types', {})})[/dim]")
         console.print(f"  [dim]Time: {cluster_result.get('leiden_time_seconds', 0):.1f}s[/dim]")
         console.print(f"  [dim]Resolution: {cluster_result.get('resolution', 'N/A')}[/dim]")
+
+        # Show hub removal stats
+        if cluster_result.get("hubs_removed"):
+            console.print(f"  [dim]Hubs removed: {cluster_result['hubs_removed']} (method={cluster_result.get('hub_method')})[/dim]")
 
         # Show top clusters
         if cluster_result.get("cluster_sizes"):
