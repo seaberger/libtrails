@@ -204,6 +204,105 @@ def cluster_without_hubs(
     return assignments, partition
 
 
+def assign_hubs_multi_cluster(
+    g: ig.Graph,
+    hub_indices: set[int],
+    primary_assignments: dict,
+    min_connections: int = 3,
+    max_clusters: int = 5,
+) -> dict:
+    """
+    Assign hub topics to multiple relevant clusters with strength scores.
+    
+    Args:
+        g: The full topic graph
+        hub_indices: Set of node indices that are hubs
+        primary_assignments: dict mapping topic_id -> primary cluster_id
+        min_connections: Minimum connection count to include a cluster
+        max_clusters: Maximum clusters per hub
+        
+    Returns:
+        dict mapping topic_id -> list of (cluster_id, strength) tuples
+    """
+    from collections import Counter
+    
+    hub_multi_assignments = {}
+    
+    for hub_idx in hub_indices:
+        topic_id = g.vs[hub_idx]['topic_id']
+        
+        # Count weighted connections to each cluster
+        cluster_connections = Counter()
+        for neighbor_idx in g.neighbors(hub_idx):
+            neighbor_topic = g.vs[neighbor_idx]['topic_id']
+            if neighbor_topic in primary_assignments:
+                cluster_id = primary_assignments[neighbor_topic]
+                if cluster_id >= 0:  # Skip unclustered
+                    # Weight by edge weight if available
+                    try:
+                        edge_id = g.get_eid(hub_idx, neighbor_idx)
+                        weight = g.es[edge_id]['weight'] if 'weight' in g.es.attributes() else 1.0
+                    except Exception:
+                        weight = 1.0
+                    cluster_connections[cluster_id] += weight
+        
+        if not cluster_connections:
+            continue
+            
+        # Normalize to proportions
+        total_weight = sum(cluster_connections.values())
+        significant_clusters = [
+            (cid, count / total_weight)
+            for cid, count in cluster_connections.most_common(max_clusters)
+            if count >= min_connections
+        ]
+        
+        if significant_clusters:
+            hub_multi_assignments[topic_id] = significant_clusters
+    
+    return hub_multi_assignments
+
+
+def save_multi_cluster_assignments(
+    assignments: dict,
+    primary_assignments: dict,
+) -> int:
+    """
+    Save multi-cluster hub assignments to database.
+    
+    Args:
+        assignments: dict mapping topic_id -> list of (cluster_id, strength)
+        primary_assignments: dict mapping topic_id -> primary cluster_id
+        
+    Returns:
+        Number of memberships saved
+    """
+    from .database import get_db
+    
+    count = 0
+    with get_db() as conn:
+        cursor = conn.cursor()
+        
+        # Clear existing multi-cluster assignments
+        cursor.execute("DELETE FROM topic_cluster_memberships")
+        
+        for topic_id, cluster_list in assignments.items():
+            primary_cluster = primary_assignments.get(topic_id, -1)
+            
+            for cluster_id, strength in cluster_list:
+                is_primary = (cluster_id == primary_cluster)
+                cursor.execute("""
+                    INSERT OR REPLACE INTO topic_cluster_memberships 
+                    (topic_id, cluster_id, strength, is_primary)
+                    VALUES (?, ?, ?, ?)
+                """, (topic_id, cluster_id, strength, is_primary))
+                count += 1
+        
+        conn.commit()
+    
+    return count
+
+
 def _get_partition(
     g: ig.Graph,
     partition_type: str,
@@ -361,6 +460,7 @@ def cluster_topics(
     # Run Leiden clustering
     import time
     start_time = time.time()
+    hub_indices = None  # Initialize for scope
 
     if remove_hubs:
         # Hub removal approach: cluster without hubs, then assign hubs post-hoc
@@ -440,6 +540,19 @@ def cluster_topics(
                     topic_id = g.vs[node_idx]["topic_id"]
                     update_topic_cluster(topic_id, cluster_id)
             conn.commit()
+
+        # Compute and save multi-cluster assignments for hubs
+        if remove_hubs and hub_indices and assignments:
+            print("  Computing multi-cluster hub assignments...")
+            multi_assignments = assign_hubs_multi_cluster(
+                g, hub_indices, assignments,
+                min_connections=3,
+                max_clusters=5,
+            )
+            count = save_multi_cluster_assignments(multi_assignments, assignments)
+            result["multi_cluster_hubs"] = len(multi_assignments)
+            result["multi_cluster_memberships"] = count
+            print(f"  Saved {count} multi-cluster memberships for {len(multi_assignments)} hubs")
 
         # Update graph vertex attributes
         g.vs["cluster"] = membership
@@ -814,3 +927,95 @@ Respond with ONLY the category label, nothing else."""
         pass
 
     return None
+
+
+def save_cluster_label(cluster_id: int, label: str):
+    """Save a cluster label to the database."""
+    from .database import get_db
+    
+    with get_db() as conn:
+        conn.execute("""
+            INSERT OR REPLACE INTO cluster_labels (cluster_id, label)
+            VALUES (?, ?)
+        """, (cluster_id, label))
+        conn.commit()
+
+
+def get_cluster_label(cluster_id: int) -> Optional[str]:
+    """Get the saved label for a cluster."""
+    from .database import get_db
+    
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT label FROM cluster_labels WHERE cluster_id = ?", (cluster_id,))
+        row = cursor.fetchone()
+        return row[0] if row else None
+
+
+def label_clusters_batch(
+    limit: int = None,
+    min_size: int = 10,
+    model: str = "gemma3:4b",
+    skip_existing: bool = True,
+) -> dict:
+    """
+    Generate LLM labels for multiple clusters.
+    
+    Args:
+        limit: Maximum clusters to label (None = all)
+        min_size: Minimum cluster size to label
+        model: Ollama model to use
+        skip_existing: Skip clusters that already have labels
+        
+    Returns:
+        Stats about labeling
+    """
+    from .database import get_db
+    
+    # Get clusters to label
+    with get_db() as conn:
+        cursor = conn.cursor()
+        
+        if skip_existing:
+            cursor.execute("""
+                SELECT t.cluster_id, COUNT(*) as size
+                FROM topics t
+                LEFT JOIN cluster_labels cl ON t.cluster_id = cl.cluster_id
+                WHERE t.cluster_id IS NOT NULL AND cl.cluster_id IS NULL
+                GROUP BY t.cluster_id
+                HAVING COUNT(*) >= ?
+                ORDER BY size DESC
+            """, (min_size,))
+        else:
+            cursor.execute("""
+                SELECT cluster_id, COUNT(*) as size
+                FROM topics
+                WHERE cluster_id IS NOT NULL
+                GROUP BY cluster_id
+                HAVING COUNT(*) >= ?
+                ORDER BY size DESC
+            """, (min_size,))
+        
+        clusters = cursor.fetchall()
+    
+    if limit:
+        clusters = clusters[:limit]
+    
+    labeled = 0
+    failed = 0
+    
+    for cluster_id, size in clusters:
+        label = label_cluster_with_llm(cluster_id, model=model)
+        if label:
+            save_cluster_label(cluster_id, label)
+            labeled += 1
+            print(f"  Cluster {cluster_id} ({size} topics): {label}")
+        else:
+            failed += 1
+            print(f"  Cluster {cluster_id} ({size} topics): FAILED")
+    
+    return {
+        "clusters_processed": len(clusters),
+        "labeled": labeled,
+        "failed": failed,
+    }

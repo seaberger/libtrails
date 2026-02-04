@@ -177,6 +177,26 @@ def init_chunks_table():
 
             CREATE INDEX IF NOT EXISTS idx_cooccur_topic1 ON topic_cooccurrences(topic1_id);
             CREATE INDEX IF NOT EXISTS idx_cooccur_topic2 ON topic_cooccurrences(topic2_id);
+
+            -- Multi-cluster membership for hub topics
+            -- Allows topics (especially hubs) to belong to multiple clusters with strength scores
+            CREATE TABLE IF NOT EXISTS topic_cluster_memberships (
+                topic_id INTEGER NOT NULL REFERENCES topics(id),
+                cluster_id INTEGER NOT NULL,
+                strength REAL NOT NULL,  -- 0.0 to 1.0, proportion of connections
+                is_primary BOOLEAN DEFAULT FALSE,
+                PRIMARY KEY (topic_id, cluster_id)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_tcm_cluster ON topic_cluster_memberships(cluster_id);
+            CREATE INDEX IF NOT EXISTS idx_tcm_topic ON topic_cluster_memberships(topic_id);
+
+            -- Cluster labels (LLM-generated)
+            CREATE TABLE IF NOT EXISTS cluster_labels (
+                cluster_id INTEGER PRIMARY KEY,
+                label TEXT NOT NULL,
+                generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
         """)
 
         # Migration: add topics_json column if it doesn't exist

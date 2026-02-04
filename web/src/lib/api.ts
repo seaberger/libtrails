@@ -29,6 +29,13 @@ export async function getThemes(
   return fetchJson(`/themes?limit=${limit}&min_books=${minBooks}`);
 }
 
+export async function searchThemes(
+  query: string,
+  limit = 20
+): Promise<ThemeSummary[]> {
+  return fetchJson(`/themes/search?q=${encodeURIComponent(query)}&limit=${limit}`);
+}
+
 export async function getTheme(clusterId: number): Promise<ThemeDetail> {
   return fetchJson(`/themes/${clusterId}`);
 }

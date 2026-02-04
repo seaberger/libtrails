@@ -965,6 +965,58 @@ def diagnose_hubs(top_n):
     console.print(f"  • Also try: [dim]--hub-method both[/dim] to include generic term patterns")
 
 
+@main.command("label-clusters")
+@click.option(
+    "--limit",
+    type=int,
+    default=None,
+    help="Maximum clusters to label (default: all)",
+)
+@click.option(
+    "--min-size",
+    type=int,
+    default=10,
+    help="Minimum cluster size to label (default: 10)",
+)
+@click.option(
+    "--model",
+    type=str,
+    default="gemma3:4b",
+    help="Ollama model to use (default: gemma3:4b)",
+)
+@click.option(
+    "--force",
+    is_flag=True,
+    help="Re-label clusters that already have labels",
+)
+def label_clusters(limit, min_size, model, force):
+    """Generate LLM-based labels for topic clusters.
+    
+    Uses Ollama to analyze the top topics in each cluster and generate
+    a concise 2-4 word descriptive label.
+    
+    Example:
+        libtrails label-clusters --limit 50
+        libtrails label-clusters --model gemma3:27b
+        libtrails label-clusters --force  # Re-label all
+    """
+    from .clustering import label_clusters_batch
+    
+    console.print("[bold]Generating cluster labels with LLM...[/bold]\n")
+    console.print(f"[dim]Model: {model}, Min size: {min_size}[/dim]\n")
+    
+    result = label_clusters_batch(
+        limit=limit,
+        min_size=min_size,
+        model=model,
+        skip_existing=not force,
+    )
+    
+    console.print(f"\n[green]Labeled {result['labeled']} clusters[/green]")
+    if result['failed'] > 0:
+        console.print(f"[yellow]Failed: {result['failed']}[/yellow]")
+
+
 @main.command()
 @click.argument('topic')
 @click.option('--limit', '-n', default=10, help='Number of related topics')

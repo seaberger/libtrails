@@ -1,11 +1,111 @@
 """Theme/cluster API endpoints."""
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Query
 
 from ..dependencies import DBConnection
 from ..schemas import BookSummary, ThemeDetail, ThemeSummary, TopicInfo
 
 router = APIRouter()
+
+
+@router.get("/themes/search", response_model=list[ThemeSummary])
+def search_themes(
+    db: DBConnection,
+    q: str = Query(..., min_length=2, description="Search query"),
+    limit: int = 20,
+):
+    """Search for themes using semantic similarity.
+
+    Finds topics matching the query, then returns their clusters
+    ranked by how many matching topics each cluster contains.
+    """
+    from libtrails.vector_search import search_topics_semantic
+
+    cursor = db.cursor()
+
+    # Find matching topics via semantic search
+    matching_topics = search_topics_semantic(q, limit=100)
+
+    if not matching_topics:
+        return []
+
+    # Group by cluster and count matches
+    cluster_matches = {}
+    for topic in matching_topics:
+        cluster_id = topic.get("cluster_id")
+        if cluster_id is not None and cluster_id >= 0:
+            if cluster_id not in cluster_matches:
+                cluster_matches[cluster_id] = {
+                    "count": 0,
+                    "best_score": 0,
+                    "best_topic": None,
+                }
+            cluster_matches[cluster_id]["count"] += 1
+            score = 1 - topic.get("distance", 0)  # Convert distance to similarity
+            if score > cluster_matches[cluster_id]["best_score"]:
+                cluster_matches[cluster_id]["best_score"] = score
+                cluster_matches[cluster_id]["best_topic"] = topic.get("label")
+
+    # Sort clusters by match count, then by best score
+    sorted_clusters = sorted(
+        cluster_matches.items(),
+        key=lambda x: (x[1]["count"], x[1]["best_score"]),
+        reverse=True
+    )[:limit]
+
+    themes = []
+    for cluster_id, match_info in sorted_clusters:
+        # Get cluster size
+        cursor.execute("""
+            SELECT COUNT(*) as size FROM topics WHERE cluster_id = ?
+        """, (cluster_id,))
+        size = cursor.fetchone()["size"]
+
+        # Get book count
+        cursor.execute("""
+            SELECT COUNT(DISTINCT b.id) as book_count
+            FROM books b
+            JOIN chunks c ON c.book_id = b.id
+            JOIN chunk_topic_links ctl ON ctl.chunk_id = c.id
+            JOIN topics t ON t.id = ctl.topic_id
+            WHERE t.cluster_id = ?
+        """, (cluster_id,))
+        book_count = cursor.fetchone()["book_count"]
+
+        # Get top topics for label
+        cursor.execute("""
+            SELECT id, label, occurrence_count as count
+            FROM topics
+            WHERE cluster_id = ?
+            ORDER BY occurrence_count DESC
+            LIMIT 3
+        """, (cluster_id,))
+        top_topics = [dict(r) for r in cursor.fetchall()]
+
+        # Get sample books
+        cursor.execute("""
+            SELECT b.id, b.title, b.author, b.calibre_id,
+                   COUNT(DISTINCT t.id) as topics_in_cluster
+            FROM books b
+            JOIN chunks c ON c.book_id = b.id
+            JOIN chunk_topic_links ctl ON ctl.chunk_id = c.id
+            JOIN topics t ON t.id = ctl.topic_id
+            WHERE t.cluster_id = ? AND b.calibre_id IS NOT NULL
+            GROUP BY b.id
+            ORDER BY topics_in_cluster DESC
+            LIMIT 5
+        """, (cluster_id,))
+        sample_books = [BookSummary(**dict(r)) for r in cursor.fetchall()]
+
+        themes.append(ThemeSummary(
+            cluster_id=cluster_id,
+            label=_generate_cluster_label(top_topics),
+            size=size,
+            book_count=book_count,
+            sample_books=sample_books,
+        ))
+
+    return themes
 
 
 def _generate_cluster_label(topics: list[dict], max_labels: int = 1) -> str:

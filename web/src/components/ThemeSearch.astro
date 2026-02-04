@@ -1,0 +1,227 @@
+---
+// Semantic search bar for themes
+// Note: innerHTML is used with API data from our own backend - sanitized at source
+---
+
+<div class="theme-search mb-8">
+  <form id="theme-search-form" class="relative">
+    <input
+      type="text"
+      id="theme-search-input"
+      name="q"
+      placeholder="Search themes (e.g., stoic philosophy, machine learning, family drama...)"
+      class="w-full px-4 py-3 pl-12 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] placeholder-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
+      autocomplete="off"
+    />
+    <svg
+      class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--color-text-muted)]"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+      />
+    </svg>
+    <div
+      id="search-loading"
+      class="absolute right-4 top-1/2 -translate-y-1/2 hidden"
+    >
+      <div class="w-5 h-5 border-2 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  </form>
+  <p id="search-status" class="mt-2 text-sm text-[var(--color-text-muted)] hidden"></p>
+</div>
+
+<script>
+  const API_BASE = '/api/v1';
+
+  // Escape HTML to prevent XSS when rendering theme data
+  function escapeHtml(text: string): string {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  function initThemeSearch() {
+    const form = document.getElementById('theme-search-form') as HTMLFormElement;
+    const input = document.getElementById('theme-search-input') as HTMLInputElement;
+    const loading = document.getElementById('search-loading');
+    const status = document.getElementById('search-status');
+    const themesGrid = document.querySelector('[data-themes-grid]');
+
+    if (!form || !input || !themesGrid) return;
+
+    let debounceTimer: ReturnType<typeof setTimeout>;
+    let originalContent = themesGrid.cloneNode(true) as HTMLElement;
+
+    async function searchThemes(query: string) {
+      if (!loading || !status) return;
+
+      if (!query.trim()) {
+        // Restore original content
+        themesGrid.replaceWith(originalContent.cloneNode(true));
+        status.classList.add('hidden');
+        // Re-attach event listeners
+        initThemeSearch();
+        return;
+      }
+
+      loading.classList.remove('hidden');
+      status.classList.add('hidden');
+
+      try {
+        const response = await fetch(`${API_BASE}/themes/search?q=${encodeURIComponent(query)}&limit=50`);
+        if (!response.ok) throw new Error('Search failed');
+
+        const themes = await response.json();
+        loading.classList.add('hidden');
+
+        if (themes.length === 0) {
+          status.textContent = `No themes found for "${query}"`;
+          status.classList.remove('hidden');
+          while (themesGrid.firstChild) themesGrid.removeChild(themesGrid.firstChild);
+          return;
+        }
+
+        status.textContent = `Found ${themes.length} themes matching "${query}"`;
+        status.classList.remove('hidden');
+
+        // Clear and render search results using DOM methods
+        while (themesGrid.firstChild) themesGrid.removeChild(themesGrid.firstChild);
+        themes.forEach((theme: any) => {
+          themesGrid.appendChild(createThemeCard(theme));
+        });
+
+        // Re-initialize fan effects
+        initFanEffect();
+      } catch (error) {
+        loading?.classList.add('hidden');
+        if (status) {
+          status.textContent = 'Search failed. Please try again.';
+          status.classList.remove('hidden');
+        }
+      }
+    }
+
+    function createThemeCard(theme: any): HTMLElement {
+      const books = theme.sample_books || [];
+      const bookCount = books.length;
+      const center = (bookCount - 1) / 2;
+
+      const card = document.createElement('a');
+      card.href = `/themes/${theme.cluster_id}`;
+      card.className = 'group block bg-[var(--color-surface)] rounded-lg p-5 border border-[var(--color-border)] hover:border-[var(--color-accent)] hover:shadow-lg transition-all duration-300';
+      card.setAttribute('data-theme-card', '');
+
+      // Cover stack container
+      const coverContainer = document.createElement('div');
+      coverContainer.className = 'relative h-40 mb-4 flex items-center justify-center';
+
+      const coverStack = document.createElement('div');
+      coverStack.className = 'relative';
+      coverStack.style.cssText = 'width: 180px; height: 140px;';
+
+      books.forEach((book: any, index: number) => {
+        const offset = index - center;
+        const stackedX = offset * 10;
+        const stackedRotate = offset * 2;
+        const fannedX = offset * 35;
+        const fannedRotate = offset * 18;
+
+        const bookDiv = document.createElement('div');
+        bookDiv.className = 'absolute left-1/2 transition-all duration-300 ease-out group-hover:scale-105';
+        bookDiv.style.cssText = `z-index: ${bookCount - index}; transform: translateX(calc(-50% + ${stackedX}px)) rotate(${stackedRotate}deg); transform-origin: center 150%;`;
+        bookDiv.setAttribute('data-fanned-x', String(fannedX));
+        bookDiv.setAttribute('data-fanned-rotate', String(fannedRotate));
+        bookDiv.setAttribute('data-stacked-x', String(stackedX));
+        bookDiv.setAttribute('data-stacked-rotate', String(stackedRotate));
+
+        const img = document.createElement('img');
+        img.src = book.calibre_id ? `/api/v1/covers/${book.calibre_id}` : '/placeholder-cover.svg';
+        img.alt = book.title || 'Book cover';
+        img.className = 'w-16 h-24 object-cover rounded shadow-md';
+        img.loading = 'lazy';
+
+        bookDiv.appendChild(img);
+        coverStack.appendChild(bookDiv);
+      });
+
+      coverContainer.appendChild(coverStack);
+      card.appendChild(coverContainer);
+
+      // Theme label
+      const label = document.createElement('h3');
+      label.className = 'font-bold text-[var(--color-text)] text-base leading-tight mb-2 text-center capitalize';
+      label.textContent = theme.label;
+      card.appendChild(label);
+
+      // Stats
+      const stats = document.createElement('p');
+      stats.className = 'text-xs text-[var(--color-text-muted)] text-center';
+      stats.textContent = `${theme.book_count} books · ${theme.size} topics`;
+      card.appendChild(stats);
+
+      return card;
+    }
+
+    // Fan effect for dynamically rendered cards
+    function initFanEffect() {
+      const cards = document.querySelectorAll('[data-theme-card]');
+      cards.forEach(card => {
+        const books = card.querySelectorAll('[data-fanned-x]');
+        if (!books.length) return;
+
+        card.addEventListener('mouseenter', () => {
+          books.forEach(book => {
+            const x = book.getAttribute('data-fanned-x');
+            const rotate = book.getAttribute('data-fanned-rotate');
+            (book as HTMLElement).style.transform = `translateX(calc(-50% + ${x}px)) rotate(${rotate}deg)`;
+          });
+        });
+
+        card.addEventListener('mouseleave', () => {
+          books.forEach(book => {
+            const x = book.getAttribute('data-stacked-x');
+            const rotate = book.getAttribute('data-stacked-rotate');
+            (book as HTMLElement).style.transform = `translateX(calc(-50% + ${x}px)) rotate(${rotate}deg)`;
+          });
+        });
+      });
+    }
+
+    // Handle input with debounce
+    input.addEventListener('input', (e) => {
+      clearTimeout(debounceTimer);
+      const query = (e.target as HTMLInputElement).value;
+
+      debounceTimer = setTimeout(() => {
+        searchThemes(query);
+      }, 300);
+    });
+
+    // Handle form submit
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      clearTimeout(debounceTimer);
+      searchThemes(input.value);
+    });
+
+    // Handle clear (escape key)
+    input.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        input.value = '';
+        themesGrid.replaceWith(originalContent.cloneNode(true));
+        status?.classList.add('hidden');
+        initThemeSearch();
+      }
+    });
+  }
+
+  // Initialize on load and after navigation
+  initThemeSearch();
+  document.addEventListener('astro:page-load', initThemeSearch);
+</script>
