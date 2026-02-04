@@ -299,36 +299,36 @@ data/
 ## Implementation Phases
 
 ### Phase 1: Data Export & Project Setup
-- [ ] Add `libtrails export` CLI command
-- [ ] Export books, themes, topics to JSON
-- [ ] Extract/copy book covers from Calibre library
-- [ ] Initialize Astro project with Tailwind
+- [x] ~~Add `libtrails export` CLI command~~ (Using direct API instead)
+- [x] ~~Export books, themes, topics to JSON~~ (Direct queries)
+- [x] ~~Extract/copy book covers from Calibre library~~ (Serving directly)
+- [x] Initialize Astro project with Tailwind
 
-### Phase 2: Theme Browser (Home)
-- [ ] Create theme cluster component
-- [ ] Layout themes in responsive grid
-- [ ] Add hover effects and transitions
-- [ ] Link to theme detail pages
+### Phase 2: Theme Browser (Home) ✅
+- [x] Create theme cluster component
+- [x] Layout themes in responsive grid
+- [x] Add hover effects and transitions
+- [x] Link to theme detail pages
 
-### Phase 3: Theme Detail Page
-- [ ] Create book card component
-- [ ] Vertical scrolling layout
-- [ ] Display book metadata and topics
-- [ ] Link to book detail pages
+### Phase 3: Theme Detail Page ✅
+- [x] Create book card component
+- [x] Vertical scrolling layout
+- [x] Display book metadata and topics
+- [x] Link to book detail pages
 
-### Phase 4: Book Detail Page
-- [ ] Large cover + metadata display
-- [ ] Topic tags/chips
-- [ ] "Related Books" section
-- [ ] Implement similarity lookup (semantic + topic overlap)
+### Phase 4: Book Detail Page ✅
+- [x] Large cover + metadata display
+- [x] Topic tags/chips
+- [x] "Related Books" section
+- [x] Implement similarity lookup (topic overlap)
 
-### Phase 5: Search & Filter
-- [ ] Add Fuse.js for client-side search
-- [ ] Sticky search bar component
+### Phase 5: Search & Filter (TODO)
+- [ ] Add search bar component (React)
+- [ ] Debounced API search
 - [ ] Real-time filtering on Theme Browser
 - [ ] Autocomplete suggestions
 
-### Phase 6: Polish & Deploy
+### Phase 6: Polish & Deploy (TODO)
 - [ ] View transitions between pages
 - [ ] Loading states and skeleton screens
 - [ ] SEO metadata
@@ -607,10 +607,84 @@ libtrails deploy # Uses saved Lightsail config
 
 ---
 
-## Next Steps
+## Implementation Status (Feb 3, 2025)
 
-1. **Wait for indexing to complete** (~20 hours remaining)
-2. **Run Leiden clustering** to generate themes
-3. **Implement `libtrails export`** command
-4. **Initialize Astro project** in `web/` folder
-5. **Build Phase 2** (Theme Browser) as proof of concept
+### Completed ✅
+
+**Backend (FastAPI)**:
+- `src/libtrails/api/` - Full API implementation
+- Endpoints: `/api/v1/themes`, `/api/v1/books`, `/api/v1/search`, `/api/v1/covers`
+- Pydantic schemas for all responses
+- CLI command: `uv run libtrails serve`
+
+**Frontend (Astro + Tailwind + React)**:
+- `web/` - Complete Astro project
+- Theme Browser home page with overlapping book cover cards
+- Theme Detail page (`/themes/[id]`) with all books in cluster
+- Book Detail page (`/books/[id]`) with topics and related books
+- All Books page (`/books`) with pagination
+- Components: ThemeCard, BookCard, BookCover, TopicChip, RelatedBooks
+- Clean, minimal design with warm color palette
+
+**Data**:
+- 925 books indexed
+- 108,668 topics with embeddings
+- ~340 Leiden clusters
+- Story of Civilization: 4.9M words, 1,637 chunks, 3,708 topics
+
+### Key Implementation Decisions
+
+1. **Direct API vs JSON Export**: Went with direct SQLite queries via FastAPI instead of pre-exporting JSON. More efficient for 100k+ topics.
+
+2. **Cover Strategy**: Serve covers directly from Calibre library path (`/api/v1/covers/{calibre_id}`) instead of copying. Simpler, no duplication.
+
+3. **SSR for Dynamic Routes**: Theme and book detail pages use `prerender = false` for server-side rendering to avoid generating thousands of static pages.
+
+4. **React over Svelte**: Used React for interactive islands (search bar to come) since it's more familiar and Astro supports both.
+
+### Remaining Work
+
+**Phase 5: Search & Filter** (Not Started):
+- [ ] Add SearchBar.tsx React component
+- [ ] Debounced search with API calls
+- [ ] Real-time filtering on Theme Browser
+- [ ] Autocomplete suggestions
+
+**Phase 6: Polish & Deploy** (Not Started):
+- [ ] Astro view transitions between pages
+- [ ] Loading states and skeleton screens
+- [ ] SEO metadata
+- [ ] Deploy to AWS Lightsail
+- [ ] Custom domain setup
+
+**Additional Enhancements**:
+- [ ] LLM-generated cluster labels (instead of "topic1 / topic2 / topic3")
+- [ ] Optimize theme cover stacking animation
+- [ ] Mobile responsive testing
+- [ ] Dark mode support
+
+### Branch
+
+All code committed to: `feature/web-interface` (pushed to GitHub)
+
+### Running Locally
+
+```bash
+# Terminal 1: Start API server
+uv run libtrails serve
+
+# Terminal 2: Start frontend
+cd web && npm run dev
+
+# Open http://localhost:4321
+```
+
+---
+
+## Original Next Steps (Archived)
+
+1. ~~Wait for indexing to complete~~ ✅
+2. ~~Run Leiden clustering~~ ✅
+3. ~~Implement `libtrails export`~~ Skipped (using direct API)
+4. ~~Initialize Astro project~~ ✅
+5. ~~Build Phase 2 (Theme Browser)~~ ✅
