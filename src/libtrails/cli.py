@@ -171,13 +171,14 @@ def sync(ipad: str, dry_run: bool, skip_index: bool, model: str, save_url: bool)
 @click.option('--dry-run', is_flag=True, help='Parse and chunk without topic extraction')
 @click.option('--reindex', is_flag=True, help='Re-index books that are already indexed')
 @click.option('--max-words', type=int, default=None, help='Skip books with more than N words (e.g., 500000)')
+@click.option('--chunk-size', type=int, default=None, help='Target words per chunk (default: 500, use 2000-3000 for large books)')
 @click.option('--min-battery', type=int, default=15, help='Pause if battery drops below this % (default: 15)')
-def index(book_id: int, title: str, index_all: bool, model: str, dry_run: bool, reindex: bool, max_words: int, min_battery: int):
+def index(book_id: int, title: str, index_all: bool, model: str, dry_run: bool, reindex: bool, max_words: int, chunk_size: int, min_battery: int):
     """Index a book (parse, chunk, extract topics)."""
     init_chunks_table()
 
     if index_all:
-        _index_all_books(model, dry_run, reindex, max_words, min_battery)
+        _index_all_books(model, dry_run, reindex, max_words, chunk_size, min_battery)
         return
 
     # Find the book
@@ -191,10 +192,10 @@ def index(book_id: int, title: str, index_all: bool, model: str, dry_run: bool, 
         console.print("[red]Book not found[/red]")
         return
 
-    _index_single_book(book, model, dry_run)
+    _index_single_book(book, model, dry_run, chunk_size=chunk_size)
 
 
-def _index_single_book(book: dict, model: str, dry_run: bool, max_words: int = None):
+def _index_single_book(book: dict, model: str, dry_run: bool, max_words: int = None, chunk_size: int = None):
     """Index a single book. Raises exception on failure. Returns 'skipped' if over max_words."""
     console.print(f"[bold]Indexing:[/bold] {book['title'][:60]}")
     console.print(f"[dim]Author: {book['author'] or 'Unknown'}[/dim]")
@@ -228,8 +229,9 @@ def _index_single_book(book: dict, model: str, dry_run: bool, max_words: int = N
     console.print(f"[green]Extracted {word_count:,} words[/green]")
 
     # Chunk
-    chunks = chunk_text(text, CHUNK_TARGET_WORDS)
-    console.print(f"[green]Created {len(chunks)} chunks[/green]")
+    target_words = chunk_size if chunk_size else CHUNK_TARGET_WORDS
+    chunks = chunk_text(text, target_words)
+    console.print(f"[green]Created {len(chunks)} chunks[/green] [dim](~{target_words} words/chunk)[/dim]")
 
     # Save chunks
     save_chunks(book['id'], chunks)
@@ -309,7 +311,7 @@ def _get_battery_level() -> int | None:
     return None
 
 
-def _index_all_books(model: str, dry_run: bool, reindex: bool = False, max_words: int = None, min_battery: int = 15):
+def _index_all_books(model: str, dry_run: bool, reindex: bool = False, max_words: int = None, chunk_size: int = None, min_battery: int = 15):
     """Index all books with Calibre matches, with resume support."""
     from .database import get_book_path, get_db
 
@@ -317,6 +319,8 @@ def _index_all_books(model: str, dry_run: bool, reindex: bool = False, max_words
 
     if max_words:
         console.print(f"[dim]Skipping books with more than {max_words:,} words[/dim]")
+    if chunk_size:
+        console.print(f"[dim]Using {chunk_size:,} words per chunk[/dim]")
     console.print(f"[dim]Will pause if battery drops below {min_battery}%[/dim]")
 
     # Get already indexed book IDs
@@ -388,7 +392,7 @@ def _index_all_books(model: str, dry_run: bool, reindex: bool = False, max_words
                     break
 
         try:
-            result = _index_single_book(book, model, dry_run, max_words)
+            result = _index_single_book(book, model, dry_run, max_words, chunk_size)
             if result == "skipped":
                 skipped_large += 1
                 continue

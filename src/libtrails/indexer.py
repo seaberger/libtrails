@@ -61,6 +61,7 @@ def index_book(
     book_id: int,
     model: str = DEFAULT_MODEL,
     max_words: Optional[int] = None,
+    chunk_size: Optional[int] = None,
     dry_run: bool = False,
     progress_callback: Optional[Callable[[str], None]] = None,
     topic_progress_callback: Optional[Callable[[int, int], None]] = None,
@@ -72,6 +73,7 @@ def index_book(
         book_id: The book ID from our database
         model: Ollama model to use for topic extraction
         max_words: Skip books with more than this many words
+        chunk_size: Target words per chunk (default: CHUNK_TARGET_WORDS from config)
         dry_run: If True, parse and chunk but skip topic extraction
         progress_callback: Called with status messages
         topic_progress_callback: Called with (completed, total) during topic extraction
@@ -147,7 +149,8 @@ def index_book(
         progress_callback(f"  Extracted {word_count:,} words")
 
     # Chunk text
-    chunks = chunk_text(text, CHUNK_TARGET_WORDS)
+    target_words = chunk_size if chunk_size else CHUNK_TARGET_WORDS
+    chunks = chunk_text(text, target_words)
     if progress_callback:
         progress_callback(f"  Created {len(chunks)} chunks")
 
@@ -214,6 +217,7 @@ def index_books_batch(
     book_ids: list[int],
     model: str = DEFAULT_MODEL,
     max_words: Optional[int] = None,
+    chunk_size: Optional[int] = None,
     dry_run: bool = False,
     progress_callback: Optional[Callable[[str], None]] = None,
     book_callback: Optional[Callable[[int, int, IndexingResult], None]] = None,
@@ -228,6 +232,7 @@ def index_books_batch(
         book_ids: List of book IDs to index
         model: Ollama model to use
         max_words: Skip books over this word count
+        chunk_size: Target words per chunk (default: from config)
         dry_run: Parse/chunk only, no topic extraction
         progress_callback: Called with status messages
         book_callback: Called after each book with (current, total, result)
@@ -265,6 +270,7 @@ def index_books_batch(
                 book_id,
                 model=model,
                 max_words=max_words,
+                chunk_size=chunk_size,
                 dry_run=dry_run,
                 progress_callback=progress_callback
             )
