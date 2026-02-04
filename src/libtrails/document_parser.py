@@ -37,7 +37,13 @@ def extract_text_from_epub(epub_path: Path) -> str:
 
         # Get all HTML/XML content files (sorted for consistent ordering)
         for name in sorted(zf.namelist()):
-            if not name.endswith(('.xhtml', '.html', '.htm', '.xml')):
+            # Match standard extensions OR Calibre's .html_split_NNN format
+            filename = name.split('/')[-1]
+            is_html_content = (
+                name.endswith(('.xhtml', '.html', '.htm', '.xml'))
+                or filename.startswith('.html_split_')
+            )
+            if not is_html_content:
                 continue
             # Skip TOC, NCX, and OPF files by checking filename (not full path)
             filename = name.split('/')[-1].lower()
