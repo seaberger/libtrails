@@ -4,7 +4,7 @@ import ThemeCard from '../components/ThemeCard.astro';
 import { getThemes } from '../lib/api';
 
 // Fetch themes at build time (SSR) or request time
-const themes = await getThemes(48, 3);
+const themes = await getThemes(200, 3);
 ---
 
 <BaseLayout title="Themes" description="Browse your book library by themes and topics">

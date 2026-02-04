@@ -976,7 +976,7 @@ def process():
     "--resolution",
     type=float,
     default=None,
-    help="Resolution for CPM partition (default: 0.001, lower = fewer clusters)",
+    help="Resolution parameter (default: 0.1). Guide: 0.01=mega-themes, 0.1=medium, 0.5=focused",
 )
 @click.option(
     "--knn-k",
@@ -989,7 +989,18 @@ def process():
     is_flag=True,
     help="Skip co-occurrence computation (use existing data)",
 )
-def cluster(mode, partition_type, min_cooccur, resolution, knn_k, skip_cooccur):
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Run clustering but don't save results to database",
+)
+@click.option(
+    "--sample-size",
+    type=int,
+    default=None,
+    help="Test on a random sample of N topics (implies --dry-run)",
+)
+def cluster(mode, partition_type, min_cooccur, resolution, knn_k, skip_cooccur, dry_run, sample_size):
     """Run topic clustering with configurable options.
 
     Defaults are optimized for ~300-400 coherent topic clusters.
@@ -997,8 +1008,10 @@ def cluster(mode, partition_type, min_cooccur, resolution, knn_k, skip_cooccur):
     Examples:
         libtrails cluster                              # Use optimized defaults
         libtrails cluster --skip-cooccur               # Reuse existing co-occurrences
-        libtrails cluster --resolution 0.0005          # Fewer, larger clusters (~170)
+        libtrails cluster --resolution 0.1             # More, smaller clusters
         libtrails cluster --mode cooccurrence          # Fast, sparse clustering
+        libtrails cluster --sample-size 5000           # Test on 5K topics (dry run)
+        libtrails cluster --dry-run --resolution 0.2   # Test params without saving
     """
     from .clustering import cluster_topics
     from .database import get_db
@@ -1035,13 +1048,19 @@ def cluster(mode, partition_type, min_cooccur, resolution, knn_k, skip_cooccur):
         console.print(f"  [green]Found {cooccur_stats['cooccurrence_pairs']} co-occurrence pairs[/green]")
 
     # Run clustering
-    console.print("\n[bold cyan]Step 2/2: Clustering topics[/bold cyan]")
+    if dry_run or sample_size:
+        console.print("\n[bold yellow]Step 2/2: Clustering topics (DRY RUN)[/bold yellow]")
+    else:
+        console.print("\n[bold cyan]Step 2/2: Clustering topics[/bold cyan]")
+
     cluster_result = cluster_topics(
         mode=mode,
         partition_type=partition_type,
         cooccurrence_min=min_cooccur,
         resolution=resolution,
         knn_k=knn_k,
+        dry_run=dry_run,
+        sample_size=sample_size,
     )
 
     if "error" not in cluster_result:
@@ -1049,16 +1068,30 @@ def cluster(mode, partition_type, min_cooccur, resolution, knn_k, skip_cooccur):
         console.print(f"  [dim]Quality score: {cluster_result['modularity']:.4f}[/dim]")
         console.print(f"  [dim]Edges: {cluster_result['total_edges']} ({cluster_result.get('edge_types', {})})[/dim]")
         console.print(f"  [dim]Time: {cluster_result.get('leiden_time_seconds', 0):.1f}s[/dim]")
+        console.print(f"  [dim]Resolution: {cluster_result.get('resolution', 'N/A')}[/dim]")
 
         # Show top clusters
         if cluster_result.get("cluster_sizes"):
             console.print("\n  [bold]Top clusters by size:[/bold]")
             for cluster_id, size in list(cluster_result["cluster_sizes"].items())[:5]:
                 console.print(f"    Cluster {cluster_id}: {size} topics")
+
+        # Show estimates for dry run
+        if cluster_result.get("sample_size"):
+            console.print("\n  [bold yellow]Dry Run Estimates:[/bold yellow]")
+            console.print(f"    Sampled: {cluster_result['sample_size']:,} of {cluster_result['full_node_count']:,} topics")
+            console.print(f"    Scale factor: {cluster_result['scale_factor']:.1f}x")
+            est_time = cluster_result.get('estimated_full_time_seconds', 0)
+            console.print(f"    Estimated full run time: {est_time/60:.1f} minutes")
+            if cluster_result.get('memory_used_mb'):
+                console.print(f"    Memory used (sample): {cluster_result['memory_used_mb']:.0f} MB")
+
+        if cluster_result.get("dry_run"):
+            console.print("\n[bold yellow]DRY RUN - no changes saved to database[/bold yellow]")
+        else:
+            console.print("\n[bold green]Clustering complete![/bold green]")
     else:
         console.print(f"  [red]Error: {cluster_result['error']}[/red]")
-
-    console.print("\n[bold green]Clustering complete![/bold green]")
 
 
 @main.command()

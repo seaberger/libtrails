@@ -4,6 +4,7 @@ import sys
 from collections import defaultdict
 from typing import Optional
 
+import igraph as ig
 import leidenalg
 
 from .config import (
@@ -18,15 +19,74 @@ from .config import (
 from .database import get_db, update_topic_cluster
 
 
-def _log_memory(label: str):
-    """Log current memory usage for debugging OOM issues."""
+def _log_memory(label: str) -> float:
+    """Log current memory usage for debugging OOM issues.
+
+    Returns:
+        Memory usage in MB, or 0 if not available.
+    """
     try:
         import resource
-        # Get memory in MB
-        mem_mb = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss / (1024 * 1024)
+        # Get memory in MB (on macOS this is in bytes, on Linux it's in KB)
+        import platform
+        usage = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+        if platform.system() == 'Darwin':
+            mem_mb = usage / (1024 * 1024)
+        else:
+            mem_mb = usage / 1024
         print(f"  [{label}] Memory: {mem_mb:.0f} MB", file=sys.stderr)
+        return mem_mb
     except Exception:
-        pass  # Not available on all platforms
+        return 0
+
+
+def _get_partition(
+    g: ig.Graph,
+    partition_type: str,
+    resolution: float,
+) -> leidenalg.VertexPartition:
+    """Get Leiden partition with appropriate settings.
+
+    Args:
+        g: The igraph Graph to cluster
+        partition_type: One of "modularity", "surprise", or "cpm"
+        resolution: Resolution parameter (used for modularity and cpm)
+
+    Returns:
+        A leidenalg VertexPartition
+    """
+    weights = g.es['weight'] if 'weight' in g.es.attributes() else None
+
+    if weights:
+        print(f"  Using edge weights (min={min(weights):.3f}, max={max(weights):.3f})")
+
+    if partition_type == "modularity":
+        # Use RB version for resolution tuning (γ=1.0 gives standard modularity)
+        return leidenalg.find_partition(
+            g,
+            leidenalg.RBConfigurationVertexPartition,
+            weights=weights,
+            resolution_parameter=resolution,
+        )
+
+    elif partition_type == "surprise":
+        # Surprise doesn't use resolution but does use weights
+        return leidenalg.find_partition(
+            g,
+            leidenalg.SurpriseVertexPartition,
+            weights=weights,
+        )
+
+    elif partition_type == "cpm":
+        return leidenalg.find_partition(
+            g,
+            leidenalg.CPMVertexPartition,
+            weights=weights,
+            resolution_parameter=resolution,
+        )
+
+    else:
+        raise ValueError(f"Unknown partition type: {partition_type}")
 
 
 def cluster_topics(
@@ -36,17 +96,21 @@ def cluster_topics(
     partition_type: str = None,
     cooccurrence_min: int = None,
     knn_k: int = None,
+    dry_run: bool = False,
+    sample_size: int = None,
 ) -> dict:
     """
     Cluster topics using the Leiden algorithm.
 
     Args:
         min_cluster_size: Minimum size for a cluster
-        resolution: Resolution parameter for CPM (higher = more clusters)
+        resolution: Resolution parameter for CPM/modularity (higher = more clusters)
         mode: Graph construction mode - "cooccurrence", "knn", or "full"
         partition_type: Leiden partition type - "modularity", "surprise", or "cpm"
         cooccurrence_min: Minimum co-occurrence count (overrides config if set)
         knn_k: Number of nearest neighbors for k-NN mode
+        dry_run: If True, don't save results to database
+        sample_size: If set, only cluster this many topics (for testing)
 
     Returns:
         Statistics about the clustering
@@ -66,7 +130,7 @@ def cluster_topics(
     # Determine co-occurrence threshold
     min_cooccur = cooccurrence_min if cooccurrence_min is not None else COOCCURRENCE_MIN_COUNT
 
-    _log_memory("Before build_topic_graph")
+    mem_before = _log_memory("Before build_topic_graph")
 
     # Build graph based on mode
     if mode == "cooccurrence":
@@ -91,10 +155,22 @@ def cluster_topics(
     else:
         return {"error": f"Unknown mode: {mode}. Use 'cooccurrence', 'knn', or 'full'"}
 
-    _log_memory(f"After build_topic_graph: {g.vcount()} nodes, {g.ecount()} edges")
+    mem_after_graph = _log_memory(f"After build_topic_graph: {g.vcount()} nodes, {g.ecount()} edges")
 
     if g.vcount() == 0:
         return {"error": "No topics in graph"}
+
+    # Sample subset if requested (for dry-run testing)
+    full_node_count = g.vcount()
+    full_edge_count = g.ecount()
+
+    if sample_size and sample_size < g.vcount():
+        print(f"  [DRY RUN] Sampling {sample_size} of {g.vcount()} topics...")
+        import random
+        random.seed(42)  # Reproducible sampling
+        sample_nodes = random.sample(range(g.vcount()), sample_size)
+        g = g.subgraph(sample_nodes)
+        print(f"  [DRY RUN] Sampled graph: {g.vcount()} nodes, {g.ecount()} edges")
 
     # Log graph statistics
     edge_type_counts = {}
@@ -106,66 +182,74 @@ def cluster_topics(
     for edge_type, count in edge_type_counts.items():
         print(f"    - {edge_type}: {count}")
 
-    # Select partition type
-    partition_types = {
-        "modularity": leidenalg.ModularityVertexPartition,
-        "surprise": leidenalg.SurpriseVertexPartition,
-        "cpm": leidenalg.CPMVertexPartition,
-    }
-
-    if partition_type not in partition_types:
+    if partition_type not in ["modularity", "surprise", "cpm"]:
         return {"error": f"Unknown partition type: {partition_type}. Use 'modularity', 'surprise', or 'cpm'"}
 
-    partition_class = partition_types[partition_type]
-
-    print(f"  Running Leiden ({partition_type}) on graph...")
+    print(f"  Running Leiden ({partition_type}, resolution={resolution}) on graph...")
     _log_memory("Before Leiden")
 
-    # Run Leiden clustering
+    # Run Leiden clustering using helper
     import time
     start_time = time.time()
 
-    if partition_type == "cpm":
-        partition = leidenalg.find_partition(
-            g,
-            partition_class,
-            resolution_parameter=resolution,
-        )
-    else:
-        partition = leidenalg.find_partition(
-            g,
-            partition_class,
-        )
+    partition = _get_partition(g, partition_type, resolution)
 
     elapsed = time.time() - start_time
-    _log_memory("After Leiden")
+    mem_after_leiden = _log_memory("After Leiden")
     print(f"  Leiden completed in {elapsed:.1f}s")
 
-    # Assign cluster IDs to topics
+    # Calculate cluster sizes
     cluster_sizes = defaultdict(int)
-    with get_db() as conn:
-        for node_idx, cluster_id in enumerate(partition.membership):
-            topic_id = g.vs[node_idx]["topic_id"]
-            update_topic_cluster(topic_id, cluster_id)
-            cluster_sizes[cluster_id] += 1
-        conn.commit()
+    for cluster_id in partition.membership:
+        cluster_sizes[cluster_id] += 1
 
-    # Update graph vertex attributes
-    g.vs["cluster"] = partition.membership
-
-    return {
+    # Build result
+    result = {
         "total_topics": g.vcount(),
         "total_edges": g.ecount(),
         "edge_types": edge_type_counts,
         "num_clusters": len(set(partition.membership)),
         "modularity": partition.quality(),
         "partition_type": partition_type,
+        "resolution": resolution,
         "mode": mode,
         "leiden_time_seconds": elapsed,
         "cluster_sizes": dict(sorted(cluster_sizes.items(), key=lambda x: x[1], reverse=True)[:10]),
         "min_cluster_size": min(cluster_sizes.values()) if cluster_sizes else 0,
         "max_cluster_size": max(cluster_sizes.values()) if cluster_sizes else 0,
+        "dry_run": dry_run or (sample_size is not None),
     }
+
+    # Add memory and scaling estimates for dry runs
+    if sample_size and sample_size < full_node_count:
+        scale_factor = full_node_count / sample_size
+        result["sample_size"] = sample_size
+        result["full_node_count"] = full_node_count
+        result["full_edge_count"] = full_edge_count
+        result["scale_factor"] = scale_factor
+        # Rough estimates (memory scales ~linearly with edges, time scales ~O(n log n))
+        result["estimated_full_time_seconds"] = elapsed * scale_factor * 1.5  # Conservative
+        result["memory_used_mb"] = mem_after_leiden - mem_before if mem_after_leiden and mem_before else 0
+
+        print(f"\n  [DRY RUN ESTIMATES]")
+        print(f"    Sample: {sample_size} topics -> {result['num_clusters']} clusters in {elapsed:.1f}s")
+        print(f"    Full run: {full_node_count} topics ({scale_factor:.1f}x)")
+        print(f"    Estimated time: {result['estimated_full_time_seconds']/60:.1f} minutes")
+
+    # Save results to database (unless dry run)
+    if not dry_run and not sample_size:
+        with get_db() as conn:
+            for node_idx, cluster_id in enumerate(partition.membership):
+                topic_id = g.vs[node_idx]["topic_id"]
+                update_topic_cluster(topic_id, cluster_id)
+            conn.commit()
+
+        # Update graph vertex attributes
+        g.vs["cluster"] = partition.membership
+    else:
+        print(f"\n  [DRY RUN] Skipping database update")
+
+    return result
 
 
 def get_cluster_topics(cluster_id: int) -> list[dict]:

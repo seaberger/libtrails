@@ -8,49 +8,94 @@ interface Props {
 
 const { theme } = Astro.props;
 
-// Get up to 3 books for the cover stack
-const stackBooks = theme.sample_books.slice(0, 3);
+// Get up to 5 books for the cover stack
+const stackBooks = theme.sample_books.slice(0, 5);
+const bookCount = stackBooks.length;
 ---
 
 <a
   href={`/themes/${theme.cluster_id}`}
-  class="block bg-[var(--color-surface)] rounded-lg p-5 border border-[var(--color-border)] card-hover"
+  class="group block bg-[var(--color-surface)] rounded-lg p-5 border border-[var(--color-border)] hover:border-[var(--color-accent)] hover:shadow-lg transition-all duration-300"
+  data-theme-card
 >
-  <!-- Cover stack -->
-  <div class="relative h-36 mb-4 flex items-center justify-center">
-    <div class="cover-stack flex items-end justify-center" style="width: 120px; height: 140px;">
-      {stackBooks.map((book, index) => (
-        <div
-          class="absolute"
-          style={`
-            z-index: ${3 - index};
-            transform: translateX(${(index - 1) * 20}px) rotate(${(index - 1) * 4}deg);
-          `}
-        >
-          <BookCover
-            calibreId={book.calibre_id}
-            title={book.title}
-            size="md"
-          />
-        </div>
-      ))}
+  <!-- Cover stack with fan-out on hover -->
+  <div class="relative h-40 mb-4 flex items-center justify-center">
+    <div class="relative" style="width: 180px; height: 140px;">
+      {stackBooks.map((book, index) => {
+        // Calculate positions
+        const center = (bookCount - 1) / 2;
+        const offset = index - center;
+
+        // Stacked (default): tight stack
+        const stackedX = offset * 10;
+        const stackedRotate = offset * 2;
+
+        // Fanned (hover): spread out with more rotation like a card fan
+        const fannedX = offset * 35;
+        const fannedRotate = offset * 18;
+
+        return (
+          <div
+            class="absolute left-1/2 transition-all duration-300 ease-out group-hover:scale-105"
+            style={`
+              z-index: ${bookCount - index};
+              transform: translateX(calc(-50% + ${stackedX}px)) rotate(${stackedRotate}deg);
+              transform-origin: center 150%;
+            `}
+            data-fanned-x={fannedX}
+            data-fanned-rotate={fannedRotate}
+            data-stacked-x={stackedX}
+            data-stacked-rotate={stackedRotate}
+          >
+            <BookCover
+              calibreId={book.calibre_id}
+              title={book.title}
+              size="md"
+            />
+          </div>
+        );
+      })}
     </div>
   </div>
 
   <!-- Theme info -->
-  <h3 class="font-medium text-[var(--color-text)] text-sm leading-tight mb-1 line-clamp-2">
+  <h3 class="font-bold text-[var(--color-text)] text-base leading-tight mb-2 text-center capitalize">
     {theme.label}
   </h3>
-  <p class="text-xs text-[var(--color-text-muted)]">
+  <p class="text-xs text-[var(--color-text-muted)] text-center">
     {theme.book_count} books · {theme.size} topics
   </p>
 </a>
 
-<style>
-  .line-clamp-2 {
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+<script>
+  // Fan out cards on hover - only on homepage with theme cards
+  function initFanEffect() {
+    const cards = document.querySelectorAll('[data-theme-card]');
+    if (!cards.length) return;
+
+    cards.forEach(card => {
+      const books = card.querySelectorAll('[data-fanned-x]');
+      if (!books.length) return;
+
+      card.addEventListener('mouseenter', () => {
+        books.forEach(book => {
+          const x = book.getAttribute('data-fanned-x');
+          const rotate = book.getAttribute('data-fanned-rotate');
+          (book as HTMLElement).style.transform = `translateX(calc(-50% + ${x}px)) rotate(${rotate}deg)`;
+        });
+      });
+
+      card.addEventListener('mouseleave', () => {
+        books.forEach(book => {
+          const x = book.getAttribute('data-stacked-x');
+          const rotate = book.getAttribute('data-stacked-rotate');
+          (book as HTMLElement).style.transform = `translateX(calc(-50% + ${x}px)) rotate(${rotate}deg)`;
+        });
+      });
+    });
   }
-</style>
+
+  // Run on load and after navigation
+  initFanEffect();
+  document.addEventListener('astro:page-load', initFanEffect);
+</script>
