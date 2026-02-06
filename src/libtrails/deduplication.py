@@ -368,6 +368,7 @@ def merge_groups_batch(groups: list[list[dict]], commit_every: int = 100) -> dic
 
     total_topics_merged = 0
     groups_processed = 0
+    deleted_topic_ids = []  # Collect IDs for vector cleanup
 
     with Progress(
         SpinnerColumn(),
@@ -421,8 +422,8 @@ def merge_groups_batch(groups: list[list[dict]], commit_every: int = 100) -> dic
                 # Delete duplicate topic
                 cursor.execute("DELETE FROM topics WHERE id = ?", (dup["id"],))
 
-                # Delete from vector index
-                cursor.execute("DELETE FROM topic_vectors WHERE topic_id = ?", (dup["id"],))
+                # Track for vector cleanup (done separately due to vec0 extension)
+                deleted_topic_ids.append(dup["id"])
 
                 total_topics_merged += 1
 
@@ -437,6 +438,20 @@ def merge_groups_batch(groups: list[list[dict]], commit_every: int = 100) -> dic
         conn.commit()
 
     conn.close()
+
+    # Clean up vectors using vec_db connection (has vec0 extension)
+    if deleted_topic_ids:
+        from .vector_search import get_vec_db
+        vec_conn = get_vec_db()
+        vec_cursor = vec_conn.cursor()
+        # Delete in batches to avoid SQL limits
+        batch_size = 500
+        for i in range(0, len(deleted_topic_ids), batch_size):
+            batch = deleted_topic_ids[i:i + batch_size]
+            placeholders = ",".join("?" * len(batch))
+            vec_cursor.execute(f"DELETE FROM topic_vectors WHERE topic_id IN ({placeholders})", batch)
+        vec_conn.commit()
+        vec_conn.close()
 
     return {
         "groups_merged": groups_processed,
