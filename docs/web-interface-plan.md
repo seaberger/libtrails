@@ -685,6 +685,189 @@ cd web && npm run dev
 
 1. ~~Wait for indexing to complete~~ ✅
 2. ~~Run Leiden clustering~~ ✅
-3. ~~Implement `libtrails export`~~ Skipped (using direct API)
+3. ~~Implement `libtrails export`~ Skipped (using direct API)
 4. ~~Initialize Astro project~~ ✅
 5. ~~Build Phase 2 (Theme Browser)~~ ✅
+
+---
+
+## Phase 7: Domain Hierarchy (Feb 2025)
+
+### Problem
+
+Browsing 845 Leiden clusters directly is overwhelming. Users need a higher-level entry point.
+
+### Solution: Two-Level Navigation
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  LibTrails    [Themes]  [Clusters]  [Books]  [Search]       │
+└─────────────────────────────────────────────────────────────┘
+```
+
+| Tab | Content | Status |
+|-----|---------|--------|
+| **Themes** | ~20 broad domains (super-clusters) | NEW |
+| **Clusters** | ~845 Leiden clusters (current themes page) | RENAME |
+| Books | Browse all indexed books | Existing |
+| Search | Semantic search across topics/books | Existing |
+
+### Themes Tab: Two-Panel Domain Browser
+
+```
+┌────────────────────────┬──────────────────────────────────────────┐
+│  DOMAINS               │                                          │
+│  ──────────────────    │  [Selected domain detail]                │
+│                        │                                          │
+│  ○ Conflict & Warfare  │  🔬 Artificial Intelligence & Math       │
+│  ○ Technology          │  ────────────────────────────────────    │
+│  ● AI & Math      ←    │  68 clusters · 8,750 topics              │
+│  ○ Space & Earth       │                                          │
+│  ○ Food & Drink        │  Featured Clusters:                      │
+│  ○ Financial Markets   │  ┌─────────┐ ┌─────────┐ ┌─────────┐    │
+│  ○ Ancient Cultures    │  │ Machine │ │ Neural  │ │  Stats  │    │
+│  ○ Spirituality        │  │Learning │ │Networks │ │  & Prob │    │
+│  ○ Human Condition     │  │ 📚 142  │ │ 📚 98   │ │ 📚 87   │    │
+│  ○ Entertainment       │  └─────────┘ └─────────┘ └─────────┘    │
+│  ○ Biology & Health    │                                          │
+│  ○ ...                 │  [View all 68 clusters →]                │
+│                        │                                          │
+│  ────────────────      │  Sample Books:                           │
+│  845 clusters total    │  📖 Deep Learning (Goodfellow)           │
+│  108,668 topics        │  📖 Pattern Recognition (Bishop)         │
+│                        │  📖 The Master Algorithm                 │
+│                        │                                          │
+└────────────────────────┴──────────────────────────────────────────┘
+```
+
+### Super-Cluster Generation (Experiment Results)
+
+**Method**: K-means on Leiden cluster centroid embeddings
+
+```python
+# 1. Compute centroid for each of 845 Leiden clusters
+centroids[cluster_id] = mean(topic_embeddings_in_cluster)
+
+# 2. K-means clustering on centroids → 20 super-clusters
+kmeans = KMeans(n_clusters=20)
+super_assignments = kmeans.fit_predict(centroid_matrix)
+
+# 3. LLM generates label for each super-cluster
+```
+
+**Results** (Feb 5, 2025):
+
+| Domain | Label | Clusters | Topics |
+|--------|-------|----------|--------|
+| 0 | Conflict and Warfare | 31 | 3,779 |
+| 1 | Technology & Systems | 66 | 7,657 |
+| 2 | Chess & Strategy | 97 | 8,460 |
+| 3 | Social & Ethical Issues | 42 | 5,328 |
+| 4 | International Relations & Law | 38 | 5,538 |
+| 5 | Energy & Industry | 34 | 3,856 |
+| 6 | Business & Education | 34 | 3,715 |
+| 7 | Food & Drink | 28 | 4,663 |
+| 8 | Transportation & Rescue | 26 | 3,278 |
+| 9 | Biology & Health | 41 | 5,448 |
+| 10 | Creative Writing & Mind | 53 | 8,081 |
+| 11 | Artificial Intelligence & Math | 68 | 8,750 |
+| 12 | Ancient Civilizations & Cultures | 36 | 5,076 |
+| 13 | Human Condition | 39 | 5,960 |
+| 14 | Space Exploration & Earth | 42 | 5,733 |
+| 15 | Intelligence & Deception | 23 | 3,719 |
+| 16 | Financial Markets & Assets | 38 | 5,600 |
+| 17 | Entertainment & Culture | 43 | 6,043 |
+| 18 | Spirituality & Belief | 26 | 3,733 |
+| 19 | 18th Century European History | 40 | 4,251 |
+
+**Quality Issues**:
+- Some domains are coherent (Transportation & Rescue, Financial Markets)
+- Some are junk drawers (Chess & Strategy contains random short-word topics)
+- Short topic labels (≤3 chars) have weak embedding signal
+
+**Data**: `experiments/super_clusters.json`
+
+### Implementation Tasks
+
+#### Phase 7a: Data Infrastructure
+- [ ] Fix super-cluster quality (filter short topics before centroid calculation)
+- [ ] Re-run k-means with improved centroids
+- [ ] Create `domains` table in database
+- [ ] Store domain assignments for each Leiden cluster
+- [ ] Add API endpoints: `GET /domains`, `GET /domains/{id}`
+
+#### Phase 7b: Themes Tab (New)
+- [ ] Create `/themes` page with two-panel layout
+- [ ] Left panel: Domain list component (selectable)
+- [ ] Right panel: Domain detail with featured clusters
+- [ ] Client-side panel switching (no page reload)
+- [ ] "View all clusters" link to filtered Clusters tab
+
+#### Phase 7c: Clusters Tab (Rename)
+- [ ] Rename current "Themes" to "Clusters" in navigation
+- [ ] Update routes: `/themes/*` → `/clusters/*`
+- [ ] Add domain filter dropdown
+- [ ] Add domain badge to cluster cards
+
+### API Design
+
+**GET /api/v1/domains**
+```json
+[
+  {
+    "domain_id": 11,
+    "label": "Artificial Intelligence & Math",
+    "cluster_count": 68,
+    "topic_count": 8750,
+    "book_count": 342,
+    "featured_clusters": [
+      {"cluster_id": 5, "label": "machine learning", "book_count": 142},
+      {"cluster_id": 57, "label": "neural networks", "book_count": 98}
+    ],
+    "sample_books": [
+      {"id": 123, "title": "Deep Learning", "calibre_id": 456}
+    ]
+  }
+]
+```
+
+**GET /api/v1/domains/{domain_id}**
+```json
+{
+  "domain_id": 11,
+  "label": "Artificial Intelligence & Math",
+  "clusters": [
+    {"cluster_id": 5, "label": "machine learning", "size": 357, "book_count": 142},
+    {"cluster_id": 57, "label": "neural networks", "size": 245, "book_count": 98}
+    // ... all 68 clusters
+  ]
+}
+```
+
+### URL Structure (Updated)
+
+```
+/                       → Redirect to /themes
+/themes                 → Domain browser (two-panel)
+/themes/{domain_id}     → Same page, domain pre-selected
+/clusters               → All clusters grid (renamed from /themes)
+/clusters?domain={id}   → Filtered by domain
+/clusters/{cluster_id}  → Cluster detail (existing theme detail)
+/books                  → All books
+/books/{book_id}        → Book detail
+```
+
+### Open Questions
+
+1. **Super-cluster quality**: How to handle junk drawer domains?
+   - Filter Leiden clusters with mostly short topics
+   - Manual curation of the 20 domains
+   - Use hierarchical Leiden instead of k-means
+
+2. **Number of domains**: Is 20 the right number?
+   - Could try 15 (broader) or 25 (more specific)
+   - Could make it dynamic based on cluster coherence
+
+3. **Domain naming**:
+   - LLM-generated (current) vs manual curation
+   - Could add icons for visual distinction

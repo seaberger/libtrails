@@ -1,0 +1,7774 @@
+{
+  "meta": {
+    "total_super_clusters": 20,
+    "total_leiden_clusters": 845,
+    "total_topics": 108668
+  },
+  "super_clusters": [
+    {
+      "super_cluster_id": 0,
+      "label": "Conflict and Warfare",
+      "leiden_cluster_count": 31,
+      "total_topics": 3779,
+      "leiden_clusters": [
+        {
+          "cluster_id": 45,
+          "size": 286,
+          "top_topics": [
+            "war",
+            "wars",
+            "combat"
+          ]
+        },
+        {
+          "cluster_id": 51,
+          "size": 255,
+          "top_topics": [
+            "iran",
+            "france",
+            "england"
+          ]
+        },
+        {
+          "cluster_id": 52,
+          "size": 247,
+          "top_topics": [
+            "gun",
+            "nra",
+            "guns"
+          ]
+        },
+        {
+          "cluster_id": 61,
+          "size": 246,
+          "top_topics": [
+            "army",
+            "morale",
+            "seamen"
+          ]
+        },
+        {
+          "cluster_id": 162,
+          "size": 184,
+          "top_topics": [
+            "men",
+            "1776",
+            "siege"
+          ]
+        },
+        {
+          "cluster_id": 176,
+          "size": 182,
+          "top_topics": [
+            "judo",
+            "fight",
+            "boxing"
+          ]
+        },
+        {
+          "cluster_id": 198,
+          "size": 161,
+          "top_topics": [
+            "ss",
+            "czar",
+            "generals"
+          ]
+        },
+        {
+          "cluster_id": 214,
+          "size": 159,
+          "top_topics": [
+            "jump",
+            "leap",
+            "blimp"
+          ]
+        },
+        {
+          "cluster_id": 226,
+          "size": 158,
+          "top_topics": [
+            "wmd",
+            "bomb",
+            "nuke"
+          ]
+        },
+        {
+          "cluster_id": 232,
+          "size": 156,
+          "top_topics": [
+            "sdf",
+            "pkk",
+            "pyd"
+          ]
+        },
+        {
+          "cluster_id": 271,
+          "size": 145,
+          "top_topics": [
+            "graves",
+            "soldier",
+            "warrior"
+          ]
+        },
+        {
+          "cluster_id": 347,
+          "size": 125,
+          "top_topics": [
+            "base",
+            "bases",
+            "squad"
+          ]
+        },
+        {
+          "cluster_id": 379,
+          "size": 123,
+          "top_topics": [
+            "camp",
+            "okie",
+            "okra"
+          ]
+        },
+        {
+          "cluster_id": 399,
+          "size": 119,
+          "top_topics": [
+            "hue",
+            "arvn",
+            "hanoi"
+          ]
+        },
+        {
+          "cluster_id": 408,
+          "size": 119,
+          "top_topics": [
+            "fort",
+            "moat",
+            "forts"
+          ]
+        },
+        {
+          "cluster_id": 442,
+          "size": 116,
+          "top_topics": [
+            "guard",
+            "escort",
+            "guards"
+          ]
+        },
+        {
+          "cluster_id": 526,
+          "size": 98,
+          "top_topics": [
+            "lion",
+            "lions",
+            "attack"
+          ]
+        },
+        {
+          "cluster_id": 605,
+          "size": 89,
+          "top_topics": [
+            "seneca",
+            "richmond",
+            "veterans"
+          ]
+        },
+        {
+          "cluster_id": 592,
+          "size": 82,
+          "top_topics": [
+            "buds",
+            "raid",
+            "bear"
+          ]
+        },
+        {
+          "cluster_id": 615,
+          "size": 82,
+          "top_topics": [
+            "wwi",
+            "wwii",
+            "wartime"
+          ]
+        },
+        {
+          "cluster_id": 677,
+          "size": 74,
+          "top_topics": [
+            "conquest",
+            "invasion",
+            "dominion"
+          ]
+        },
+        {
+          "cluster_id": 698,
+          "size": 72,
+          "top_topics": [
+            "hero",
+            "heroes",
+            "heroism"
+          ]
+        },
+        {
+          "cluster_id": 700,
+          "size": 68,
+          "top_topics": [
+            "march",
+            "rally",
+            "parade"
+          ]
+        },
+        {
+          "cluster_id": 748,
+          "size": 66,
+          "top_topics": [
+            "rebels",
+            "militia",
+            "militias"
+          ]
+        },
+        {
+          "cluster_id": 737,
+          "size": 63,
+          "top_topics": [
+            "enemy",
+            "enemies",
+            "ambushes"
+          ]
+        },
+        {
+          "cluster_id": 754,
+          "size": 63,
+          "top_topics": [
+            "gerry",
+            "macau",
+            "trouble"
+          ]
+        },
+        {
+          "cluster_id": 762,
+          "size": 58,
+          "top_topics": [
+            "armada",
+            "bomb bay",
+            "black sea"
+          ]
+        },
+        {
+          "cluster_id": 776,
+          "size": 53,
+          "top_topics": [
+            "retreat",
+            "retreats",
+            "loyalists"
+          ]
+        },
+        {
+          "cluster_id": 785,
+          "size": 51,
+          "top_topics": [
+            "kabul",
+            "medals",
+            "taliban"
+          ]
+        },
+        {
+          "cluster_id": 788,
+          "size": 49,
+          "top_topics": [
+            "ashura",
+            "defeat",
+            "martyr"
+          ]
+        },
+        {
+          "cluster_id": 837,
+          "size": 30,
+          "top_topics": [
+            "klept",
+            "helots",
+            "sparta"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 1,
+      "label": "Technology & Systems",
+      "leiden_cluster_count": 66,
+      "total_topics": 7657,
+      "leiden_clusters": [
+        {
+          "cluster_id": 9,
+          "size": 339,
+          "top_topics": [
+            "lag",
+            "time",
+            "date"
+          ]
+        },
+        {
+          "cluster_id": 46,
+          "size": 251,
+          "top_topics": [
+            "git",
+            "ssh",
+            "bash"
+          ]
+        },
+        {
+          "cluster_id": 60,
+          "size": 231,
+          "top_topics": [
+            "web",
+            "css",
+            "ajax"
+          ]
+        },
+        {
+          "cluster_id": 94,
+          "size": 216,
+          "top_topics": [
+            "gps",
+            "probes",
+            "old one"
+          ]
+        },
+        {
+          "cluster_id": 88,
+          "size": 211,
+          "top_topics": [
+            "iso",
+            "cctv",
+            "nilt"
+          ]
+        },
+        {
+          "cluster_id": 115,
+          "size": 196,
+          "top_topics": [
+            "log",
+            "logs",
+            "newt"
+          ]
+        },
+        {
+          "cluster_id": 136,
+          "size": 186,
+          "top_topics": [
+            "ion",
+            "design",
+            "battery"
+          ]
+        },
+        {
+          "cluster_id": 153,
+          "size": 184,
+          "top_topics": [
+            "flip",
+            "turn",
+            "board"
+          ]
+        },
+        {
+          "cluster_id": 145,
+          "size": 183,
+          "top_topics": [
+            "tasks",
+            "routine",
+            "calendar"
+          ]
+        },
+        {
+          "cluster_id": 141,
+          "size": 181,
+          "top_topics": [
+            "box",
+            "hub",
+            "audio"
+          ]
+        },
+        {
+          "cluster_id": 131,
+          "size": 181,
+          "top_topics": [
+            "ui",
+            "gui",
+            "rat"
+          ]
+        },
+        {
+          "cluster_id": 174,
+          "size": 172,
+          "top_topics": [
+            "agent",
+            "agents",
+            "planner"
+          ]
+        },
+        {
+          "cluster_id": 234,
+          "size": 156,
+          "top_topics": [
+            "ftx",
+            "zte",
+            "voip"
+          ]
+        },
+        {
+          "cluster_id": 218,
+          "size": 155,
+          "top_topics": [
+            "rob",
+            "robot",
+            "robox"
+          ]
+        },
+        {
+          "cluster_id": 221,
+          "size": 154,
+          "top_topics": [
+            "sms",
+            "imap",
+            "smtp"
+          ]
+        },
+        {
+          "cluster_id": 253,
+          "size": 150,
+          "top_topics": [
+            "ico",
+            "zelle",
+            "crypto"
+          ]
+        },
+        {
+          "cluster_id": 273,
+          "size": 143,
+          "top_topics": [
+            "chaos",
+            "order",
+            "lodge"
+          ]
+        },
+        {
+          "cluster_id": 295,
+          "size": 139,
+          "top_topics": [
+            "vc",
+            "vr",
+            "pip"
+          ]
+        },
+        {
+          "cluster_id": 289,
+          "size": 138,
+          "top_topics": [
+            "key",
+            "ssl",
+            "tls"
+          ]
+        },
+        {
+          "cluster_id": 316,
+          "size": 137,
+          "top_topics": [
+            "macd",
+            "mact",
+            "imac"
+          ]
+        },
+        {
+          "cluster_id": 296,
+          "size": 136,
+          "top_topics": [
+            "ibm",
+            "editing",
+            "editors"
+          ]
+        },
+        {
+          "cluster_id": 311,
+          "size": 133,
+          "top_topics": [
+            "count",
+            "ituno",
+            "tally"
+          ]
+        },
+        {
+          "cluster_id": 340,
+          "size": 128,
+          "top_topics": [
+            "rer",
+            "relu",
+            "reegs"
+          ]
+        },
+        {
+          "cluster_id": 376,
+          "size": 124,
+          "top_topics": [
+            "apps",
+            "notes",
+            "evernote"
+          ]
+        },
+        {
+          "cluster_id": 380,
+          "size": 123,
+          "top_topics": [
+            "life",
+            "zone",
+            "action"
+          ]
+        },
+        {
+          "cluster_id": 392,
+          "size": 123,
+          "top_topics": [
+            "oss",
+            "eros",
+            "path"
+          ]
+        },
+        {
+          "cluster_id": 369,
+          "size": 123,
+          "top_topics": [
+            "r&d",
+            "inventor",
+            "pioneers"
+          ]
+        },
+        {
+          "cluster_id": 400,
+          "size": 118,
+          "top_topics": [
+            "test",
+            "blood",
+            "tests"
+          ]
+        },
+        {
+          "cluster_id": 423,
+          "size": 112,
+          "top_topics": [
+            "bait",
+            "horn",
+            "reel"
+          ]
+        },
+        {
+          "cluster_id": 459,
+          "size": 110,
+          "top_topics": [
+            "cpu",
+            "gpu",
+            "hpc"
+          ]
+        },
+        {
+          "cluster_id": 478,
+          "size": 109,
+          "top_topics": [
+            "error",
+            "kelly",
+            "heavy"
+          ]
+        },
+        {
+          "cluster_id": 463,
+          "size": 109,
+          "top_topics": [
+            "fred",
+            "harm",
+            "batch"
+          ]
+        },
+        {
+          "cluster_id": 446,
+          "size": 108,
+          "top_topics": [
+            "3d",
+            "next",
+            "width"
+          ]
+        },
+        {
+          "cluster_id": 464,
+          "size": 106,
+          "top_topics": [
+            "gpt-2",
+            "gpt-3",
+            "gpt-4"
+          ]
+        },
+        {
+          "cluster_id": 491,
+          "size": 101,
+          "top_topics": [
+            "3com",
+            "co-op",
+            "dicom"
+          ]
+        },
+        {
+          "cluster_id": 494,
+          "size": 98,
+          "top_topics": [
+            "login",
+            "censure",
+            "e-verify"
+          ]
+        },
+        {
+          "cluster_id": 538,
+          "size": 95,
+          "top_topics": [
+            "scope",
+            "scopes",
+            "homework"
+          ]
+        },
+        {
+          "cluster_id": 517,
+          "size": 95,
+          "top_topics": [
+            "host",
+            "exots",
+            "hosts"
+          ]
+        },
+        {
+          "cluster_id": 540,
+          "size": 94,
+          "top_topics": [
+            "ec2",
+            "sky",
+            "aws"
+          ]
+        },
+        {
+          "cluster_id": 522,
+          "size": 94,
+          "top_topics": [
+            "pdf",
+            "excel",
+            "pypdf2"
+          ]
+        },
+        {
+          "cluster_id": 537,
+          "size": 92,
+          "top_topics": [
+            "vpn",
+            "access",
+            "sharing"
+          ]
+        },
+        {
+          "cluster_id": 575,
+          "size": 88,
+          "top_topics": [
+            "parts",
+            "motion",
+            "relative"
+          ]
+        },
+        {
+          "cluster_id": 582,
+          "size": 88,
+          "top_topics": [
+            "lock",
+            "locks",
+            "pixies"
+          ]
+        },
+        {
+          "cluster_id": 601,
+          "size": 87,
+          "top_topics": [
+            "202",
+            "sega",
+            "geeks"
+          ]
+        },
+        {
+          "cluster_id": 586,
+          "size": 83,
+          "top_topics": [
+            "tile",
+            "tiles",
+            "clues"
+          ]
+        },
+        {
+          "cluster_id": 594,
+          "size": 83,
+          "top_topics": [
+            "doon",
+            "augury",
+            "assizes"
+          ]
+        },
+        {
+          "cluster_id": 621,
+          "size": 81,
+          "top_topics": [
+            "aol",
+            "coding",
+            "dating"
+          ]
+        },
+        {
+          "cluster_id": 640,
+          "size": 79,
+          "top_topics": [
+            "ip law",
+            "notice",
+            "patent"
+          ]
+        },
+        {
+          "cluster_id": 642,
+          "size": 78,
+          "top_topics": [
+            "puck",
+            "queue",
+            "slate"
+          ]
+        },
+        {
+          "cluster_id": 633,
+          "size": 78,
+          "top_topics": [
+            "copy",
+            "clone",
+            "clones"
+          ]
+        },
+        {
+          "cluster_id": 681,
+          "size": 75,
+          "top_topics": [
+            "xis",
+            "xingu",
+            "sechin"
+          ]
+        },
+        {
+          "cluster_id": 715,
+          "size": 72,
+          "top_topics": [
+            "method",
+            "statics",
+            "methods"
+          ]
+        },
+        {
+          "cluster_id": 708,
+          "size": 71,
+          "top_topics": [
+            "mod",
+            "input",
+            "entry"
+          ]
+        },
+        {
+          "cluster_id": 701,
+          "size": 71,
+          "top_topics": [
+            "lab",
+            "dworkin",
+            "lab work"
+          ]
+        },
+        {
+          "cluster_id": 689,
+          "size": 70,
+          "top_topics": [
+            "net",
+            "pdc",
+            "pddl"
+          ]
+        },
+        {
+          "cluster_id": 717,
+          "size": 68,
+          "top_topics": [
+            "f'nor",
+            "being",
+            "non-self"
+          ]
+        },
+        {
+          "cluster_id": 739,
+          "size": 67,
+          "top_topics": [
+            "exams",
+            "medical",
+            "owl exam"
+          ]
+        },
+        {
+          "cluster_id": 767,
+          "size": 56,
+          "top_topics": [
+            "c++",
+            "cgi",
+            "onnx"
+          ]
+        },
+        {
+          "cluster_id": 778,
+          "size": 55,
+          "top_topics": [
+            "api",
+            "use",
+            "apis"
+          ]
+        },
+        {
+          "cluster_id": 799,
+          "size": 48,
+          "top_topics": [
+            "cache",
+            "blocks",
+            "caching"
+          ]
+        },
+        {
+          "cluster_id": 796,
+          "size": 48,
+          "top_topics": [
+            "trace",
+            "script",
+            "tracing"
+          ]
+        },
+        {
+          "cluster_id": 797,
+          "size": 46,
+          "top_topics": [
+            "recorder",
+            "red tape",
+            "xception"
+          ]
+        },
+        {
+          "cluster_id": 820,
+          "size": 38,
+          "top_topics": [
+            "quarks",
+            "sprites",
+            "collider"
+          ]
+        },
+        {
+          "cluster_id": 825,
+          "size": 34,
+          "top_topics": [
+            "offset",
+            "notation",
+            "position"
+          ]
+        },
+        {
+          "cluster_id": 834,
+          "size": 32,
+          "top_topics": [
+            "line",
+            "lines",
+            "k line"
+          ]
+        },
+        {
+          "cluster_id": 840,
+          "size": 27,
+          "top_topics": [
+            "return",
+            "returns",
+            "returners"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 2,
+      "label": "Chess & Strategy",
+      "leiden_cluster_count": 97,
+      "total_topics": 8460,
+      "leiden_clusters": [
+        {
+          "cluster_id": 19,
+          "size": 309,
+          "top_topics": [
+            "hugh",
+            "mate",
+            "rook"
+          ]
+        },
+        {
+          "cluster_id": 22,
+          "size": 297,
+          "top_topics": [
+            "kgb",
+            "lev",
+            "anna"
+          ]
+        },
+        {
+          "cluster_id": 103,
+          "size": 203,
+          "top_topics": [
+            "tea",
+            "chun",
+            "japan"
+          ]
+        },
+        {
+          "cluster_id": 109,
+          "size": 198,
+          "top_topics": [
+            "sax",
+            "bach",
+            "bass"
+          ]
+        },
+        {
+          "cluster_id": 99,
+          "size": 197,
+          "top_topics": [
+            "sol",
+            "dina",
+            "iris"
+          ]
+        },
+        {
+          "cluster_id": 140,
+          "size": 189,
+          "top_topics": [
+            "bog",
+            "duel",
+            "wand"
+          ]
+        },
+        {
+          "cluster_id": 243,
+          "size": 148,
+          "top_topics": [
+            "ka",
+            "elu",
+            "gru"
+          ]
+        },
+        {
+          "cluster_id": 281,
+          "size": 138,
+          "top_topics": [
+            "eo",
+            "eli",
+            "lio"
+          ]
+        },
+        {
+          "cluster_id": 291,
+          "size": 136,
+          "top_topics": [
+            "rank",
+            "tent",
+            "silk"
+          ]
+        },
+        {
+          "cluster_id": 321,
+          "size": 129,
+          "top_topics": [
+            "range",
+            "knight",
+            "ranges"
+          ]
+        },
+        {
+          "cluster_id": 341,
+          "size": 127,
+          "top_topics": [
+            "lune",
+            "mags",
+            "lohan"
+          ]
+        },
+        {
+          "cluster_id": 317,
+          "size": 127,
+          "top_topics": [
+            "ecba",
+            "apert",
+            "avout"
+          ]
+        },
+        {
+          "cluster_id": 367,
+          "size": 126,
+          "top_topics": [
+            "drag",
+            "pony",
+            "mekh"
+          ]
+        },
+        {
+          "cluster_id": 339,
+          "size": 126,
+          "top_topics": [
+            "fcn",
+            "knn",
+            "agon"
+          ]
+        },
+        {
+          "cluster_id": 364,
+          "size": 122,
+          "top_topics": [
+            "lan",
+            "deer",
+            "aiel"
+          ]
+        },
+        {
+          "cluster_id": 363,
+          "size": 121,
+          "top_topics": [
+            "thu",
+            "trie",
+            "claw"
+          ]
+        },
+        {
+          "cluster_id": 383,
+          "size": 117,
+          "top_topics": [
+            "way",
+            "door",
+            "loft"
+          ]
+        },
+        {
+          "cluster_id": 403,
+          "size": 116,
+          "top_topics": [
+            "ru",
+            "ruc",
+            "alia"
+          ]
+        },
+        {
+          "cluster_id": 451,
+          "size": 112,
+          "top_topics": [
+            "ada",
+            "ark",
+            "ivy"
+          ]
+        },
+        {
+          "cluster_id": 427,
+          "size": 111,
+          "top_topics": [
+            "bim",
+            "crm",
+            "gam"
+          ]
+        },
+        {
+          "cluster_id": 454,
+          "size": 109,
+          "top_topics": [
+            "atia",
+            "gaia",
+            "noia"
+          ]
+        },
+        {
+          "cluster_id": 435,
+          "size": 109,
+          "top_topics": [
+            "mab",
+            "blas",
+            "krum"
+          ]
+        },
+        {
+          "cluster_id": 485,
+          "size": 106,
+          "top_topics": [
+            "names",
+            "naming",
+            "titles"
+          ]
+        },
+        {
+          "cluster_id": 449,
+          "size": 105,
+          "top_topics": [
+            "athy",
+            "moha",
+            "mose"
+          ]
+        },
+        {
+          "cluster_id": 467,
+          "size": 103,
+          "top_topics": [
+            "cato",
+            "bull",
+            "pico"
+          ]
+        },
+        {
+          "cluster_id": 488,
+          "size": 100,
+          "top_topics": [
+            "kip",
+            "dole",
+            "kale"
+          ]
+        },
+        {
+          "cluster_id": 497,
+          "size": 98,
+          "top_topics": [
+            "kyr",
+            "toga",
+            "yolo"
+          ]
+        },
+        {
+          "cluster_id": 509,
+          "size": 98,
+          "top_topics": [
+            "seers",
+            "whips",
+            "pater"
+          ]
+        },
+        {
+          "cluster_id": 516,
+          "size": 96,
+          "top_topics": [
+            "dao",
+            "erg",
+            "eri"
+          ]
+        },
+        {
+          "cluster_id": 535,
+          "size": 95,
+          "top_topics": [
+            "pia",
+            "nun",
+            "twins"
+          ]
+        },
+        {
+          "cluster_id": 514,
+          "size": 94,
+          "top_topics": [
+            "imt",
+            "ime",
+            "boma"
+          ]
+        },
+        {
+          "cluster_id": 573,
+          "size": 88,
+          "top_topics": [
+            "giant",
+            "troll",
+            "vault"
+          ]
+        },
+        {
+          "cluster_id": 608,
+          "size": 85,
+          "top_topics": [
+            "jedi",
+            "mace",
+            "blade"
+          ]
+        },
+        {
+          "cluster_id": 590,
+          "size": 84,
+          "top_topics": [
+            "ra",
+            "flec",
+            "rias"
+          ]
+        },
+        {
+          "cluster_id": 591,
+          "size": 83,
+          "top_topics": [
+            "arch",
+            "charm",
+            "osage"
+          ]
+        },
+        {
+          "cluster_id": 609,
+          "size": 83,
+          "top_topics": [
+            "lore",
+            "dyan",
+            "eyrie"
+          ]
+        },
+        {
+          "cluster_id": 577,
+          "size": 83,
+          "top_topics": [
+            "grog",
+            "hags",
+            "chug"
+          ]
+        },
+        {
+          "cluster_id": 613,
+          "size": 81,
+          "top_topics": [
+            "end",
+            "done",
+            "leave"
+          ]
+        },
+        {
+          "cluster_id": 620,
+          "size": 80,
+          "top_topics": [
+            "poke",
+            "frog",
+            "gawyn"
+          ]
+        },
+        {
+          "cluster_id": 638,
+          "size": 79,
+          "top_topics": [
+            "gem",
+            "poe",
+            "devi"
+          ]
+        },
+        {
+          "cluster_id": 661,
+          "size": 79,
+          "top_topics": [
+            "hat",
+            "pins",
+            "helm"
+          ]
+        },
+        {
+          "cluster_id": 647,
+          "size": 79,
+          "top_topics": [
+            "io",
+            "i/o",
+            "oob"
+          ]
+        },
+        {
+          "cluster_id": 668,
+          "size": 79,
+          "top_topics": [
+            "aziz",
+            "duke",
+            "dune"
+          ]
+        },
+        {
+          "cluster_id": 627,
+          "size": 78,
+          "top_topics": [
+            "ner",
+            "nexi",
+            "lard"
+          ]
+        },
+        {
+          "cluster_id": 643,
+          "size": 78,
+          "top_topics": [
+            "esk",
+            "nhk",
+            "esp"
+          ]
+        },
+        {
+          "cluster_id": 650,
+          "size": 78,
+          "top_topics": [
+            "jazz",
+            "nova",
+            "terra"
+          ]
+        },
+        {
+          "cluster_id": 631,
+          "size": 78,
+          "top_topics": [
+            "l.a.",
+            "meef",
+            "bubis"
+          ]
+        },
+        {
+          "cluster_id": 652,
+          "size": 77,
+          "top_topics": [
+            "iaa",
+            "ica",
+            "isi"
+          ]
+        },
+        {
+          "cluster_id": 646,
+          "size": 77,
+          "top_topics": [
+            "ngai",
+            "ekur",
+            "regs"
+          ]
+        },
+        {
+          "cluster_id": 656,
+          "size": 77,
+          "top_topics": [
+            "he",
+            "me",
+            "man"
+          ]
+        },
+        {
+          "cluster_id": 660,
+          "size": 77,
+          "top_topics": [
+            "ball",
+            "kobe",
+            "hoops"
+          ]
+        },
+        {
+          "cluster_id": 648,
+          "size": 76,
+          "top_topics": [
+            "oar",
+            "qar",
+            "agni"
+          ]
+        },
+        {
+          "cluster_id": 644,
+          "size": 76,
+          "top_topics": [
+            "cart",
+            "well",
+            "giddy"
+          ]
+        },
+        {
+          "cluster_id": 671,
+          "size": 74,
+          "top_topics": [
+            "opal",
+            "veal",
+            "cabal"
+          ]
+        },
+        {
+          "cluster_id": 675,
+          "size": 73,
+          "top_topics": [
+            "vf",
+            "bnf",
+            "nfa"
+          ]
+        },
+        {
+          "cluster_id": 674,
+          "size": 73,
+          "top_topics": [
+            "afv",
+            "mav",
+            "scow"
+          ]
+        },
+        {
+          "cluster_id": 676,
+          "size": 73,
+          "top_topics": [
+            "herd",
+            "worm",
+            "pout"
+          ]
+        },
+        {
+          "cluster_id": 680,
+          "size": 72,
+          "top_topics": [
+            "aba",
+            "juju",
+            "abaya"
+          ]
+        },
+        {
+          "cluster_id": 678,
+          "size": 72,
+          "top_topics": [
+            "seum",
+            "jean",
+            "menu"
+          ]
+        },
+        {
+          "cluster_id": 682,
+          "size": 72,
+          "top_topics": [
+            "gimp",
+            "neri",
+            "bela"
+          ]
+        },
+        {
+          "cluster_id": 706,
+          "size": 69,
+          "top_topics": [
+            "hume",
+            "atoms",
+            "nyujo"
+          ]
+        },
+        {
+          "cluster_id": 707,
+          "size": 68,
+          "top_topics": [
+            "sims",
+            "lula",
+            "muni"
+          ]
+        },
+        {
+          "cluster_id": 704,
+          "size": 68,
+          "top_topics": [
+            "stb",
+            "faes",
+            "jena"
+          ]
+        },
+        {
+          "cluster_id": 721,
+          "size": 67,
+          "top_topics": [
+            "cuda",
+            "iida",
+            "ikkt"
+          ]
+        },
+        {
+          "cluster_id": 735,
+          "size": 66,
+          "top_topics": [
+            "crow",
+            "swan",
+            "birds"
+          ]
+        },
+        {
+          "cluster_id": 728,
+          "size": 65,
+          "top_topics": [
+            "go",
+            "rok",
+            "gomi"
+          ]
+        },
+        {
+          "cluster_id": 731,
+          "size": 63,
+          "top_topics": [
+            "cds",
+            "die",
+            "koans"
+          ]
+        },
+        {
+          "cluster_id": 741,
+          "size": 63,
+          "top_topics": [
+            "axe",
+            "ike",
+            "hank"
+          ]
+        },
+        {
+          "cluster_id": 738,
+          "size": 63,
+          "top_topics": [
+            "hood",
+            "lens",
+            "glass"
+          ]
+        },
+        {
+          "cluster_id": 729,
+          "size": 63,
+          "top_topics": [
+            "aume",
+            "gray",
+            "keme"
+          ]
+        },
+        {
+          "cluster_id": 736,
+          "size": 63,
+          "top_topics": [
+            "holo",
+            "hokey",
+            "horla"
+          ]
+        },
+        {
+          "cluster_id": 733,
+          "size": 62,
+          "top_topics": [
+            "cic",
+            "nsc",
+            "cil"
+          ]
+        },
+        {
+          "cluster_id": 732,
+          "size": 62,
+          "top_topics": [
+            "fax",
+            "tex",
+            "faun"
+          ]
+        },
+        {
+          "cluster_id": 743,
+          "size": 61,
+          "top_topics": [
+            "og",
+            "lcs",
+            "lys"
+          ]
+        },
+        {
+          "cluster_id": 751,
+          "size": 61,
+          "top_topics": [
+            "dyes",
+            "hair",
+            "wigs"
+          ]
+        },
+        {
+          "cluster_id": 750,
+          "size": 60,
+          "top_topics": [
+            "gate",
+            "gwen",
+            "filch"
+          ]
+        },
+        {
+          "cluster_id": 757,
+          "size": 56,
+          "top_topics": [
+            "kus",
+            "keev",
+            "kelp"
+          ]
+        },
+        {
+          "cluster_id": 769,
+          "size": 55,
+          "top_topics": [
+            "orb",
+            "red",
+            "reds"
+          ]
+        },
+        {
+          "cluster_id": 775,
+          "size": 53,
+          "top_topics": [
+            "x-men",
+            "strip",
+            "batman"
+          ]
+        },
+        {
+          "cluster_id": 773,
+          "size": 52,
+          "top_topics": [
+            "pit",
+            "mari",
+            "hades"
+          ]
+        },
+        {
+          "cluster_id": 786,
+          "size": 52,
+          "top_topics": [
+            "bell",
+            "bells",
+            "spire"
+          ]
+        },
+        {
+          "cluster_id": 772,
+          "size": 52,
+          "top_topics": [
+            "slaw",
+            "lyra",
+            "slag"
+          ]
+        },
+        {
+          "cluster_id": 780,
+          "size": 50,
+          "top_topics": [
+            "sp",
+            "srs",
+            "gss"
+          ]
+        },
+        {
+          "cluster_id": 794,
+          "size": 47,
+          "top_topics": [
+            "opa",
+            "ceqa",
+            "cesi"
+          ]
+        },
+        {
+          "cluster_id": 800,
+          "size": 47,
+          "top_topics": [
+            "echo",
+            "doll",
+            "bats"
+          ]
+        },
+        {
+          "cluster_id": 806,
+          "size": 45,
+          "top_topics": [
+            "mario",
+            "zelda",
+            "adler"
+          ]
+        },
+        {
+          "cluster_id": 805,
+          "size": 45,
+          "top_topics": [
+            "byd",
+            "fid",
+            "gmd"
+          ]
+        },
+        {
+          "cluster_id": 808,
+          "size": 43,
+          "top_topics": [
+            "daikon",
+            "dallin",
+            "marlin"
+          ]
+        },
+        {
+          "cluster_id": 809,
+          "size": 43,
+          "top_topics": [
+            "hdf5",
+            "plei",
+            "issei"
+          ]
+        },
+        {
+          "cluster_id": 813,
+          "size": 42,
+          "top_topics": [
+            "ez",
+            "saz",
+            "dora"
+          ]
+        },
+        {
+          "cluster_id": 817,
+          "size": 40,
+          "top_topics": [
+            "te",
+            "cpt",
+            "de\u00e4t"
+          ]
+        },
+        {
+          "cluster_id": 818,
+          "size": 37,
+          "top_topics": [
+            "r",
+            "#p",
+            "a*"
+          ]
+        },
+        {
+          "cluster_id": 828,
+          "size": 32,
+          "top_topics": [
+            "pell",
+            "vull",
+            "hovel"
+          ]
+        },
+        {
+          "cluster_id": 831,
+          "size": 32,
+          "top_topics": [
+            "ivan",
+            "inez",
+            "anansi"
+          ]
+        },
+        {
+          "cluster_id": 833,
+          "size": 30,
+          "top_topics": [
+            "band",
+            "angst",
+            "anguda"
+          ]
+        },
+        {
+          "cluster_id": 835,
+          "size": 30,
+          "top_topics": [
+            "fete",
+            "ferpa",
+            "ferro"
+          ]
+        },
+        {
+          "cluster_id": 838,
+          "size": 27,
+          "top_topics": [
+            "sade",
+            "mainz",
+            "dothe"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 3,
+      "label": "Social & Ethical Issues",
+      "leiden_cluster_count": 42,
+      "total_topics": 5328,
+      "leiden_clusters": [
+        {
+          "cluster_id": 1,
+          "size": 429,
+          "top_topics": [
+            "vice",
+            "moral",
+            "vices"
+          ]
+        },
+        {
+          "cluster_id": 13,
+          "size": 330,
+          "top_topics": [
+            "gays",
+            "women",
+            "gender"
+          ]
+        },
+        {
+          "cluster_id": 36,
+          "size": 278,
+          "top_topics": [
+            "dalits",
+            "racism",
+            "sexism"
+          ]
+        },
+        {
+          "cluster_id": 35,
+          "size": 273,
+          "top_topics": [
+            "purge",
+            "purges",
+            "fuling"
+          ]
+        },
+        {
+          "cluster_id": 122,
+          "size": 188,
+          "top_topics": [
+            "mentors",
+            "influence",
+            "mentoring"
+          ]
+        },
+        {
+          "cluster_id": 156,
+          "size": 181,
+          "top_topics": [
+            "marx",
+            "hegel",
+            "plato"
+          ]
+        },
+        {
+          "cluster_id": 150,
+          "size": 179,
+          "top_topics": [
+            "wit",
+            "bad",
+            "rue"
+          ]
+        },
+        {
+          "cluster_id": 164,
+          "size": 178,
+          "top_topics": [
+            "social",
+            "civility",
+            "socialite"
+          ]
+        },
+        {
+          "cluster_id": 155,
+          "size": 175,
+          "top_topics": [
+            "space",
+            "cosmos",
+            "geodes"
+          ]
+        },
+        {
+          "cluster_id": 190,
+          "size": 170,
+          "top_topics": [
+            "insult",
+            "review",
+            "insults"
+          ]
+        },
+        {
+          "cluster_id": 206,
+          "size": 164,
+          "top_topics": [
+            "honor",
+            "trust",
+            "bearer"
+          ]
+        },
+        {
+          "cluster_id": 223,
+          "size": 163,
+          "top_topics": [
+            "core",
+            "fane",
+            "arton"
+          ]
+        },
+        {
+          "cluster_id": 237,
+          "size": 156,
+          "top_topics": [
+            "ideas",
+            "dilemma",
+            "dilemmas"
+          ]
+        },
+        {
+          "cluster_id": 274,
+          "size": 150,
+          "top_topics": [
+            "algae",
+            "gen z",
+            "gen re"
+          ]
+        },
+        {
+          "cluster_id": 286,
+          "size": 140,
+          "top_topics": [
+            "lie",
+            "lies",
+            "mean"
+          ]
+        },
+        {
+          "cluster_id": 301,
+          "size": 138,
+          "top_topics": [
+            "dawkins",
+            "arrogance",
+            "passivity"
+          ]
+        },
+        {
+          "cluster_id": 418,
+          "size": 118,
+          "top_topics": [
+            "choice",
+            "choices",
+            "serenity"
+          ]
+        },
+        {
+          "cluster_id": 436,
+          "size": 115,
+          "top_topics": [
+            "forum",
+            "debate",
+            "oratory"
+          ]
+        },
+        {
+          "cluster_id": 443,
+          "size": 112,
+          "top_topics": [
+            "sift",
+            "silo",
+            "sion"
+          ]
+        },
+        {
+          "cluster_id": 474,
+          "size": 107,
+          "top_topics": [
+            "wisdom",
+            "knowing",
+            "proverbs"
+          ]
+        },
+        {
+          "cluster_id": 444,
+          "size": 107,
+          "top_topics": [
+            "iq",
+            "wade",
+            "oslo"
+          ]
+        },
+        {
+          "cluster_id": 512,
+          "size": 100,
+          "top_topics": [
+            "owls",
+            "goats",
+            "goatee"
+          ]
+        },
+        {
+          "cluster_id": 519,
+          "size": 96,
+          "top_topics": [
+            "laws",
+            "isaac",
+            "jacob"
+          ]
+        },
+        {
+          "cluster_id": 543,
+          "size": 95,
+          "top_topics": [
+            "localism",
+            "comparison",
+            "homogeneity"
+          ]
+        },
+        {
+          "cluster_id": 536,
+          "size": 93,
+          "top_topics": [
+            "argues",
+            "refusal",
+            "verbals"
+          ]
+        },
+        {
+          "cluster_id": 568,
+          "size": 91,
+          "top_topics": [
+            "geneva",
+            "niccon",
+            "fremona"
+          ]
+        },
+        {
+          "cluster_id": 635,
+          "size": 84,
+          "top_topics": [
+            "ursula",
+            "utopia",
+            "utopias"
+          ]
+        },
+        {
+          "cluster_id": 649,
+          "size": 81,
+          "top_topics": [
+            "research",
+            "sociology",
+            "act theory"
+          ]
+        },
+        {
+          "cluster_id": 666,
+          "size": 76,
+          "top_topics": [
+            "deism",
+            "dequeue",
+            "ambiguity"
+          ]
+        },
+        {
+          "cluster_id": 679,
+          "size": 75,
+          "top_topics": [
+            "jung",
+            "freud",
+            "trona"
+          ]
+        },
+        {
+          "cluster_id": 693,
+          "size": 74,
+          "top_topics": [
+            "judging",
+            "judgment",
+            "judgement"
+          ]
+        },
+        {
+          "cluster_id": 711,
+          "size": 72,
+          "top_topics": [
+            "ego",
+            "pride",
+            "egoism"
+          ]
+        },
+        {
+          "cluster_id": 712,
+          "size": 71,
+          "top_topics": [
+            "hel",
+            "helvi",
+            "hedone"
+          ]
+        },
+        {
+          "cluster_id": 746,
+          "size": 61,
+          "top_topics": [
+            "aristo",
+            "mccarthy",
+            "satanism"
+          ]
+        },
+        {
+          "cluster_id": 766,
+          "size": 57,
+          "top_topics": [
+            "genius",
+            "defarge",
+            "society"
+          ]
+        },
+        {
+          "cluster_id": 783,
+          "size": 53,
+          "top_topics": [
+            "kant",
+            "aesthetic",
+            "art world"
+          ]
+        },
+        {
+          "cluster_id": 771,
+          "size": 53,
+          "top_topics": [
+            "agoge",
+            "clich\u00e9",
+            "clich\u00e9s"
+          ]
+        },
+        {
+          "cluster_id": 784,
+          "size": 52,
+          "top_topics": [
+            "modernism",
+            "modernismo",
+            "atlanticism"
+          ]
+        },
+        {
+          "cluster_id": 782,
+          "size": 51,
+          "top_topics": [
+            "nurbs",
+            "nursy",
+            "mimir"
+          ]
+        },
+        {
+          "cluster_id": 793,
+          "size": 50,
+          "top_topics": [
+            "tories",
+            "leftism",
+            "toryism"
+          ]
+        },
+        {
+          "cluster_id": 801,
+          "size": 48,
+          "top_topics": [
+            "noir",
+            "monet",
+            "boudin"
+          ]
+        },
+        {
+          "cluster_id": 811,
+          "size": 44,
+          "top_topics": [
+            "fritz haber",
+            "gene theory",
+            "grav theory"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 4,
+      "label": "International Relations & Law",
+      "leiden_cluster_count": 38,
+      "total_topics": 5538,
+      "leiden_clusters": [
+        {
+          "cluster_id": 4,
+          "size": 358,
+          "top_topics": [
+            "lenin",
+            "liaison",
+            "romania"
+          ]
+        },
+        {
+          "cluster_id": 21,
+          "size": 302,
+          "top_topics": [
+            "amaat",
+            "state",
+            "nation"
+          ]
+        },
+        {
+          "cluster_id": 49,
+          "size": 249,
+          "top_topics": [
+            "dis",
+            "dikes",
+            "apathy"
+          ]
+        },
+        {
+          "cluster_id": 66,
+          "size": 234,
+          "top_topics": [
+            "nato",
+            "envoy",
+            "libya"
+          ]
+        },
+        {
+          "cluster_id": 95,
+          "size": 212,
+          "top_topics": [
+            "judge",
+            "judges",
+            "quotas"
+          ]
+        },
+        {
+          "cluster_id": 101,
+          "size": 209,
+          "top_topics": [
+            "law",
+            "jury",
+            "court"
+          ]
+        },
+        {
+          "cluster_id": 106,
+          "size": 201,
+          "top_topics": [
+            "pact",
+            "exile",
+            "visas"
+          ]
+        },
+        {
+          "cluster_id": 151,
+          "size": 187,
+          "top_topics": [
+            "unity",
+            "nodes",
+            "groups"
+          ]
+        },
+        {
+          "cluster_id": 208,
+          "size": 170,
+          "top_topics": [
+            "peace",
+            "disco",
+            "bombay"
+          ]
+        },
+        {
+          "cluster_id": 199,
+          "size": 170,
+          "top_topics": [
+            "charter",
+            "injustice",
+            "sovereign"
+          ]
+        },
+        {
+          "cluster_id": 173,
+          "size": 166,
+          "top_topics": [
+            "nypd",
+            "unia",
+            "naacp"
+          ]
+        },
+        {
+          "cluster_id": 192,
+          "size": 162,
+          "top_topics": [
+            "jihad",
+            "medina",
+            "punjab"
+          ]
+        },
+        {
+          "cluster_id": 229,
+          "size": 162,
+          "top_topics": [
+            "iowa",
+            "dogma",
+            "polls"
+          ]
+        },
+        {
+          "cluster_id": 212,
+          "size": 160,
+          "top_topics": [
+            "sec",
+            "bills",
+            "permits"
+          ]
+        },
+        {
+          "cluster_id": 261,
+          "size": 147,
+          "top_topics": [
+            "harlem",
+            "negroes",
+            "kips bay"
+          ]
+        },
+        {
+          "cluster_id": 314,
+          "size": 141,
+          "top_topics": [
+            "riot",
+            "riots",
+            "unrest"
+          ]
+        },
+        {
+          "cluster_id": 297,
+          "size": 136,
+          "top_topics": [
+            "freedom",
+            "liberty",
+            "tyranny"
+          ]
+        },
+        {
+          "cluster_id": 326,
+          "size": 136,
+          "top_topics": [
+            "news",
+            "labor",
+            "union"
+          ]
+        },
+        {
+          "cluster_id": 310,
+          "size": 135,
+          "top_topics": [
+            "blair",
+            "nehru",
+            "ahimsa"
+          ]
+        },
+        {
+          "cluster_id": 344,
+          "size": 133,
+          "top_topics": [
+            "kempism",
+            "defiance",
+            "civil wars"
+          ]
+        },
+        {
+          "cluster_id": 352,
+          "size": 129,
+          "top_topics": [
+            "duty",
+            "civics",
+            "duties"
+          ]
+        },
+        {
+          "cluster_id": 353,
+          "size": 124,
+          "top_topics": [
+            "lama",
+            "visa",
+            "tibet"
+          ]
+        },
+        {
+          "cluster_id": 359,
+          "size": 124,
+          "top_topics": [
+            "census",
+            "sprawl",
+            "malthus"
+          ]
+        },
+        {
+          "cluster_id": 391,
+          "size": 124,
+          "top_topics": [
+            "nazis",
+            "chtexa",
+            "hitler"
+          ]
+        },
+        {
+          "cluster_id": 401,
+          "size": 122,
+          "top_topics": [
+            "horde",
+            "border",
+            "faction"
+          ]
+        },
+        {
+          "cluster_id": 398,
+          "size": 120,
+          "top_topics": [
+            "austria",
+            "fascism",
+            "salzburg"
+          ]
+        },
+        {
+          "cluster_id": 420,
+          "size": 118,
+          "top_topics": [
+            "slave",
+            "slaves",
+            "slavery"
+          ]
+        },
+        {
+          "cluster_id": 465,
+          "size": 108,
+          "top_topics": [
+            "council",
+            "councils",
+            "cardinals"
+          ]
+        },
+        {
+          "cluster_id": 456,
+          "size": 106,
+          "top_topics": [
+            "dpr",
+            "brexit",
+            "democrat"
+          ]
+        },
+        {
+          "cluster_id": 507,
+          "size": 100,
+          "top_topics": [
+            "sudan",
+            "rights",
+            "citizen"
+          ]
+        },
+        {
+          "cluster_id": 524,
+          "size": 94,
+          "top_topics": [
+            "dissent",
+            "oppression",
+            "repression"
+          ]
+        },
+        {
+          "cluster_id": 551,
+          "size": 89,
+          "top_topics": [
+            "bart",
+            "barter",
+            "barthes"
+          ]
+        },
+        {
+          "cluster_id": 665,
+          "size": 81,
+          "top_topics": [
+            "change",
+            "optimism",
+            "progress"
+          ]
+        },
+        {
+          "cluster_id": 625,
+          "size": 81,
+          "top_topics": [
+            "admin",
+            "referee",
+            "official"
+          ]
+        },
+        {
+          "cluster_id": 623,
+          "size": 81,
+          "top_topics": [
+            "rule",
+            "rules",
+            "gilead"
+          ]
+        },
+        {
+          "cluster_id": 696,
+          "size": 71,
+          "top_topics": [
+            "affairs",
+            "geopolitics",
+            "global risk"
+          ]
+        },
+        {
+          "cluster_id": 792,
+          "size": 49,
+          "top_topics": [
+            "un",
+            "unpg",
+            "uniss"
+          ]
+        },
+        {
+          "cluster_id": 814,
+          "size": 47,
+          "top_topics": [
+            "reform",
+            "reforms",
+            "glenbrook"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 5,
+      "label": "Energy & Industry",
+      "leiden_cluster_count": 34,
+      "total_topics": 3856,
+      "leiden_clusters": [
+        {
+          "cluster_id": 18,
+          "size": 304,
+          "top_topics": [
+            "gas",
+            "nba",
+            "oil"
+          ]
+        },
+        {
+          "cluster_id": 86,
+          "size": 220,
+          "top_topics": [
+            "gym",
+            "power",
+            "powers"
+          ]
+        },
+        {
+          "cluster_id": 130,
+          "size": 186,
+          "top_topics": [
+            "fix",
+            "refit",
+            "repair"
+          ]
+        },
+        {
+          "cluster_id": 169,
+          "size": 165,
+          "top_topics": [
+            "ash",
+            "fork",
+            "sink"
+          ]
+        },
+        {
+          "cluster_id": 216,
+          "size": 158,
+          "top_topics": [
+            "fire",
+            "fury",
+            "haze"
+          ]
+        },
+        {
+          "cluster_id": 245,
+          "size": 151,
+          "top_topics": [
+            "co2",
+            "ozone",
+            "methane"
+          ]
+        },
+        {
+          "cluster_id": 256,
+          "size": 143,
+          "top_topics": [
+            "lead",
+            "mojo",
+            "grids"
+          ]
+        },
+        {
+          "cluster_id": 336,
+          "size": 132,
+          "top_topics": [
+            "patagonia",
+            "capitalism",
+            "industrial"
+          ]
+        },
+        {
+          "cluster_id": 325,
+          "size": 130,
+          "top_topics": [
+            "suit",
+            "tank",
+            "suits"
+          ]
+        },
+        {
+          "cluster_id": 334,
+          "size": 129,
+          "top_topics": [
+            "dam",
+            "dams",
+            "failure"
+          ]
+        },
+        {
+          "cluster_id": 375,
+          "size": 124,
+          "top_topics": [
+            "farm",
+            "tito",
+            "farms"
+          ]
+        },
+        {
+          "cluster_id": 378,
+          "size": 122,
+          "top_topics": [
+            "force",
+            "field",
+            "dynamos"
+          ]
+        },
+        {
+          "cluster_id": 455,
+          "size": 106,
+          "top_topics": [
+            "yoga",
+            "chair",
+            "spine"
+          ]
+        },
+        {
+          "cluster_id": 496,
+          "size": 102,
+          "top_topics": [
+            "coal",
+            "ores",
+            "mines"
+          ]
+        },
+        {
+          "cluster_id": 501,
+          "size": 100,
+          "top_topics": [
+            "laser",
+            "bunker",
+            "lasers"
+          ]
+        },
+        {
+          "cluster_id": 511,
+          "size": 100,
+          "top_topics": [
+            "diy",
+            "lux",
+            "hell"
+          ]
+        },
+        {
+          "cluster_id": 498,
+          "size": 98,
+          "top_topics": [
+            "jim",
+            "gold",
+            "zinc"
+          ]
+        },
+        {
+          "cluster_id": 546,
+          "size": 95,
+          "top_topics": [
+            "wax",
+            "wave",
+            "slime"
+          ]
+        },
+        {
+          "cluster_id": 525,
+          "size": 94,
+          "top_topics": [
+            "cern",
+            "genies",
+            "helium"
+          ]
+        },
+        {
+          "cluster_id": 531,
+          "size": 94,
+          "top_topics": [
+            "arc",
+            "fuse",
+            "fuses"
+          ]
+        },
+        {
+          "cluster_id": 545,
+          "size": 93,
+          "top_topics": [
+            "air",
+            "eels",
+            "flow"
+          ]
+        },
+        {
+          "cluster_id": 539,
+          "size": 93,
+          "top_topics": [
+            "flux",
+            "heat",
+            "globe"
+          ]
+        },
+        {
+          "cluster_id": 559,
+          "size": 90,
+          "top_topics": [
+            "wall",
+            "brick",
+            "walls"
+          ]
+        },
+        {
+          "cluster_id": 567,
+          "size": 90,
+          "top_topics": [
+            "broom",
+            "atrium",
+            "bridge"
+          ]
+        },
+        {
+          "cluster_id": 578,
+          "size": 88,
+          "top_topics": [
+            "blue",
+            "paint",
+            "blue sky"
+          ]
+        },
+        {
+          "cluster_id": 618,
+          "size": 82,
+          "top_topics": [
+            "feet",
+            "legs",
+            "asics"
+          ]
+        },
+        {
+          "cluster_id": 658,
+          "size": 78,
+          "top_topics": [
+            "mill",
+            "wood",
+            "inwood"
+          ]
+        },
+        {
+          "cluster_id": 673,
+          "size": 75,
+          "top_topics": [
+            "steam",
+            "engine",
+            "valves"
+          ]
+        },
+        {
+          "cluster_id": 692,
+          "size": 72,
+          "top_topics": [
+            "factory",
+            "degrowth",
+            "cravetech"
+          ]
+        },
+        {
+          "cluster_id": 697,
+          "size": 71,
+          "top_topics": [
+            "iron",
+            "ironing",
+            "airdrops"
+          ]
+        },
+        {
+          "cluster_id": 694,
+          "size": 70,
+          "top_topics": [
+            "jack",
+            "medv",
+            "medea"
+          ]
+        },
+        {
+          "cluster_id": 710,
+          "size": 68,
+          "top_topics": [
+            "supply",
+            "rations",
+            "supplies"
+          ]
+        },
+        {
+          "cluster_id": 725,
+          "size": 68,
+          "top_topics": [
+            "gums",
+            "julie",
+            "makeup"
+          ]
+        },
+        {
+          "cluster_id": 727,
+          "size": 65,
+          "top_topics": [
+            "gear",
+            "pack",
+            "sack"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 6,
+      "label": "Business & Education",
+      "leiden_cluster_count": 34,
+      "total_topics": 3715,
+      "leiden_clusters": [
+        {
+          "cluster_id": 16,
+          "size": 307,
+          "top_topics": [
+            "sewer",
+            "locker",
+            "school"
+          ]
+        },
+        {
+          "cluster_id": 55,
+          "size": 241,
+          "top_topics": [
+            "mit",
+            "phd",
+            "ucla"
+          ]
+        },
+        {
+          "cluster_id": 154,
+          "size": 178,
+          "top_topics": [
+            "moocs",
+            "course",
+            "lessons"
+          ]
+        },
+        {
+          "cluster_id": 195,
+          "size": 162,
+          "top_topics": [
+            "ceo",
+            "role",
+            "roles"
+          ]
+        },
+        {
+          "cluster_id": 252,
+          "size": 152,
+          "top_topics": [
+            "sar",
+            "sartre",
+            "success"
+          ]
+        },
+        {
+          "cluster_id": 284,
+          "size": 138,
+          "top_topics": [
+            "skill",
+            "skills",
+            "talent"
+          ]
+        },
+        {
+          "cluster_id": 282,
+          "size": 138,
+          "top_topics": [
+            "client",
+            "customer",
+            "clientage"
+          ]
+        },
+        {
+          "cluster_id": 307,
+          "size": 136,
+          "top_topics": [
+            "job",
+            "jobs",
+            "hiring"
+          ]
+        },
+        {
+          "cluster_id": 306,
+          "size": 132,
+          "top_topics": [
+            "nucor",
+            "motiv",
+            "praise"
+          ]
+        },
+        {
+          "cluster_id": 342,
+          "size": 128,
+          "top_topics": [
+            "stable",
+            "midlife",
+            "stability"
+          ]
+        },
+        {
+          "cluster_id": 390,
+          "size": 125,
+          "top_topics": [
+            "producer",
+            "creative",
+            "interview"
+          ]
+        },
+        {
+          "cluster_id": 371,
+          "size": 124,
+          "top_topics": [
+            "orgota",
+            "assent",
+            "dispute"
+          ]
+        },
+        {
+          "cluster_id": 346,
+          "size": 123,
+          "top_topics": [
+            "debut",
+            "launch",
+            "capital"
+          ]
+        },
+        {
+          "cluster_id": 409,
+          "size": 118,
+          "top_topics": [
+            "hr",
+            "employee",
+            "teledyne"
+          ]
+        },
+        {
+          "cluster_id": 425,
+          "size": 118,
+          "top_topics": [
+            "work",
+            "main",
+            "need"
+          ]
+        },
+        {
+          "cluster_id": 430,
+          "size": 115,
+          "top_topics": [
+            "desk",
+            "office",
+            "offices"
+          ]
+        },
+        {
+          "cluster_id": 466,
+          "size": 108,
+          "top_topics": [
+            "impact",
+            "russell",
+            "impacts"
+          ]
+        },
+        {
+          "cluster_id": 482,
+          "size": 106,
+          "top_topics": [
+            "data",
+            "audit",
+            "audits"
+          ]
+        },
+        {
+          "cluster_id": 529,
+          "size": 97,
+          "top_topics": [
+            "goal",
+            "goals",
+            "ambition"
+          ]
+        },
+        {
+          "cluster_id": 581,
+          "size": 92,
+          "top_topics": [
+            "fda",
+            "drug b",
+            "product"
+          ]
+        },
+        {
+          "cluster_id": 569,
+          "size": 92,
+          "top_topics": [
+            "leader",
+            "cash flow",
+            "hierarchy"
+          ]
+        },
+        {
+          "cluster_id": 597,
+          "size": 86,
+          "top_topics": [
+            "doctor",
+            "garage",
+            "doctors"
+          ]
+        },
+        {
+          "cluster_id": 604,
+          "size": 82,
+          "top_topics": [
+            "guru",
+            "help",
+            "advice"
+          ]
+        },
+        {
+          "cluster_id": 663,
+          "size": 79,
+          "top_topics": [
+            "team",
+            "rivals",
+            "rivalry"
+          ]
+        },
+        {
+          "cluster_id": 670,
+          "size": 74,
+          "top_topics": [
+            "plan",
+            "plans",
+            "scheme"
+          ]
+        },
+        {
+          "cluster_id": 723,
+          "size": 70,
+          "top_topics": [
+            "decisions",
+            "strategy risk",
+            "decision lists"
+          ]
+        },
+        {
+          "cluster_id": 724,
+          "size": 68,
+          "top_topics": [
+            "wages",
+            "salary",
+            "payroll"
+          ]
+        },
+        {
+          "cluster_id": 756,
+          "size": 61,
+          "top_topics": [
+            "visionary",
+            "leadership",
+            "work style"
+          ]
+        },
+        {
+          "cluster_id": 777,
+          "size": 56,
+          "top_topics": [
+            "process",
+            "syndevs",
+            "syngamy"
+          ]
+        },
+        {
+          "cluster_id": 803,
+          "size": 48,
+          "top_topics": [
+            "hold",
+            "keep",
+            "keepers"
+          ]
+        },
+        {
+          "cluster_id": 802,
+          "size": 46,
+          "top_topics": [
+            "acuity",
+            "capacity",
+            "human value"
+          ]
+        },
+        {
+          "cluster_id": 807,
+          "size": 43,
+          "top_topics": [
+            "agency",
+            "bureau",
+            "blue space"
+          ]
+        },
+        {
+          "cluster_id": 822,
+          "size": 36,
+          "top_topics": [
+            "elites",
+            "aspirants",
+            "candidates"
+          ]
+        },
+        {
+          "cluster_id": 826,
+          "size": 36,
+          "top_topics": [
+            "productivity",
+            "writer's growth",
+            "work productivity"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 7,
+      "label": "Food & Drink",
+      "leiden_cluster_count": 28,
+      "total_topics": 4663,
+      "leiden_clusters": [
+        {
+          "cluster_id": 6,
+          "size": 347,
+          "top_topics": [
+            "nut",
+            "oak",
+            "cake"
+          ]
+        },
+        {
+          "cluster_id": 10,
+          "size": 344,
+          "top_topics": [
+            "gel",
+            "fish",
+            "milk"
+          ]
+        },
+        {
+          "cluster_id": 11,
+          "size": 331,
+          "top_topics": [
+            "ham",
+            "biga",
+            "mold"
+          ]
+        },
+        {
+          "cluster_id": 30,
+          "size": 298,
+          "top_topics": [
+            "bread",
+            "dough",
+            "flour"
+          ]
+        },
+        {
+          "cluster_id": 43,
+          "size": 262,
+          "top_topics": [
+            "salt",
+            "heine",
+            "herbs"
+          ]
+        },
+        {
+          "cluster_id": 82,
+          "size": 220,
+          "top_topics": [
+            "bbq",
+            "pork",
+            "ribs"
+          ]
+        },
+        {
+          "cluster_id": 80,
+          "size": 218,
+          "top_topics": [
+            "frye",
+            "clams",
+            "fried"
+          ]
+        },
+        {
+          "cluster_id": 100,
+          "size": 207,
+          "top_topics": [
+            "beef",
+            "meat",
+            "steak"
+          ]
+        },
+        {
+          "cluster_id": 160,
+          "size": 171,
+          "top_topics": [
+            "ale",
+            "beer",
+            "hops"
+          ]
+        },
+        {
+          "cluster_id": 187,
+          "size": 166,
+          "top_topics": [
+            "candy",
+            "cocoa",
+            "snack"
+          ]
+        },
+        {
+          "cluster_id": 231,
+          "size": 161,
+          "top_topics": [
+            "cook",
+            "food",
+            "meal"
+          ]
+        },
+        {
+          "cluster_id": 205,
+          "size": 159,
+          "top_topics": [
+            "rising",
+            "wafers",
+            "pan'en"
+          ]
+        },
+        {
+          "cluster_id": 239,
+          "size": 154,
+          "top_topics": [
+            "corn",
+            "lamb",
+            "peas"
+          ]
+        },
+        {
+          "cluster_id": 251,
+          "size": 152,
+          "top_topics": [
+            "bror",
+            "soup",
+            "stew"
+          ]
+        },
+        {
+          "cluster_id": 305,
+          "size": 140,
+          "top_topics": [
+            "dip",
+            "dips",
+            "pasta"
+          ]
+        },
+        {
+          "cluster_id": 350,
+          "size": 131,
+          "top_topics": [
+            "oven",
+            "ovens",
+            "pizza"
+          ]
+        },
+        {
+          "cluster_id": 337,
+          "size": 126,
+          "top_topics": [
+            "dal",
+            "elmo",
+            "beans"
+          ]
+        },
+        {
+          "cluster_id": 349,
+          "size": 124,
+          "top_topics": [
+            "om",
+            "pie",
+            "omen"
+          ]
+        },
+        {
+          "cluster_id": 414,
+          "size": 119,
+          "top_topics": [
+            "italy",
+            "cuisine",
+            "tuscany"
+          ]
+        },
+        {
+          "cluster_id": 428,
+          "size": 110,
+          "top_topics": [
+            "crag",
+            "deli",
+            "cleo"
+          ]
+        },
+        {
+          "cluster_id": 475,
+          "size": 110,
+          "top_topics": [
+            "oats",
+            "rice",
+            "bowl"
+          ]
+        },
+        {
+          "cluster_id": 527,
+          "size": 102,
+          "top_topics": [
+            "gin",
+            "rum",
+            "dill"
+          ]
+        },
+        {
+          "cluster_id": 547,
+          "size": 96,
+          "top_topics": [
+            "chili",
+            "salad",
+            "pepper"
+          ]
+        },
+        {
+          "cluster_id": 553,
+          "size": 91,
+          "top_topics": [
+            "wine",
+            "vines",
+            "wines"
+          ]
+        },
+        {
+          "cluster_id": 550,
+          "size": 90,
+          "top_topics": [
+            "tips",
+            "thermos",
+            "food names"
+          ]
+        },
+        {
+          "cluster_id": 584,
+          "size": 90,
+          "top_topics": [
+            "recipe",
+            "ficciones",
+            "recipe yield"
+          ]
+        },
+        {
+          "cluster_id": 639,
+          "size": 80,
+          "top_topics": [
+            "egg",
+            "zdi",
+            "eggs"
+          ]
+        },
+        {
+          "cluster_id": 730,
+          "size": 64,
+          "top_topics": [
+            "glaze",
+            "crust",
+            "crusts"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 8,
+      "label": "Transportation & Rescue",
+      "leiden_cluster_count": 26,
+      "total_topics": 3278,
+      "leiden_clusters": [
+        {
+          "cluster_id": 53,
+          "size": 241,
+          "top_topics": [
+            "raf",
+            "uav",
+            "drone"
+          ]
+        },
+        {
+          "cluster_id": 70,
+          "size": 230,
+          "top_topics": [
+            "crash",
+            "wreck",
+            "fumes"
+          ]
+        },
+        {
+          "cluster_id": 85,
+          "size": 226,
+          "top_topics": [
+            "boat",
+            "raft",
+            "boats"
+          ]
+        },
+        {
+          "cluster_id": 79,
+          "size": 222,
+          "top_topics": [
+            "sas",
+            "nasa",
+            "noaa"
+          ]
+        },
+        {
+          "cluster_id": 171,
+          "size": 172,
+          "top_topics": [
+            "navy",
+            "oman",
+            "dubai"
+          ]
+        },
+        {
+          "cluster_id": 191,
+          "size": 168,
+          "top_topics": [
+            "ferry",
+            "fleet",
+            "fleete"
+          ]
+        },
+        {
+          "cluster_id": 210,
+          "size": 167,
+          "top_topics": [
+            "mud",
+            "flood",
+            "rescue"
+          ]
+        },
+        {
+          "cluster_id": 178,
+          "size": 167,
+          "top_topics": [
+            "tram",
+            "commute",
+            "driving"
+          ]
+        },
+        {
+          "cluster_id": 276,
+          "size": 147,
+          "top_topics": [
+            "rv",
+            "car",
+            "atv"
+          ]
+        },
+        {
+          "cluster_id": 299,
+          "size": 139,
+          "top_topics": [
+            "bus",
+            "ors",
+            "orth"
+          ]
+        },
+        {
+          "cluster_id": 290,
+          "size": 139,
+          "top_topics": [
+            "cargo",
+            "convoys",
+            "shipment"
+          ]
+        },
+        {
+          "cluster_id": 327,
+          "size": 130,
+          "top_topics": [
+            "shaw",
+            "wire",
+            "at&t"
+          ]
+        },
+        {
+          "cluster_id": 389,
+          "size": 123,
+          "top_topics": [
+            "crew",
+            "crewing",
+            "gun crew"
+          ]
+        },
+        {
+          "cluster_id": 365,
+          "size": 121,
+          "top_topics": [
+            "dock",
+            "port",
+            "pier"
+          ]
+        },
+        {
+          "cluster_id": 441,
+          "size": 114,
+          "top_topics": [
+            "mutiny",
+            "boat/ship",
+            "shipboard"
+          ]
+        },
+        {
+          "cluster_id": 452,
+          "size": 111,
+          "top_topics": [
+            "case",
+            "clerk",
+            "morel"
+          ]
+        },
+        {
+          "cluster_id": 561,
+          "size": 88,
+          "top_topics": [
+            "orbit",
+            "orbits",
+            "landing"
+          ]
+        },
+        {
+          "cluster_id": 600,
+          "size": 86,
+          "top_topics": [
+            "cloak",
+            "radar",
+            "cover"
+          ]
+        },
+        {
+          "cluster_id": 636,
+          "size": 83,
+          "top_topics": [
+            "coral",
+            "reefs",
+            "lichen"
+          ]
+        },
+        {
+          "cluster_id": 629,
+          "size": 83,
+          "top_topics": [
+            "chase",
+            "roche",
+            "chases"
+          ]
+        },
+        {
+          "cluster_id": 603,
+          "size": 81,
+          "top_topics": [
+            "hedron",
+            "hrunta",
+            "hr\u00f6nir"
+          ]
+        },
+        {
+          "cluster_id": 651,
+          "size": 78,
+          "top_topics": [
+            "maui",
+            "oahu",
+            "hawaii"
+          ]
+        },
+        {
+          "cluster_id": 749,
+          "size": 62,
+          "top_topics": [
+            "fly",
+            "curb",
+            "flight"
+          ]
+        },
+        {
+          "cluster_id": 781,
+          "size": 52,
+          "top_topics": [
+            "rover",
+            "rovers",
+            "caravan"
+          ]
+        },
+        {
+          "cluster_id": 836,
+          "size": 31,
+          "top_topics": [
+            "hull",
+            "ship",
+            "jefri"
+          ]
+        },
+        {
+          "cluster_id": 842,
+          "size": 17,
+          "top_topics": [
+            "balloon",
+            "balloon man",
+            "balloon ride"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 9,
+      "label": "Biology & Health",
+      "leiden_cluster_count": 41,
+      "total_topics": 5448,
+      "leiden_clusters": [
+        {
+          "cluster_id": 14,
+          "size": 311,
+          "top_topics": [
+            "bark",
+            "stem",
+            "root"
+          ]
+        },
+        {
+          "cluster_id": 32,
+          "size": 277,
+          "top_topics": [
+            "dna",
+            "gmos",
+            "gene"
+          ]
+        },
+        {
+          "cluster_id": 50,
+          "size": 254,
+          "top_topics": [
+            "diet",
+            "usda",
+            "vega"
+          ]
+        },
+        {
+          "cluster_id": 67,
+          "size": 241,
+          "top_topics": [
+            "darwin",
+            "origin",
+            "agassiz"
+          ]
+        },
+        {
+          "cluster_id": 75,
+          "size": 237,
+          "top_topics": [
+            "cat",
+            "dog",
+            "pet"
+          ]
+        },
+        {
+          "cluster_id": 73,
+          "size": 226,
+          "top_topics": [
+            "atp",
+            "cells",
+            "gerane"
+          ]
+        },
+        {
+          "cluster_id": 108,
+          "size": 197,
+          "top_topics": [
+            "ahab",
+            "cove",
+            "refuge"
+          ]
+        },
+        {
+          "cluster_id": 110,
+          "size": 191,
+          "top_topics": [
+            "bp",
+            "fat",
+            "acid"
+          ]
+        },
+        {
+          "cluster_id": 149,
+          "size": 184,
+          "top_topics": [
+            "flu",
+            "hiv",
+            "aids"
+          ]
+        },
+        {
+          "cluster_id": 168,
+          "size": 169,
+          "top_topics": [
+            "pcr",
+            "rna",
+            "mire"
+          ]
+        },
+        {
+          "cluster_id": 196,
+          "size": 159,
+          "top_topics": [
+            "rose",
+            "bloom",
+            "cacti"
+          ]
+        },
+        {
+          "cluster_id": 197,
+          "size": 158,
+          "top_topics": [
+            "kiln",
+            "soil",
+            "dirt"
+          ]
+        },
+        {
+          "cluster_id": 222,
+          "size": 152,
+          "top_topics": [
+            "andy",
+            "carl",
+            "sire"
+          ]
+        },
+        {
+          "cluster_id": 244,
+          "size": 145,
+          "top_topics": [
+            "moss",
+            "ferns",
+            "aroids"
+          ]
+        },
+        {
+          "cluster_id": 280,
+          "size": 141,
+          "top_topics": [
+            "hla",
+            "mri",
+            "lupus"
+          ]
+        },
+        {
+          "cluster_id": 329,
+          "size": 140,
+          "top_topics": [
+            "trials",
+            "in vitro",
+            "experiment"
+          ]
+        },
+        {
+          "cluster_id": 366,
+          "size": 125,
+          "top_topics": [
+            "boers",
+            "fauna",
+            "north"
+          ]
+        },
+        {
+          "cluster_id": 351,
+          "size": 124,
+          "top_topics": [
+            "niche",
+            "species",
+            "adaptation"
+          ]
+        },
+        {
+          "cluster_id": 385,
+          "size": 122,
+          "top_topics": [
+            "cow",
+            "fog",
+            "hog"
+          ]
+        },
+        {
+          "cluster_id": 404,
+          "size": 120,
+          "top_topics": [
+            "barn",
+            "bird",
+            "barns"
+          ]
+        },
+        {
+          "cluster_id": 396,
+          "size": 118,
+          "top_topics": [
+            "yard",
+            "lawns",
+            "plant"
+          ]
+        },
+        {
+          "cluster_id": 411,
+          "size": 118,
+          "top_topics": [
+            "coat",
+            "seeds",
+            "cycads"
+          ]
+        },
+        {
+          "cluster_id": 461,
+          "size": 113,
+          "top_topics": [
+            "flies",
+            "baddies",
+            "cyclops"
+          ]
+        },
+        {
+          "cluster_id": 440,
+          "size": 110,
+          "top_topics": [
+            "flora",
+            "grass",
+            "borneo"
+          ]
+        },
+        {
+          "cluster_id": 439,
+          "size": 108,
+          "top_topics": [
+            "womb",
+            "ovum",
+            "fetus"
+          ]
+        },
+        {
+          "cluster_id": 484,
+          "size": 101,
+          "top_topics": [
+            "bioy",
+            "biota",
+            "biosoft"
+          ]
+        },
+        {
+          "cluster_id": 518,
+          "size": 97,
+          "top_topics": [
+            "bug",
+            "bugs",
+            "buggy"
+          ]
+        },
+        {
+          "cluster_id": 500,
+          "size": 97,
+          "top_topics": [
+            "clades",
+            "pyrrho",
+            "rosids"
+          ]
+        },
+        {
+          "cluster_id": 542,
+          "size": 94,
+          "top_topics": [
+            "zoo",
+            "trap",
+            "zoos"
+          ]
+        },
+        {
+          "cluster_id": 558,
+          "size": 90,
+          "top_topics": [
+            "food webs",
+            "allelopathy",
+            "insectivora"
+          ]
+        },
+        {
+          "cluster_id": 624,
+          "size": 86,
+          "top_topics": [
+            "mating",
+            "seducers",
+            "seduction"
+          ]
+        },
+        {
+          "cluster_id": 606,
+          "size": 84,
+          "top_topics": [
+            "doyn",
+            "zero",
+            "owyn"
+          ]
+        },
+        {
+          "cluster_id": 632,
+          "size": 82,
+          "top_topics": [
+            "botany",
+            "taxonomy",
+            "botanist"
+          ]
+        },
+        {
+          "cluster_id": 664,
+          "size": 78,
+          "top_topics": [
+            "ant",
+            "ants",
+            "bees"
+          ]
+        },
+        {
+          "cluster_id": 703,
+          "size": 74,
+          "top_topics": [
+            "bmd",
+            "body",
+            "bone"
+          ]
+        },
+        {
+          "cluster_id": 690,
+          "size": 72,
+          "top_topics": [
+            "ged",
+            "gout",
+            "dung"
+          ]
+        },
+        {
+          "cluster_id": 691,
+          "size": 69,
+          "top_topics": [
+            "ape",
+            "apes",
+            "hyena"
+          ]
+        },
+        {
+          "cluster_id": 755,
+          "size": 59,
+          "top_topics": [
+            "alby",
+            "alor",
+            "serum"
+          ]
+        },
+        {
+          "cluster_id": 768,
+          "size": 53,
+          "top_topics": [
+            "ddt",
+            "hazmat",
+            "phytin"
+          ]
+        },
+        {
+          "cluster_id": 821,
+          "size": 38,
+          "top_topics": [
+            "odor",
+            "odors",
+            "scent"
+          ]
+        },
+        {
+          "cluster_id": 824,
+          "size": 34,
+          "top_topics": [
+            "adonis",
+            "plating",
+            "silicon"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 10,
+      "label": "Creative Writing & Mind",
+      "leiden_cluster_count": 53,
+      "total_topics": 8081,
+      "leiden_clusters": [
+        {
+          "cluster_id": 2,
+          "size": 392,
+          "top_topics": [
+            "writ",
+            "author",
+            "authors"
+          ]
+        },
+        {
+          "cluster_id": 17,
+          "size": 314,
+          "top_topics": [
+            "framing",
+            "novella",
+            "summary"
+          ]
+        },
+        {
+          "cluster_id": 24,
+          "size": 288,
+          "top_topics": [
+            "lamp",
+            "bulbs",
+            "color"
+          ]
+        },
+        {
+          "cluster_id": 28,
+          "size": 278,
+          "top_topics": [
+            "eeg",
+            "fmri",
+            "brain"
+          ]
+        },
+        {
+          "cluster_id": 33,
+          "size": 275,
+          "top_topics": [
+            "words",
+            "nouns",
+            "slang"
+          ]
+        },
+        {
+          "cluster_id": 56,
+          "size": 256,
+          "top_topics": [
+            "voice",
+            "touch",
+            "scene"
+          ]
+        },
+        {
+          "cluster_id": 63,
+          "size": 238,
+          "top_topics": [
+            "mind",
+            "minds",
+            "control"
+          ]
+        },
+        {
+          "cluster_id": 76,
+          "size": 230,
+          "top_topics": [
+            "muse",
+            "poem",
+            "poet"
+          ]
+        },
+        {
+          "cluster_id": 81,
+          "size": 223,
+          "top_topics": [
+            "memory",
+            "replay",
+            "amnesia"
+          ]
+        },
+        {
+          "cluster_id": 112,
+          "size": 204,
+          "top_topics": [
+            "nlp",
+            "bert",
+            "tags"
+          ]
+        },
+        {
+          "cluster_id": 134,
+          "size": 195,
+          "top_topics": [
+            "love",
+            "lust",
+            "desire"
+          ]
+        },
+        {
+          "cluster_id": 165,
+          "size": 191,
+          "top_topics": [
+            "character",
+            "characters",
+            "str markers"
+          ]
+        },
+        {
+          "cluster_id": 133,
+          "size": 186,
+          "top_topics": [
+            "unreal",
+            "reality",
+            "fiction"
+          ]
+        },
+        {
+          "cluster_id": 163,
+          "size": 184,
+          "top_topics": [
+            "self",
+            "else",
+            "other"
+          ]
+        },
+        {
+          "cluster_id": 135,
+          "size": 181,
+          "top_topics": [
+            "fluffy",
+            "pillow",
+            "drawing"
+          ]
+        },
+        {
+          "cluster_id": 188,
+          "size": 173,
+          "top_topics": [
+            "mood",
+            "moods",
+            "moody"
+          ]
+        },
+        {
+          "cluster_id": 175,
+          "size": 171,
+          "top_topics": [
+            "psyche",
+            "coping",
+            "dianetics"
+          ]
+        },
+        {
+          "cluster_id": 213,
+          "size": 168,
+          "top_topics": [
+            "past",
+            "dejavu",
+            "debussy"
+          ]
+        },
+        {
+          "cluster_id": 172,
+          "size": 168,
+          "top_topics": [
+            "pace",
+            "reader",
+            "pacing"
+          ]
+        },
+        {
+          "cluster_id": 224,
+          "size": 163,
+          "top_topics": [
+            "code",
+            "sign",
+            "codes"
+          ]
+        },
+        {
+          "cluster_id": 201,
+          "size": 161,
+          "top_topics": [
+            "dance",
+            "rhyme",
+            "waltz"
+          ]
+        },
+        {
+          "cluster_id": 228,
+          "size": 160,
+          "top_topics": [
+            "essay",
+            "breach",
+            "essays"
+          ]
+        },
+        {
+          "cluster_id": 238,
+          "size": 155,
+          "top_topics": [
+            "chatgpt",
+            "cyborgs",
+            "chatbots"
+          ]
+        },
+        {
+          "cluster_id": 258,
+          "size": 150,
+          "top_topics": [
+            "fluid",
+            "memes",
+            "cogito"
+          ]
+        },
+        {
+          "cluster_id": 265,
+          "size": 148,
+          "top_topics": [
+            "tone",
+            "genre",
+            "styles"
+          ]
+        },
+        {
+          "cluster_id": 304,
+          "size": 142,
+          "top_topics": [
+            "watch",
+            "watches",
+            "watcher"
+          ]
+        },
+        {
+          "cluster_id": 333,
+          "size": 137,
+          "top_topics": [
+            "senses",
+            "penury",
+            "visuals"
+          ]
+        },
+        {
+          "cluster_id": 287,
+          "size": 137,
+          "top_topics": [
+            "coma",
+            "lacan",
+            "lipan"
+          ]
+        },
+        {
+          "cluster_id": 315,
+          "size": 131,
+          "top_topics": [
+            "face",
+            "faces",
+            "skull"
+          ]
+        },
+        {
+          "cluster_id": 384,
+          "size": 129,
+          "top_topics": [
+            "identity",
+            "role theory",
+            "new identity"
+          ]
+        },
+        {
+          "cluster_id": 354,
+          "size": 126,
+          "top_topics": [
+            "ear",
+            "eye",
+            "gaze"
+          ]
+        },
+        {
+          "cluster_id": 381,
+          "size": 120,
+          "top_topics": [
+            "intent",
+            "motive",
+            "premise"
+          ]
+        },
+        {
+          "cluster_id": 413,
+          "size": 119,
+          "top_topics": [
+            "evoked",
+            "modesty",
+            "haptics"
+          ]
+        },
+        {
+          "cluster_id": 431,
+          "size": 117,
+          "top_topics": [
+            "ink",
+            "faber",
+            "pencils"
+          ]
+        },
+        {
+          "cluster_id": 422,
+          "size": 115,
+          "top_topics": [
+            "edna",
+            "blake",
+            "taoism"
+          ]
+        },
+        {
+          "cluster_id": 473,
+          "size": 108,
+          "top_topics": [
+            "simile",
+            "analogy",
+            "similes"
+          ]
+        },
+        {
+          "cluster_id": 483,
+          "size": 106,
+          "top_topics": [
+            "plot",
+            "plots",
+            "plotly"
+          ]
+        },
+        {
+          "cluster_id": 479,
+          "size": 105,
+          "top_topics": [
+            "musing",
+            "status",
+            "lunacy"
+          ]
+        },
+        {
+          "cluster_id": 480,
+          "size": 105,
+          "top_topics": [
+            "uzi",
+            "laozi",
+            "melzi"
+          ]
+        },
+        {
+          "cluster_id": 489,
+          "size": 104,
+          "top_topics": [
+            "detail",
+            "imagery",
+            "details"
+          ]
+        },
+        {
+          "cluster_id": 503,
+          "size": 99,
+          "top_topics": [
+            "seinfeld",
+            "adversity",
+            "human type"
+          ]
+        },
+        {
+          "cluster_id": 556,
+          "size": 94,
+          "top_topics": [
+            "mirage",
+            "mirages",
+            "practice"
+          ]
+        },
+        {
+          "cluster_id": 562,
+          "size": 93,
+          "top_topics": [
+            "kiss",
+            "lovers",
+            "embrace"
+          ]
+        },
+        {
+          "cluster_id": 552,
+          "size": 91,
+          "top_topics": [
+            "folio",
+            "quotes",
+            "vellum"
+          ]
+        },
+        {
+          "cluster_id": 572,
+          "size": 88,
+          "top_topics": [
+            "mindset",
+            "wastage",
+            "modding"
+          ]
+        },
+        {
+          "cluster_id": 610,
+          "size": 86,
+          "top_topics": [
+            "taste",
+            "palate",
+            "ravioli"
+          ]
+        },
+        {
+          "cluster_id": 616,
+          "size": 80,
+          "top_topics": [
+            "art loss",
+            "missing art",
+            "artistic risk"
+          ]
+        },
+        {
+          "cluster_id": 657,
+          "size": 78,
+          "top_topics": [
+            "detach",
+            "remorse",
+            "bodymod"
+          ]
+        },
+        {
+          "cluster_id": 722,
+          "size": 74,
+          "top_topics": [
+            "hand",
+            "glory",
+            "busts"
+          ]
+        },
+        {
+          "cluster_id": 702,
+          "size": 73,
+          "top_topics": [
+            "aura",
+            "adhd",
+            "auras"
+          ]
+        },
+        {
+          "cluster_id": 720,
+          "size": 69,
+          "top_topics": [
+            "ch'i",
+            "suurs",
+            "wuhua"
+          ]
+        },
+        {
+          "cluster_id": 726,
+          "size": 67,
+          "top_topics": [
+            "cue",
+            "cues",
+            "cueing"
+          ]
+        },
+        {
+          "cluster_id": 832,
+          "size": 36,
+          "top_topics": [
+            "mirror",
+            "mirrors",
+            "mirroring"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 11,
+      "label": "Artificial Intelligence & Math",
+      "leiden_cluster_count": 68,
+      "total_topics": 8750,
+      "leiden_clusters": [
+        {
+          "cluster_id": 5,
+          "size": 357,
+          "top_topics": [
+            "pca",
+            "mat",
+            "pcfg"
+          ]
+        },
+        {
+          "cluster_id": 39,
+          "size": 274,
+          "top_topics": [
+            "dirac",
+            "bernald",
+            "density"
+          ]
+        },
+        {
+          "cluster_id": 57,
+          "size": 245,
+          "top_topics": [
+            "cnn",
+            "gan",
+            "cnn2"
+          ]
+        },
+        {
+          "cluster_id": 64,
+          "size": 235,
+          "top_topics": [
+            "zen",
+            "math",
+            "sets"
+          ]
+        },
+        {
+          "cluster_id": 68,
+          "size": 232,
+          "top_topics": [
+            "logic",
+            "proof",
+            "axioms"
+          ]
+        },
+        {
+          "cluster_id": 69,
+          "size": 227,
+          "top_topics": [
+            "dfa",
+            "htw",
+            "md5"
+          ]
+        },
+        {
+          "cluster_id": 93,
+          "size": 215,
+          "top_topics": [
+            "bias",
+            "ai bias",
+            "fallacy"
+          ]
+        },
+        {
+          "cluster_id": 117,
+          "size": 201,
+          "top_topics": [
+            "bayes",
+            "jinxes",
+            "dorothy"
+          ]
+        },
+        {
+          "cluster_id": 116,
+          "size": 191,
+          "top_topics": [
+            "point",
+            "hester",
+            "spaces"
+          ]
+        },
+        {
+          "cluster_id": 132,
+          "size": 191,
+          "top_topics": [
+            "dfs",
+            "mse",
+            "ida*"
+          ]
+        },
+        {
+          "cluster_id": 118,
+          "size": 190,
+          "top_topics": [
+            "roc",
+            "sigma",
+            "recall"
+          ]
+        },
+        {
+          "cluster_id": 137,
+          "size": 183,
+          "top_topics": [
+            "qa",
+            "seo",
+            "study"
+          ]
+        },
+        {
+          "cluster_id": 143,
+          "size": 178,
+          "top_topics": [
+            "ff",
+            "ja",
+            "f."
+          ]
+        },
+        {
+          "cluster_id": 161,
+          "size": 173,
+          "top_topics": [
+            "aqr",
+            "dqn",
+            "lvq"
+          ]
+        },
+        {
+          "cluster_id": 189,
+          "size": 171,
+          "top_topics": [
+            "ai",
+            "lockup",
+            "ai bots"
+          ]
+        },
+        {
+          "cluster_id": 182,
+          "size": 169,
+          "top_topics": [
+            "five",
+            "mask",
+            "tint"
+          ]
+        },
+        {
+          "cluster_id": 247,
+          "size": 154,
+          "top_topics": [
+            "lzw",
+            "ascii",
+            "binns"
+          ]
+        },
+        {
+          "cluster_id": 236,
+          "size": 153,
+          "top_topics": [
+            "ddp",
+            "rdd",
+            "sql"
+          ]
+        },
+        {
+          "cluster_id": 257,
+          "size": 150,
+          "top_topics": [
+            "labels",
+            "dataset",
+            "distill"
+          ]
+        },
+        {
+          "cluster_id": 250,
+          "size": 149,
+          "top_topics": [
+            "178",
+            "beta",
+            "alpha"
+          ]
+        },
+        {
+          "cluster_id": 272,
+          "size": 147,
+          "top_topics": [
+            "formula",
+            "formulas",
+            "equations"
+          ]
+        },
+        {
+          "cluster_id": 283,
+          "size": 144,
+          "top_topics": [
+            "cosine",
+            "layers",
+            "tf-idf"
+          ]
+        },
+        {
+          "cluster_id": 293,
+          "size": 140,
+          "top_topics": [
+            "luck",
+            "odds",
+            "chance"
+          ]
+        },
+        {
+          "cluster_id": 312,
+          "size": 138,
+          "top_topics": [
+            "scale",
+            "binder",
+            "scales"
+          ]
+        },
+        {
+          "cluster_id": 294,
+          "size": 136,
+          "top_topics": [
+            "loop",
+            "loops",
+            "looping"
+          ]
+        },
+        {
+          "cluster_id": 302,
+          "size": 135,
+          "top_topics": [
+            "tuff",
+            "turl",
+            "tuan"
+          ]
+        },
+        {
+          "cluster_id": 328,
+          "size": 134,
+          "top_topics": [
+            "fey",
+            "hawat",
+            "qubits"
+          ]
+        },
+        {
+          "cluster_id": 318,
+          "size": 132,
+          "top_topics": [
+            "eve",
+            "sgd",
+            "adam"
+          ]
+        },
+        {
+          "cluster_id": 355,
+          "size": 131,
+          "top_topics": [
+            "kwargs",
+            "presets",
+            "embedding"
+          ]
+        },
+        {
+          "cluster_id": 345,
+          "size": 129,
+          "top_topics": [
+            "lda",
+            "svm",
+            "qda"
+          ]
+        },
+        {
+          "cluster_id": 361,
+          "size": 124,
+          "top_topics": [
+            "imps",
+            "grange",
+            "impiety"
+          ]
+        },
+        {
+          "cluster_id": 419,
+          "size": 123,
+          "top_topics": [
+            "sox",
+            "u-net",
+            "kernel"
+          ]
+        },
+        {
+          "cluster_id": 407,
+          "size": 123,
+          "top_topics": [
+            "rca",
+            "tlic",
+            "grpc"
+          ]
+        },
+        {
+          "cluster_id": 393,
+          "size": 121,
+          "top_topics": [
+            "analysis",
+            "modeling",
+            "methodism"
+          ]
+        },
+        {
+          "cluster_id": 377,
+          "size": 120,
+          "top_topics": [
+            "np",
+            "csp",
+            "nexus"
+          ]
+        },
+        {
+          "cluster_id": 370,
+          "size": 119,
+          "top_topics": [
+            "ode",
+            "odes",
+            "cauchy"
+          ]
+        },
+        {
+          "cluster_id": 437,
+          "size": 118,
+          "top_topics": [
+            "graph",
+            "graphs",
+            "graphviz"
+          ]
+        },
+        {
+          "cluster_id": 415,
+          "size": 115,
+          "top_topics": [
+            "entropy",
+            "sparsity",
+            "denoising"
+          ]
+        },
+        {
+          "cluster_id": 412,
+          "size": 114,
+          "top_topics": [
+            "rubin",
+            "thinking",
+            "reasoning"
+          ]
+        },
+        {
+          "cluster_id": 469,
+          "size": 111,
+          "top_topics": [
+            "pixel",
+            "automl",
+            "automa"
+          ]
+        },
+        {
+          "cluster_id": 493,
+          "size": 104,
+          "top_topics": [
+            "mcmc",
+            "mcrn",
+            "mc355"
+          ]
+        },
+        {
+          "cluster_id": 492,
+          "size": 103,
+          "top_topics": [
+            "java",
+            "program",
+            "learning"
+          ]
+        },
+        {
+          "cluster_id": 495,
+          "size": 101,
+          "top_topics": [
+            "baseline",
+            "benchmark",
+            "benchmarks"
+          ]
+        },
+        {
+          "cluster_id": 505,
+          "size": 101,
+          "top_topics": [
+            "split",
+            "assessor",
+            "dataflow"
+          ]
+        },
+        {
+          "cluster_id": 515,
+          "size": 97,
+          "top_topics": [
+            "lgm",
+            "llm",
+            "llms"
+          ]
+        },
+        {
+          "cluster_id": 510,
+          "size": 97,
+          "top_topics": [
+            "noise",
+            "nudging",
+            "humming"
+          ]
+        },
+        {
+          "cluster_id": 521,
+          "size": 95,
+          "top_topics": [
+            "kfold",
+            "ernst",
+            "ernest"
+          ]
+        },
+        {
+          "cluster_id": 533,
+          "size": 93,
+          "top_topics": [
+            "epochs",
+            "mincing",
+            "spreads"
+          ]
+        },
+        {
+          "cluster_id": 588,
+          "size": 88,
+          "top_topics": [
+            "less",
+            "fp16",
+            "babel-17"
+          ]
+        },
+        {
+          "cluster_id": 565,
+          "size": 88,
+          "top_topics": [
+            "baliset",
+            "keenset",
+            "support"
+          ]
+        },
+        {
+          "cluster_id": 576,
+          "size": 87,
+          "top_topics": [
+            "score",
+            "ranking",
+            "ratings"
+          ]
+        },
+        {
+          "cluster_id": 617,
+          "size": 87,
+          "top_topics": [
+            "sensor",
+            "signal",
+            "inertia"
+          ]
+        },
+        {
+          "cluster_id": 614,
+          "size": 87,
+          "top_topics": [
+            "predictor",
+            "prediction",
+            "predictive"
+          ]
+        },
+        {
+          "cluster_id": 611,
+          "size": 84,
+          "top_topics": [
+            "shape",
+            "convex",
+            "shapes"
+          ]
+        },
+        {
+          "cluster_id": 596,
+          "size": 83,
+          "top_topics": [
+            "anova",
+            "quantile",
+            "casuistry"
+          ]
+        },
+        {
+          "cluster_id": 622,
+          "size": 82,
+          "top_topics": [
+            "dbscan",
+            "k-means",
+            "hdbscan"
+          ]
+        },
+        {
+          "cluster_id": 637,
+          "size": 80,
+          "top_topics": [
+            "diagrams",
+            "outcomes",
+            "mediator"
+          ]
+        },
+        {
+          "cluster_id": 672,
+          "size": 77,
+          "top_topics": [
+            "latency",
+            "affinity",
+            "inference"
+          ]
+        },
+        {
+          "cluster_id": 659,
+          "size": 77,
+          "top_topics": [
+            "farwan",
+            "casting",
+            "proxies"
+          ]
+        },
+        {
+          "cluster_id": 669,
+          "size": 75,
+          "top_topics": [
+            "lasso",
+            "hessian",
+            "adaboost"
+          ]
+        },
+        {
+          "cluster_id": 695,
+          "size": 71,
+          "top_topics": [
+            "imports",
+            "linear b",
+            "rigidity"
+          ]
+        },
+        {
+          "cluster_id": 734,
+          "size": 66,
+          "top_topics": [
+            "csv",
+            "pandas",
+            "parser"
+          ]
+        },
+        {
+          "cluster_id": 759,
+          "size": 59,
+          "top_topics": [
+            "complexes",
+            "complexity",
+            "god complex"
+          ]
+        },
+        {
+          "cluster_id": 765,
+          "size": 58,
+          "top_topics": [
+            "rnn",
+            "rnns",
+            "hooks"
+          ]
+        },
+        {
+          "cluster_id": 829,
+          "size": 38,
+          "top_topics": [
+            "mlm",
+            "mlops",
+            "mlp models"
+          ]
+        },
+        {
+          "cluster_id": 830,
+          "size": 35,
+          "top_topics": [
+            "canon",
+            "bagging",
+            "baggers"
+          ]
+        },
+        {
+          "cluster_id": 839,
+          "size": 27,
+          "top_topics": [
+            "mnist",
+            "digits",
+            "innenin"
+          ]
+        },
+        {
+          "cluster_id": 843,
+          "size": 18,
+          "top_topics": [
+            "heuristic",
+            "heuristics",
+            "heuristics,"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 12,
+      "label": "Ancient Civilizations & Cultures",
+      "leiden_cluster_count": 36,
+      "total_topics": 5076,
+      "leiden_clusters": [
+        {
+          "cluster_id": 20,
+          "size": 294,
+          "top_topics": [
+            "paz",
+            "maya",
+            "andes"
+          ]
+        },
+        {
+          "cluster_id": 31,
+          "size": 280,
+          "top_topics": [
+            "1859",
+            "1861",
+            "1863"
+          ]
+        },
+        {
+          "cluster_id": 37,
+          "size": 279,
+          "top_topics": [
+            "clan",
+            "tribe",
+            "custer"
+          ]
+        },
+        {
+          "cluster_id": 84,
+          "size": 220,
+          "top_topics": [
+            "gaul",
+            "rome",
+            "crete"
+          ]
+        },
+        {
+          "cluster_id": 90,
+          "size": 212,
+          "top_topics": [
+            "jews",
+            "utah",
+            "zion"
+          ]
+        },
+        {
+          "cluster_id": 113,
+          "size": 197,
+          "top_topics": [
+            "altar",
+            "icons",
+            "idols"
+          ]
+        },
+        {
+          "cluster_id": 129,
+          "size": 183,
+          "top_topics": [
+            "zca",
+            "pisa",
+            "finca"
+          ]
+        },
+        {
+          "cluster_id": 211,
+          "size": 169,
+          "top_topics": [
+            "calli",
+            "custom",
+            "legacy"
+          ]
+        },
+        {
+          "cluster_id": 179,
+          "size": 169,
+          "top_topics": [
+            "ali",
+            "amos",
+            "imam"
+          ]
+        },
+        {
+          "cluster_id": 170,
+          "size": 165,
+          "top_topics": [
+            "fur",
+            "hare",
+            "odin"
+          ]
+        },
+        {
+          "cluster_id": 200,
+          "size": 164,
+          "top_topics": [
+            "wenzel",
+            "emperor",
+            "viceroy"
+          ]
+        },
+        {
+          "cluster_id": 183,
+          "size": 163,
+          "top_topics": [
+            "tyre",
+            "galicia",
+            "carthage"
+          ]
+        },
+        {
+          "cluster_id": 235,
+          "size": 153,
+          "top_topics": [
+            "crops",
+            "malta",
+            "juneau"
+          ]
+        },
+        {
+          "cluster_id": 262,
+          "size": 150,
+          "top_topics": [
+            "1344",
+            "1348",
+            "1399"
+          ]
+        },
+        {
+          "cluster_id": 259,
+          "size": 146,
+          "top_topics": [
+            "asia",
+            "bali",
+            "fiji"
+          ]
+        },
+        {
+          "cluster_id": 279,
+          "size": 141,
+          "top_topics": [
+            "goa",
+            "abyss",
+            "bahia"
+          ]
+        },
+        {
+          "cluster_id": 288,
+          "size": 138,
+          "top_topics": [
+            "lora",
+            "lyre",
+            "peru"
+          ]
+        },
+        {
+          "cluster_id": 332,
+          "size": 137,
+          "top_topics": [
+            "gods",
+            "cairo",
+            "deity"
+          ]
+        },
+        {
+          "cluster_id": 320,
+          "size": 129,
+          "top_topics": [
+            "legion",
+            "persia",
+            "xerxes"
+          ]
+        },
+        {
+          "cluster_id": 410,
+          "size": 122,
+          "top_topics": [
+            "pax",
+            "pope",
+            "milan"
+          ]
+        },
+        {
+          "cluster_id": 382,
+          "size": 120,
+          "top_topics": [
+            "org",
+            "sect",
+            "ngos"
+          ]
+        },
+        {
+          "cluster_id": 386,
+          "size": 119,
+          "top_topics": [
+            "saxon",
+            "indian",
+            "saxons"
+          ]
+        },
+        {
+          "cluster_id": 426,
+          "size": 117,
+          "top_topics": [
+            "figs",
+            "vases",
+            "figgins"
+          ]
+        },
+        {
+          "cluster_id": 417,
+          "size": 114,
+          "top_topics": [
+            "harlen",
+            "corsica",
+            "dynasty"
+          ]
+        },
+        {
+          "cluster_id": 468,
+          "size": 108,
+          "top_topics": [
+            "early",
+            "sapiens",
+            "mammoths"
+          ]
+        },
+        {
+          "cluster_id": 457,
+          "size": 106,
+          "top_topics": [
+            "coup",
+            "cuba",
+            "aleph"
+          ]
+        },
+        {
+          "cluster_id": 504,
+          "size": 99,
+          "top_topics": [
+            "cyana",
+            "cyriaca",
+            "minotaur"
+          ]
+        },
+        {
+          "cluster_id": 487,
+          "size": 99,
+          "top_topics": [
+            "east",
+            "hill",
+            "heights"
+          ]
+        },
+        {
+          "cluster_id": 544,
+          "size": 92,
+          "top_topics": [
+            "goat",
+            "ogre",
+            "cusp"
+          ]
+        },
+        {
+          "cluster_id": 602,
+          "size": 88,
+          "top_topics": [
+            "monk",
+            "jade",
+            "jane"
+          ]
+        },
+        {
+          "cluster_id": 626,
+          "size": 84,
+          "top_topics": [
+            "nero",
+            "aech",
+            "aesi"
+          ]
+        },
+        {
+          "cluster_id": 634,
+          "size": 79,
+          "top_topics": [
+            "eu",
+            "euth",
+            "euced"
+          ]
+        },
+        {
+          "cluster_id": 662,
+          "size": 77,
+          "top_topics": [
+            "nico",
+            "villa",
+            "heresy"
+          ]
+        },
+        {
+          "cluster_id": 719,
+          "size": 66,
+          "top_topics": [
+            "hecht",
+            "gudrun",
+            "fichte"
+          ]
+        },
+        {
+          "cluster_id": 770,
+          "size": 52,
+          "top_topics": [
+            "khan",
+            "mongol",
+            "warden"
+          ]
+        },
+        {
+          "cluster_id": 810,
+          "size": 45,
+          "top_topics": [
+            "golem",
+            "prague",
+            "bohemia"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 13,
+      "label": "Human Condition",
+      "leiden_cluster_count": 39,
+      "total_topics": 5960,
+      "leiden_clusters": [
+        {
+          "cluster_id": 7,
+          "size": 360,
+          "top_topics": [
+            "scar",
+            "fever",
+            "scars"
+          ]
+        },
+        {
+          "cluster_id": 23,
+          "size": 285,
+          "top_topics": [
+            "decay",
+            "decline",
+            "collapse"
+          ]
+        },
+        {
+          "cluster_id": 40,
+          "size": 268,
+          "top_topics": [
+            "aunt",
+            "feud",
+            "home"
+          ]
+        },
+        {
+          "cluster_id": 48,
+          "size": 261,
+          "top_topics": [
+            "joy",
+            "awe",
+            "awer"
+          ]
+        },
+        {
+          "cluster_id": 65,
+          "size": 234,
+          "top_topics": [
+            "fear",
+            "fears",
+            "danger"
+          ]
+        },
+        {
+          "cluster_id": 91,
+          "size": 214,
+          "top_topics": [
+            "boy",
+            "son",
+            "boys"
+          ]
+        },
+        {
+          "cluster_id": 102,
+          "size": 204,
+          "top_topics": [
+            "papa",
+            "care",
+            "carew"
+          ]
+        },
+        {
+          "cluster_id": 119,
+          "size": 203,
+          "top_topics": [
+            "pain",
+            "agony",
+            "misery"
+          ]
+        },
+        {
+          "cluster_id": 127,
+          "size": 191,
+          "top_topics": [
+            "envy",
+            "hate",
+            "rage"
+          ]
+        },
+        {
+          "cluster_id": 124,
+          "size": 191,
+          "top_topics": [
+            "nhs",
+            "hipaa",
+            "nurse"
+          ]
+        },
+        {
+          "cluster_id": 126,
+          "size": 189,
+          "top_topics": [
+            "ikon",
+            "agea",
+            "aging"
+          ]
+        },
+        {
+          "cluster_id": 139,
+          "size": 184,
+          "top_topics": [
+            "death",
+            "grief",
+            "dying"
+          ]
+        },
+        {
+          "cluster_id": 158,
+          "size": 175,
+          "top_topics": [
+            "play",
+            "toys",
+            "plays"
+          ]
+        },
+        {
+          "cluster_id": 209,
+          "size": 170,
+          "top_topics": [
+            "rape",
+            "abuse",
+            "gunmen"
+          ]
+        },
+        {
+          "cluster_id": 217,
+          "size": 164,
+          "top_topics": [
+            "wife",
+            "dowry",
+            "wives"
+          ]
+        },
+        {
+          "cluster_id": 219,
+          "size": 160,
+          "top_topics": [
+            "crisis",
+            "crises",
+            "calamity"
+          ]
+        },
+        {
+          "cluster_id": 233,
+          "size": 156,
+          "top_topics": [
+            "calm",
+            "rest",
+            "breeze"
+          ]
+        },
+        {
+          "cluster_id": 246,
+          "size": 154,
+          "top_topics": [
+            "hunger",
+            "famine",
+            "poverty"
+          ]
+        },
+        {
+          "cluster_id": 225,
+          "size": 154,
+          "top_topics": [
+            "shelter",
+            "doomsday",
+            "shelters"
+          ]
+        },
+        {
+          "cluster_id": 267,
+          "size": 152,
+          "top_topics": [
+            "dmt",
+            "lsd",
+            "hemp"
+          ]
+        },
+        {
+          "cluster_id": 300,
+          "size": 144,
+          "top_topics": [
+            "dread",
+            "ghoul",
+            "panic"
+          ]
+        },
+        {
+          "cluster_id": 308,
+          "size": 142,
+          "top_topics": [
+            "regret",
+            "apology",
+            "excuses"
+          ]
+        },
+        {
+          "cluster_id": 292,
+          "size": 139,
+          "top_topics": [
+            "ptsd",
+            "poker",
+            "post-war"
+          ]
+        },
+        {
+          "cluster_id": 387,
+          "size": 124,
+          "top_topics": [
+            "asthma",
+            "stimuli",
+            "reaction"
+          ]
+        },
+        {
+          "cluster_id": 434,
+          "size": 117,
+          "top_topics": [
+            "loners",
+            "silence",
+            "isolate"
+          ]
+        },
+        {
+          "cluster_id": 448,
+          "size": 114,
+          "top_topics": [
+            "pity",
+            "blame",
+            "guilt"
+          ]
+        },
+        {
+          "cluster_id": 429,
+          "size": 114,
+          "top_topics": [
+            "cure",
+            "shock",
+            "shocks"
+          ]
+        },
+        {
+          "cluster_id": 438,
+          "size": 114,
+          "top_topics": [
+            "concern",
+            "hardship",
+            "obstacle"
+          ]
+        },
+        {
+          "cluster_id": 462,
+          "size": 107,
+          "top_topics": [
+            "gdp",
+            "utility",
+            "veracity"
+          ]
+        },
+        {
+          "cluster_id": 532,
+          "size": 97,
+          "top_topics": [
+            "cpr",
+            "alarm",
+            "emergency"
+          ]
+        },
+        {
+          "cluster_id": 549,
+          "size": 92,
+          "top_topics": [
+            "autism",
+            "spasms",
+            "disorder"
+          ]
+        },
+        {
+          "cluster_id": 554,
+          "size": 89,
+          "top_topics": [
+            "sleep",
+            "fugue",
+            "bedtime"
+          ]
+        },
+        {
+          "cluster_id": 593,
+          "size": 85,
+          "top_topics": [
+            "rush",
+            "effort",
+            "thrill"
+          ]
+        },
+        {
+          "cluster_id": 589,
+          "size": 85,
+          "top_topics": [
+            "crush",
+            "impetus",
+            "impulse"
+          ]
+        },
+        {
+          "cluster_id": 645,
+          "size": 80,
+          "top_topics": [
+            "age",
+            "ages",
+            "age gap"
+          ]
+        },
+        {
+          "cluster_id": 653,
+          "size": 76,
+          "top_topics": [
+            "eric",
+            "cecilia",
+            "custody"
+          ]
+        },
+        {
+          "cluster_id": 699,
+          "size": 73,
+          "top_topics": [
+            "cavor",
+            "effect",
+            "causation"
+          ]
+        },
+        {
+          "cluster_id": 742,
+          "size": 62,
+          "top_topics": [
+            "aid",
+            "usaaf",
+            "relief"
+          ]
+        },
+        {
+          "cluster_id": 827,
+          "size": 37,
+          "top_topics": [
+            "fragility",
+            "resilience",
+            "fragilista"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 14,
+      "label": "Space Exploration & Earth",
+      "leiden_cluster_count": 42,
+      "total_topics": 5733,
+      "leiden_clusters": [
+        {
+          "cluster_id": 3,
+          "size": 362,
+          "top_topics": [
+            "quake",
+            "basins",
+            "faults"
+          ]
+        },
+        {
+          "cluster_id": 8,
+          "size": 358,
+          "top_topics": [
+            "ufo",
+            "ufos",
+            "alien"
+          ]
+        },
+        {
+          "cluster_id": 12,
+          "size": 324,
+          "top_topics": [
+            "ice",
+            "alps",
+            "cold"
+          ]
+        },
+        {
+          "cluster_id": 44,
+          "size": 267,
+          "top_topics": [
+            "quest",
+            "voyage",
+            "journey"
+          ]
+        },
+        {
+          "cluster_id": 97,
+          "size": 207,
+          "top_topics": [
+            "mars",
+            "colony",
+            "martian"
+          ]
+        },
+        {
+          "cluster_id": 114,
+          "size": 195,
+          "top_topics": [
+            "luna",
+            "moon",
+            "moons"
+          ]
+        },
+        {
+          "cluster_id": 125,
+          "size": 191,
+          "top_topics": [
+            "sea",
+            "beach",
+            "ocean"
+          ]
+        },
+        {
+          "cluster_id": 138,
+          "size": 180,
+          "top_topics": [
+            "sun",
+            "meade",
+            "comets"
+          ]
+        },
+        {
+          "cluster_id": 177,
+          "size": 173,
+          "top_topics": [
+            "village",
+            "bedouin",
+            "frontier"
+          ]
+        },
+        {
+          "cluster_id": 194,
+          "size": 168,
+          "top_topics": [
+            "knox",
+            "arctic",
+            "sea ice"
+          ]
+        },
+        {
+          "cluster_id": 204,
+          "size": 164,
+          "top_topics": [
+            "map",
+            "maps",
+            "road"
+          ]
+        },
+        {
+          "cluster_id": 207,
+          "size": 163,
+          "top_topics": [
+            "pond",
+            "river",
+            "burke"
+          ]
+        },
+        {
+          "cluster_id": 241,
+          "size": 159,
+          "top_topics": [
+            "rain",
+            "tide",
+            "wind"
+          ]
+        },
+        {
+          "cluster_id": 268,
+          "size": 150,
+          "top_topics": [
+            "city",
+            "layout",
+            "building"
+          ]
+        },
+        {
+          "cluster_id": 275,
+          "size": 149,
+          "top_topics": [
+            "slope",
+            "ridge",
+            "ravine"
+          ]
+        },
+        {
+          "cluster_id": 278,
+          "size": 140,
+          "top_topics": [
+            "mecca",
+            "drylands",
+            "deadlands"
+          ]
+        },
+        {
+          "cluster_id": 319,
+          "size": 136,
+          "top_topics": [
+            "biomes",
+            "island",
+            "ecology"
+          ]
+        },
+        {
+          "cluster_id": 356,
+          "size": 121,
+          "top_topics": [
+            "realm",
+            "venus",
+            "ethne"
+          ]
+        },
+        {
+          "cluster_id": 388,
+          "size": 120,
+          "top_topics": [
+            "rock",
+            "rocks",
+            "stone"
+          ]
+        },
+        {
+          "cluster_id": 406,
+          "size": 116,
+          "top_topics": [
+            "cycle",
+            "bikers",
+            "cycles"
+          ]
+        },
+        {
+          "cluster_id": 424,
+          "size": 115,
+          "top_topics": [
+            "leper",
+            "sonar",
+            "stars"
+          ]
+        },
+        {
+          "cluster_id": 416,
+          "size": 114,
+          "top_topics": [
+            "rig",
+            "rope",
+            "rigs"
+          ]
+        },
+        {
+          "cluster_id": 460,
+          "size": 111,
+          "top_topics": [
+            "trek",
+            "trail",
+            "nature"
+          ]
+        },
+        {
+          "cluster_id": 445,
+          "size": 111,
+          "top_topics": [
+            "ruin",
+            "ruins",
+            "rubble"
+          ]
+        },
+        {
+          "cluster_id": 476,
+          "size": 107,
+          "top_topics": [
+            "sethe",
+            "canyon",
+            "denver"
+          ]
+        },
+        {
+          "cluster_id": 471,
+          "size": 106,
+          "top_topics": [
+            "cave",
+            "caves",
+            "polio"
+          ]
+        },
+        {
+          "cluster_id": 458,
+          "size": 106,
+          "top_topics": [
+            "dig",
+            "dome",
+            "chasm"
+          ]
+        },
+        {
+          "cluster_id": 520,
+          "size": 105,
+          "top_topics": [
+            "cottage",
+            "midwest",
+            "cottages"
+          ]
+        },
+        {
+          "cluster_id": 499,
+          "size": 102,
+          "top_topics": [
+            "chad",
+            "mali",
+            "anwar"
+          ]
+        },
+        {
+          "cluster_id": 508,
+          "size": 101,
+          "top_topics": [
+            "south",
+            "facility",
+            "maryland"
+          ]
+        },
+        {
+          "cluster_id": 523,
+          "size": 98,
+          "top_topics": [
+            "move",
+            "gait",
+            "stuck"
+          ]
+        },
+        {
+          "cluster_id": 560,
+          "size": 95,
+          "top_topics": [
+            "park",
+            "funes",
+            "parks"
+          ]
+        },
+        {
+          "cluster_id": 555,
+          "size": 92,
+          "top_topics": [
+            "fox",
+            "hunt",
+            "avery"
+          ]
+        },
+        {
+          "cluster_id": 619,
+          "size": 86,
+          "top_topics": [
+            "basements",
+            "deep work",
+            "crawlspace"
+          ]
+        },
+        {
+          "cluster_id": 583,
+          "size": 85,
+          "top_topics": [
+            "abel",
+            "rpms",
+            "tilt"
+          ]
+        },
+        {
+          "cluster_id": 683,
+          "size": 72,
+          "top_topics": [
+            "fall",
+            "falls",
+            "ladder"
+          ]
+        },
+        {
+          "cluster_id": 763,
+          "size": 60,
+          "top_topics": [
+            "lava",
+            "magma",
+            "atolls"
+          ]
+        },
+        {
+          "cluster_id": 761,
+          "size": 59,
+          "top_topics": [
+            "lake",
+            "ohio",
+            "lakes"
+          ]
+        },
+        {
+          "cluster_id": 764,
+          "size": 55,
+          "top_topics": [
+            "amalfi",
+            "hebron",
+            "new age"
+          ]
+        },
+        {
+          "cluster_id": 798,
+          "size": 48,
+          "top_topics": [
+            "cliff",
+            "aurora",
+            "bikura"
+          ]
+        },
+        {
+          "cluster_id": 804,
+          "size": 45,
+          "top_topics": [
+            "gt",
+            "ala",
+            "g.v."
+          ]
+        },
+        {
+          "cluster_id": 844,
+          "size": 17,
+          "top_topics": [
+            "nomads",
+            "nomadism",
+            "nomad band"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 15,
+      "label": "Intelligence & Deception",
+      "leiden_cluster_count": 23,
+      "total_topics": 3719,
+      "leiden_clusters": [
+        {
+          "cluster_id": 29,
+          "size": 287,
+          "top_topics": [
+            "cia",
+            "mi6",
+            "spy"
+          ]
+        },
+        {
+          "cluster_id": 78,
+          "size": 234,
+          "top_topics": [
+            "jail",
+            "rehab",
+            "gitmo"
+          ]
+        },
+        {
+          "cluster_id": 74,
+          "size": 228,
+          "top_topics": [
+            "hoax",
+            "scam",
+            "fraud"
+          ]
+        },
+        {
+          "cluster_id": 77,
+          "size": 227,
+          "top_topics": [
+            "hidden",
+            "hiding",
+            "secret"
+          ]
+        },
+        {
+          "cluster_id": 83,
+          "size": 222,
+          "top_topics": [
+            "justice",
+            "torture",
+            "criminal"
+          ]
+        },
+        {
+          "cluster_id": 89,
+          "size": 216,
+          "top_topics": [
+            "freaks",
+            "humans",
+            "people"
+          ]
+        },
+        {
+          "cluster_id": 111,
+          "size": 213,
+          "top_topics": [
+            "mitoma",
+            "mystery",
+            "mithran"
+          ]
+        },
+        {
+          "cluster_id": 104,
+          "size": 202,
+          "top_topics": [
+            "loss",
+            "lost",
+            "rmse"
+          ]
+        },
+        {
+          "cluster_id": 105,
+          "size": 201,
+          "top_topics": [
+            "escape",
+            "escapee",
+            "escapes"
+          ]
+        },
+        {
+          "cluster_id": 144,
+          "size": 185,
+          "top_topics": [
+            "mob",
+            "gang",
+            "mobs"
+          ]
+        },
+        {
+          "cluster_id": 180,
+          "size": 175,
+          "top_topics": [
+            "cops",
+            "s\u00e4po",
+            "arrest"
+          ]
+        },
+        {
+          "cluster_id": 181,
+          "size": 171,
+          "top_topics": [
+            "alibi",
+            "heist",
+            "theft"
+          ]
+        },
+        {
+          "cluster_id": 264,
+          "size": 155,
+          "top_topics": [
+            "doubt",
+            "deceit",
+            "treason"
+          ]
+        },
+        {
+          "cluster_id": 269,
+          "size": 149,
+          "top_topics": [
+            "bribe",
+            "greed",
+            "bribery"
+          ]
+        },
+        {
+          "cluster_id": 322,
+          "size": 140,
+          "top_topics": [
+            "murder",
+            "victim",
+            "killing"
+          ]
+        },
+        {
+          "cluster_id": 309,
+          "size": 135,
+          "top_topics": [
+            "safe",
+            "haven",
+            "safety"
+          ]
+        },
+        {
+          "cluster_id": 421,
+          "size": 114,
+          "top_topics": [
+            "denial",
+            "misdeed",
+            "mishima"
+          ]
+        },
+        {
+          "cluster_id": 470,
+          "size": 105,
+          "top_topics": [
+            "nsa",
+            "leak",
+            "leaks"
+          ]
+        },
+        {
+          "cluster_id": 585,
+          "size": 88,
+          "top_topics": [
+            "hawala",
+            "piracy",
+            "pirates"
+          ]
+        },
+        {
+          "cluster_id": 580,
+          "size": 87,
+          "top_topics": [
+            "ideation",
+            "integrity",
+            "self-harm"
+          ]
+        },
+        {
+          "cluster_id": 709,
+          "size": 72,
+          "top_topics": [
+            "rumor",
+            "gossip",
+            "rumors"
+          ]
+        },
+        {
+          "cluster_id": 760,
+          "size": 62,
+          "top_topics": [
+            "fbi",
+            "inquiry",
+            "cover-up"
+          ]
+        },
+        {
+          "cluster_id": 789,
+          "size": 51,
+          "top_topics": [
+            "desmond",
+            "assassin",
+            "assassins"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 16,
+      "label": "Financial Markets & Assets",
+      "leiden_cluster_count": 38,
+      "total_topics": 5600,
+      "leiden_clusters": [
+        {
+          "cluster_id": 0,
+          "size": 506,
+          "top_topics": [
+            "etfs",
+            "djia",
+            "bonds"
+          ]
+        },
+        {
+          "cluster_id": 27,
+          "size": 288,
+          "top_topics": [
+            "debt",
+            "cdos",
+            "debts"
+          ]
+        },
+        {
+          "cluster_id": 34,
+          "size": 272,
+          "top_topics": [
+            "tax",
+            "irs",
+            "fees"
+          ]
+        },
+        {
+          "cluster_id": 38,
+          "size": 269,
+          "top_topics": [
+            "persona",
+            "revenue",
+            "apple i"
+          ]
+        },
+        {
+          "cluster_id": 41,
+          "size": 262,
+          "top_topics": [
+            "ecb",
+            "coin",
+            "euro"
+          ]
+        },
+        {
+          "cluster_id": 54,
+          "size": 247,
+          "top_topics": [
+            "camel",
+            "ivory",
+            "moose"
+          ]
+        },
+        {
+          "cluster_id": 87,
+          "size": 215,
+          "top_topics": [
+            "emp",
+            "emv",
+            "rsi"
+          ]
+        },
+        {
+          "cluster_id": 121,
+          "size": 197,
+          "top_topics": [
+            "land",
+            "acre",
+            "rent"
+          ]
+        },
+        {
+          "cluster_id": 157,
+          "size": 184,
+          "top_topics": [
+            "brokers",
+            "trading",
+            "zipline"
+          ]
+        },
+        {
+          "cluster_id": 159,
+          "size": 177,
+          "top_topics": [
+            "austerity",
+            "instability",
+            "market crash"
+          ]
+        },
+        {
+          "cluster_id": 142,
+          "size": 177,
+          "top_topics": [
+            "sale",
+            "rugby",
+            "sales"
+          ]
+        },
+        {
+          "cluster_id": 203,
+          "size": 163,
+          "top_topics": [
+            "yum!",
+            "yahoos",
+            "yahoo!"
+          ]
+        },
+        {
+          "cluster_id": 202,
+          "size": 162,
+          "top_topics": [
+            "risk",
+            "tail",
+            "payoffs"
+          ]
+        },
+        {
+          "cluster_id": 266,
+          "size": 146,
+          "top_topics": [
+            "gaps",
+            "gesture",
+            "gestures"
+          ]
+        },
+        {
+          "cluster_id": 348,
+          "size": 131,
+          "top_topics": [
+            "money mind",
+            "principles",
+            "money myths"
+          ]
+        },
+        {
+          "cluster_id": 323,
+          "size": 131,
+          "top_topics": [
+            "solutes",
+            "dilution",
+            "earnings"
+          ]
+        },
+        {
+          "cluster_id": 373,
+          "size": 125,
+          "top_topics": [
+            "size",
+            "arbitrage",
+            "volatilty"
+          ]
+        },
+        {
+          "cluster_id": 357,
+          "size": 125,
+          "top_topics": [
+            "payday",
+            "payada",
+            "gawtrey"
+          ]
+        },
+        {
+          "cluster_id": 372,
+          "size": 124,
+          "top_topics": [
+            "industry",
+            "economics",
+            "high-tech"
+          ]
+        },
+        {
+          "cluster_id": 395,
+          "size": 123,
+          "top_topics": [
+            "atms",
+            "bank",
+            "cash"
+          ]
+        },
+        {
+          "cluster_id": 362,
+          "size": 123,
+          "top_topics": [
+            "g20",
+            "imf",
+            "ipo"
+          ]
+        },
+        {
+          "cluster_id": 397,
+          "size": 121,
+          "top_topics": [
+            "charts",
+            "charting",
+            "car data"
+          ]
+        },
+        {
+          "cluster_id": 453,
+          "size": 116,
+          "top_topics": [
+            "wealth",
+            "luxury",
+            "glamour"
+          ]
+        },
+        {
+          "cluster_id": 432,
+          "size": 111,
+          "top_topics": [
+            "excess",
+            "losses",
+            "disgrace"
+          ]
+        },
+        {
+          "cluster_id": 477,
+          "size": 103,
+          "top_topics": [
+            "bet",
+            "mercy",
+            "rolls"
+          ]
+        },
+        {
+          "cluster_id": 530,
+          "size": 96,
+          "top_topics": [
+            "a&p",
+            "m&a",
+            "s&m"
+          ]
+        },
+        {
+          "cluster_id": 528,
+          "size": 96,
+          "top_topics": [
+            "assets",
+            "premiums",
+            "premortem"
+          ]
+        },
+        {
+          "cluster_id": 566,
+          "size": 91,
+          "top_topics": [
+            "profit",
+            "informatics",
+            "roi analysis"
+          ]
+        },
+        {
+          "cluster_id": 557,
+          "size": 90,
+          "top_topics": [
+            "nih",
+            "funding",
+            "foundation"
+          ]
+        },
+        {
+          "cluster_id": 607,
+          "size": 89,
+          "top_topics": [
+            "value",
+            "worth",
+            "price"
+          ]
+        },
+        {
+          "cluster_id": 612,
+          "size": 85,
+          "top_topics": [
+            "ira",
+            "401ks",
+            "pension"
+          ]
+        },
+        {
+          "cluster_id": 655,
+          "size": 82,
+          "top_topics": [
+            "unet",
+            "maker",
+            "makers"
+          ]
+        },
+        {
+          "cluster_id": 595,
+          "size": 82,
+          "top_topics": [
+            "cape",
+            "ratio",
+            "virek"
+          ]
+        },
+        {
+          "cluster_id": 630,
+          "size": 81,
+          "top_topics": [
+            "alcoa",
+            "buybacks",
+            "investor"
+          ]
+        },
+        {
+          "cluster_id": 705,
+          "size": 70,
+          "top_topics": [
+            "demand",
+            "futures",
+            "options"
+          ]
+        },
+        {
+          "cluster_id": 774,
+          "size": 54,
+          "top_topics": [
+            "dpo",
+            "directbuy",
+            "indie music"
+          ]
+        },
+        {
+          "cluster_id": 790,
+          "size": 51,
+          "top_topics": [
+            "bakery",
+            "microfinance",
+            "small stocks"
+          ]
+        },
+        {
+          "cluster_id": 823,
+          "size": 35,
+          "top_topics": [
+            "dues",
+            "offer",
+            "offers"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 17,
+      "label": "Entertainment & Culture",
+      "leiden_cluster_count": 43,
+      "total_topics": 6043,
+      "leiden_clusters": [
+        {
+          "cluster_id": 26,
+          "size": 291,
+          "top_topics": [
+            "media",
+            "pulps",
+            "murdoch"
+          ]
+        },
+        {
+          "cluster_id": 25,
+          "size": 288,
+          "top_topics": [
+            "actor",
+            "drama",
+            "stage"
+          ]
+        },
+        {
+          "cluster_id": 47,
+          "size": 248,
+          "top_topics": [
+            "qi",
+            "tian",
+            "china"
+          ]
+        },
+        {
+          "cluster_id": 58,
+          "size": 243,
+          "top_topics": [
+            "polo",
+            "beets",
+            "cuffs"
+          ]
+        },
+        {
+          "cluster_id": 62,
+          "size": 236,
+          "top_topics": [
+            "bbc",
+            "film",
+            "movie"
+          ]
+        },
+        {
+          "cluster_id": 96,
+          "size": 224,
+          "top_topics": [
+            "bed",
+            "ikea",
+            "room"
+          ]
+        },
+        {
+          "cluster_id": 92,
+          "size": 217,
+          "top_topics": [
+            "bar",
+            "inn",
+            "pub"
+          ]
+        },
+        {
+          "cluster_id": 98,
+          "size": 204,
+          "top_topics": [
+            "book",
+            "isbn",
+            "list"
+          ]
+        },
+        {
+          "cluster_id": 128,
+          "size": 193,
+          "top_topics": [
+            "place",
+            "places",
+            "cruise"
+          ]
+        },
+        {
+          "cluster_id": 148,
+          "size": 183,
+          "top_topics": [
+            "art",
+            "arts",
+            "vermeer"
+          ]
+        },
+        {
+          "cluster_id": 185,
+          "size": 167,
+          "top_topics": [
+            "dawn",
+            "dusk",
+            "mist"
+          ]
+        },
+        {
+          "cluster_id": 193,
+          "size": 162,
+          "top_topics": [
+            "gift",
+            "gifts",
+            "xenos"
+          ]
+        },
+        {
+          "cluster_id": 215,
+          "size": 162,
+          "top_topics": [
+            "relic",
+            "relics",
+            "wpa art"
+          ]
+        },
+        {
+          "cluster_id": 230,
+          "size": 161,
+          "top_topics": [
+            "agra",
+            "urban",
+            "delhi"
+          ]
+        },
+        {
+          "cluster_id": 255,
+          "size": 154,
+          "top_topics": [
+            "met",
+            "smile",
+            "ordeal"
+          ]
+        },
+        {
+          "cluster_id": 227,
+          "size": 152,
+          "top_topics": [
+            "workshop",
+            "advocacy",
+            "workgroup"
+          ]
+        },
+        {
+          "cluster_id": 240,
+          "size": 152,
+          "top_topics": [
+            "mvp",
+            "lupin",
+            "peter"
+          ]
+        },
+        {
+          "cluster_id": 220,
+          "size": 151,
+          "top_topics": [
+            "festa",
+            "advent",
+            "easter"
+          ]
+        },
+        {
+          "cluster_id": 242,
+          "size": 150,
+          "top_topics": [
+            "fair",
+            "tour",
+            "show"
+          ]
+        },
+        {
+          "cluster_id": 277,
+          "size": 145,
+          "top_topics": [
+            "area",
+            "homes",
+            "locals"
+          ]
+        },
+        {
+          "cluster_id": 270,
+          "size": 145,
+          "top_topics": [
+            "mall",
+            "shop",
+            "plaza"
+          ]
+        },
+        {
+          "cluster_id": 260,
+          "size": 143,
+          "top_topics": [
+            "etsy",
+            "seam",
+            "yarn"
+          ]
+        },
+        {
+          "cluster_id": 298,
+          "size": 142,
+          "top_topics": [
+            "town",
+            "mayor",
+            "towns"
+          ]
+        },
+        {
+          "cluster_id": 335,
+          "size": 130,
+          "top_topics": [
+            "dodd",
+            "diary",
+            "papers"
+          ]
+        },
+        {
+          "cluster_id": 374,
+          "size": 127,
+          "top_topics": [
+            "flag",
+            "decor",
+            "fancy"
+          ]
+        },
+        {
+          "cluster_id": 368,
+          "size": 123,
+          "top_topics": [
+            "archive",
+            "codices",
+            "archives"
+          ]
+        },
+        {
+          "cluster_id": 402,
+          "size": 119,
+          "top_topics": [
+            "crowd",
+            "event",
+            "crowds"
+          ]
+        },
+        {
+          "cluster_id": 450,
+          "size": 113,
+          "top_topics": [
+            "fbs",
+            "game",
+            "hall"
+          ]
+        },
+        {
+          "cluster_id": 481,
+          "size": 107,
+          "top_topics": [
+            "guild",
+            "guilds",
+            "manner"
+          ]
+        },
+        {
+          "cluster_id": 490,
+          "size": 102,
+          "top_topics": [
+            "nyc",
+            "yankees",
+            "new york"
+          ]
+        },
+        {
+          "cluster_id": 534,
+          "size": 97,
+          "top_topics": [
+            "model",
+            "artist",
+            "models"
+          ]
+        },
+        {
+          "cluster_id": 541,
+          "size": 92,
+          "top_topics": [
+            "cafe",
+            "caf\u00e9",
+            "caf\u00e9s"
+          ]
+        },
+        {
+          "cluster_id": 570,
+          "size": 90,
+          "top_topics": [
+            "rye",
+            "manor",
+            "houses"
+          ]
+        },
+        {
+          "cluster_id": 654,
+          "size": 78,
+          "top_topics": [
+            "spa",
+            "bath",
+            "tubs"
+          ]
+        },
+        {
+          "cluster_id": 684,
+          "size": 78,
+          "top_topics": [
+            "party",
+            "parties",
+            "caddies"
+          ]
+        },
+        {
+          "cluster_id": 714,
+          "size": 75,
+          "top_topics": [
+            "april",
+            "sukkot",
+            "harvest"
+          ]
+        },
+        {
+          "cluster_id": 688,
+          "size": 75,
+          "top_topics": [
+            "arcade",
+            "arcades",
+            "boredom"
+          ]
+        },
+        {
+          "cluster_id": 716,
+          "size": 68,
+          "top_topics": [
+            "lefse",
+            "gaston",
+            "lecture"
+          ]
+        },
+        {
+          "cluster_id": 747,
+          "size": 65,
+          "top_topics": [
+            "fame",
+            "infamy",
+            "celebrity"
+          ]
+        },
+        {
+          "cluster_id": 744,
+          "size": 64,
+          "top_topics": [
+            "9/11",
+            "seward",
+            "lincoln"
+          ]
+        },
+        {
+          "cluster_id": 752,
+          "size": 61,
+          "top_topics": [
+            "golf",
+            "clubs",
+            "4-h club"
+          ]
+        },
+        {
+          "cluster_id": 815,
+          "size": 42,
+          "top_topics": [
+            "d-day",
+            "friday",
+            "mayday"
+          ]
+        },
+        {
+          "cluster_id": 841,
+          "size": 24,
+          "top_topics": [
+            "studio",
+            "art studio",
+            "art studios"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 18,
+      "label": "Spirituality & Belief",
+      "leiden_cluster_count": 26,
+      "total_topics": 3733,
+      "leiden_clusters": [
+        {
+          "cluster_id": 42,
+          "size": 270,
+          "top_topics": [
+            "dream",
+            "dreams",
+            "visions"
+          ]
+        },
+        {
+          "cluster_id": 59,
+          "size": 244,
+          "top_topics": [
+            "tomb",
+            "grave",
+            "morty"
+          ]
+        },
+        {
+          "cluster_id": 71,
+          "size": 232,
+          "top_topics": [
+            "myth",
+            "tale",
+            "celts"
+          ]
+        },
+        {
+          "cluster_id": 72,
+          "size": 226,
+          "top_topics": [
+            "piety",
+            "censor",
+            "banning"
+          ]
+        },
+        {
+          "cluster_id": 107,
+          "size": 198,
+          "top_topics": [
+            "lent",
+            "para",
+            "saul"
+          ]
+        },
+        {
+          "cluster_id": 146,
+          "size": 184,
+          "top_topics": [
+            "fate",
+            "grim",
+            "will"
+          ]
+        },
+        {
+          "cluster_id": 152,
+          "size": 181,
+          "top_topics": [
+            "sex",
+            "cock",
+            "orgy"
+          ]
+        },
+        {
+          "cluster_id": 167,
+          "size": 175,
+          "top_topics": [
+            "atman",
+            "arhat",
+            "karma"
+          ]
+        },
+        {
+          "cluster_id": 186,
+          "size": 165,
+          "top_topics": [
+            "psi",
+            "ghost",
+            "spook"
+          ]
+        },
+        {
+          "cluster_id": 249,
+          "size": 164,
+          "top_topics": [
+            "god",
+            "faith",
+            "belief"
+          ]
+        },
+        {
+          "cluster_id": 248,
+          "size": 152,
+          "top_topics": [
+            "mage",
+            "magic",
+            "spell"
+          ]
+        },
+        {
+          "cluster_id": 313,
+          "size": 138,
+          "top_topics": [
+            "daze",
+            "madman",
+            "madmen"
+          ]
+        },
+        {
+          "cluster_id": 343,
+          "size": 138,
+          "top_topics": [
+            "ritual",
+            "rituals",
+            "ceremonial"
+          ]
+        },
+        {
+          "cluster_id": 331,
+          "size": 137,
+          "top_topics": [
+            "angel",
+            "demon",
+            "angels"
+          ]
+        },
+        {
+          "cluster_id": 358,
+          "size": 127,
+          "top_topics": [
+            "sin",
+            "evil",
+            "sins"
+          ]
+        },
+        {
+          "cluster_id": 405,
+          "size": 125,
+          "top_topics": [
+            "witness",
+            "illusion",
+            "suspects"
+          ]
+        },
+        {
+          "cluster_id": 447,
+          "size": 114,
+          "top_topics": [
+            "khai",
+            "dark",
+            "xhais"
+          ]
+        },
+        {
+          "cluster_id": 502,
+          "size": 101,
+          "top_topics": [
+            "xbrl",
+            "xand",
+            "kafka"
+          ]
+        },
+        {
+          "cluster_id": 506,
+          "size": 99,
+          "top_topics": [
+            "u2",
+            "hymn",
+            "song"
+          ]
+        },
+        {
+          "cluster_id": 513,
+          "size": 98,
+          "top_topics": [
+            "gore",
+            "gotha",
+            "theme"
+          ]
+        },
+        {
+          "cluster_id": 563,
+          "size": 89,
+          "top_topics": [
+            "kali",
+            "ruler",
+            "rulers"
+          ]
+        },
+        {
+          "cluster_id": 571,
+          "size": 89,
+          "top_topics": [
+            "rpg",
+            "npcs",
+            "oasis"
+          ]
+        },
+        {
+          "cluster_id": 598,
+          "size": 86,
+          "top_topics": [
+            "prayer",
+            "seeker",
+            "guides"
+          ]
+        },
+        {
+          "cluster_id": 599,
+          "size": 84,
+          "top_topics": [
+            "messiah",
+            "sefirot",
+            "adultery"
+          ]
+        },
+        {
+          "cluster_id": 745,
+          "size": 63,
+          "top_topics": [
+            "soul",
+            "souls",
+            "londo"
+          ]
+        },
+        {
+          "cluster_id": 779,
+          "size": 54,
+          "top_topics": [
+            "cult",
+            "prop",
+            "cults"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 19,
+      "label": "18th Century European History",
+      "leiden_cluster_count": 40,
+      "total_topics": 4251,
+      "leiden_clusters": [
+        {
+          "cluster_id": 15,
+          "size": 310,
+          "top_topics": [
+            "hugo",
+            "congo",
+            "ghent"
+          ]
+        },
+        {
+          "cluster_id": 120,
+          "size": 192,
+          "top_topics": [
+            "1775",
+            "1789",
+            "1792"
+          ]
+        },
+        {
+          "cluster_id": 123,
+          "size": 190,
+          "top_topics": [
+            "hamlet",
+            "jonson",
+            "macbeth"
+          ]
+        },
+        {
+          "cluster_id": 147,
+          "size": 178,
+          "top_topics": [
+            "irish",
+            "galway",
+            "revolt"
+          ]
+        },
+        {
+          "cluster_id": 166,
+          "size": 176,
+          "top_topics": [
+            "ge",
+            "jan",
+            "berlin"
+          ]
+        },
+        {
+          "cluster_id": 184,
+          "size": 162,
+          "top_topics": [
+            "74",
+            "190",
+            "194"
+          ]
+        },
+        {
+          "cluster_id": 263,
+          "size": 155,
+          "top_topics": [
+            "anne",
+            "royal",
+            "reign"
+          ]
+        },
+        {
+          "cluster_id": 254,
+          "size": 152,
+          "top_topics": [
+            "burr",
+            "adams",
+            "affair"
+          ]
+        },
+        {
+          "cluster_id": 285,
+          "size": 149,
+          "top_topics": [
+            "heir",
+            "heirs",
+            "estate"
+          ]
+        },
+        {
+          "cluster_id": 303,
+          "size": 134,
+          "top_topics": [
+            "idaho",
+            "maine",
+            "boston"
+          ]
+        },
+        {
+          "cluster_id": 330,
+          "size": 134,
+          "top_topics": [
+            "novel",
+            "novels",
+            "sci-fi"
+          ]
+        },
+        {
+          "cluster_id": 324,
+          "size": 130,
+          "top_topics": [
+            "cage",
+            "john",
+            "cages"
+          ]
+        },
+        {
+          "cluster_id": 338,
+          "size": 129,
+          "top_topics": [
+            "de",
+            "kent",
+            "oath"
+          ]
+        },
+        {
+          "cluster_id": 360,
+          "size": 127,
+          "top_topics": [
+            "elf",
+            "ron",
+            "wick"
+          ]
+        },
+        {
+          "cluster_id": 433,
+          "size": 123,
+          "top_topics": [
+            "gaunt",
+            "henry",
+            "thomas"
+          ]
+        },
+        {
+          "cluster_id": 394,
+          "size": 122,
+          "top_topics": [
+            "genji",
+            "madam",
+            "marie"
+          ]
+        },
+        {
+          "cluster_id": 472,
+          "size": 106,
+          "top_topics": [
+            "maid",
+            "harem",
+            "maids"
+          ]
+        },
+        {
+          "cluster_id": 486,
+          "size": 100,
+          "top_topics": [
+            "jamis",
+            "mijas",
+            "peril"
+          ]
+        },
+        {
+          "cluster_id": 548,
+          "size": 90,
+          "top_topics": [
+            "mead",
+            "honey",
+            "melon"
+          ]
+        },
+        {
+          "cluster_id": 564,
+          "size": 88,
+          "top_topics": [
+            "doyle",
+            "master",
+            "watson"
+          ]
+        },
+        {
+          "cluster_id": 574,
+          "size": 87,
+          "top_topics": [
+            "mann",
+            "tony",
+            "faust"
+          ]
+        },
+        {
+          "cluster_id": 579,
+          "size": 87,
+          "top_topics": [
+            "usk",
+            "joyce",
+            "wales"
+          ]
+        },
+        {
+          "cluster_id": 587,
+          "size": 85,
+          "top_topics": [
+            "mary",
+            "paul",
+            "jesus"
+          ]
+        },
+        {
+          "cluster_id": 628,
+          "size": 80,
+          "top_topics": [
+            "jay",
+            "lee",
+            "grant"
+          ]
+        },
+        {
+          "cluster_id": 641,
+          "size": 79,
+          "top_topics": [
+            "edgar",
+            "mosby",
+            "edmund"
+          ]
+        },
+        {
+          "cluster_id": 685,
+          "size": 73,
+          "top_topics": [
+            "gus",
+            "orr",
+            "egan"
+          ]
+        },
+        {
+          "cluster_id": 667,
+          "size": 73,
+          "top_topics": [
+            "gabelle",
+            "gallery",
+            "miss ou"
+          ]
+        },
+        {
+          "cluster_id": 686,
+          "size": 71,
+          "top_topics": [
+            "hut",
+            "doom",
+            "huts"
+          ]
+        },
+        {
+          "cluster_id": 687,
+          "size": 71,
+          "top_topics": [
+            "loch",
+            "pindar",
+            "gundar"
+          ]
+        },
+        {
+          "cluster_id": 713,
+          "size": 68,
+          "top_topics": [
+            "ben",
+            "ezra",
+            "geico"
+          ]
+        },
+        {
+          "cluster_id": 718,
+          "size": 67,
+          "top_topics": [
+            "katy",
+            "cathy",
+            "susan"
+          ]
+        },
+        {
+          "cluster_id": 740,
+          "size": 66,
+          "top_topics": [
+            "wvs",
+            "arnold",
+            "theory"
+          ]
+        },
+        {
+          "cluster_id": 753,
+          "size": 65,
+          "top_topics": [
+            "liv",
+            "king",
+            "malt"
+          ]
+        },
+        {
+          "cluster_id": 758,
+          "size": 61,
+          "top_topics": [
+            "pryor",
+            "letter",
+            "letters"
+          ]
+        },
+        {
+          "cluster_id": 787,
+          "size": 53,
+          "top_topics": [
+            "bob",
+            "bobby",
+            "burton"
+          ]
+        },
+        {
+          "cluster_id": 795,
+          "size": 49,
+          "top_topics": [
+            "axl",
+            "lords",
+            "radch"
+          ]
+        },
+        {
+          "cluster_id": 791,
+          "size": 48,
+          "top_topics": [
+            "dus",
+            "emma",
+            "lily"
+          ]
+        },
+        {
+          "cluster_id": 812,
+          "size": 44,
+          "top_topics": [
+            "dante",
+            "vinci",
+            "vitas"
+          ]
+        },
+        {
+          "cluster_id": 816,
+          "size": 40,
+          "top_topics": [
+            "sonnet",
+            "kleist",
+            "erskine"
+          ]
+        },
+        {
+          "cluster_id": 819,
+          "size": 37,
+          "top_topics": [
+            "leo",
+            "1906",
+            "frank"
+          ]
+        }
+      ]
+    }
+  ]
+}
