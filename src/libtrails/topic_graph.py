@@ -11,15 +11,30 @@ from .database import get_all_topics, get_db, get_topic_embeddings, save_cooccur
 from .embeddings import bytes_to_embedding
 
 
-def compute_cooccurrences() -> dict:
+def compute_cooccurrences(progress_file: str | None = None) -> dict:
     """
     Compute topic co-occurrences from chunks.
 
     Two topics co-occur if they appear in the same chunk.
 
+    Args:
+        progress_file: Optional file path to write progress updates (for background runs)
+
     Returns:
         Dict with statistics about co-occurrences
     """
+    import time
+    from datetime import datetime
+
+    def log_progress(msg: str):
+        """Write progress message to stdout and optionally to file."""
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        full_msg = f"[{timestamp}] {msg}"
+        print(full_msg, flush=True)
+        if progress_file:
+            with open(progress_file, "w") as f:
+                f.write(f"{full_msg}\n")
+
     with get_db() as conn:
         cursor = conn.cursor()
 
@@ -35,23 +50,45 @@ def compute_cooccurrences() -> dict:
         for row in cursor.fetchall():
             chunk_topics[row[0]].append(row[1])
 
+        total_chunks = len(chunk_topics)
+        log_progress(f"Computing co-occurrences for {total_chunks:,} chunks...")
+
         # Count co-occurrences
         cooccur_counts = defaultdict(int)
-        for chunk_id, topics in chunk_topics.items():
-            for i, t1 in enumerate(topics):
-                for t2 in topics[i + 1:]:
+        start_time = time.time()
+        log_interval = 10000  # Log every 10k chunks
+
+        for i, (chunk_id, topics) in enumerate(chunk_topics.items()):
+            for j, t1 in enumerate(topics):
+                for t2 in topics[j + 1 :]:
                     # Ensure consistent ordering
                     pair = (min(t1, t2), max(t1, t2))
                     cooccur_counts[pair] += 1
+
+            # Log progress periodically
+            if (i + 1) % log_interval == 0:
+                elapsed = time.time() - start_time
+                rate = (i + 1) / elapsed if elapsed > 0 else 0
+                remaining = (total_chunks - i - 1) / rate if rate > 0 else 0
+                pct = 100 * (i + 1) / total_chunks
+                log_progress(
+                    f"Co-occurrence counting: {i + 1:,}/{total_chunks:,} ({pct:.1f}%) | "
+                    f"Pairs: {len(cooccur_counts):,} | Rate: {rate:.1f}/sec | ETA: {remaining / 60:.1f} min"
+                )
+
+        log_progress(f"Found {len(cooccur_counts):,} co-occurrence pairs")
 
         # Compute PMI (Pointwise Mutual Information)
         # Get topic occurrence counts
         cursor.execute("SELECT id, occurrence_count FROM topics")
         topic_counts = {row[0]: row[1] for row in cursor.fetchall()}
-        total_chunks = len(chunk_topics)
 
         # Save to database with PMI
+        log_progress(f"Computing PMI and saving {len(cooccur_counts):,} pairs...")
         saved = 0
+        save_interval = 50000  # Log every 50k saves
+        start_time = time.time()
+
         for (t1, t2), count in cooccur_counts.items():
             # PMI = log(P(t1,t2) / (P(t1) * P(t2)))
             p_t1 = topic_counts.get(t1, 1) / total_chunks
@@ -66,6 +103,19 @@ def compute_cooccurrences() -> dict:
             save_cooccurrence(t1, t2, count, pmi)
             saved += 1
 
+            # Log progress periodically
+            if saved % save_interval == 0:
+                elapsed = time.time() - start_time
+                rate = saved / elapsed if elapsed > 0 else 0
+                remaining = (len(cooccur_counts) - saved) / rate if rate > 0 else 0
+                pct = 100 * saved / len(cooccur_counts)
+                log_progress(
+                    f"Saving PMI: {saved:,}/{len(cooccur_counts):,} ({pct:.1f}%) | "
+                    f"Rate: {rate:.1f}/sec | ETA: {remaining / 60:.1f} min"
+                )
+
+        log_progress(f"Co-occurrence computation complete: {saved:,} pairs saved")
+
         return {
             "total_chunks": total_chunks,
             "cooccurrence_pairs": saved,
@@ -77,6 +127,7 @@ def build_topic_graph(
     embedding_threshold: float = 0.5,
     cooccurrence_min: int = 2,
     pmi_min: float = 0.0,
+    progress_file: str | None = None,
 ) -> ig.Graph:
     """
     Build a topic graph with edges based on embedding similarity and co-occurrence.
@@ -85,10 +136,23 @@ def build_topic_graph(
         embedding_threshold: Minimum cosine similarity for embedding edges
         cooccurrence_min: Minimum co-occurrence count for edges
         pmi_min: Minimum PMI for co-occurrence edges
+        progress_file: Optional file path to write progress updates (for background runs)
 
     Returns:
         igraph.Graph with topic nodes and weighted edges
     """
+    import time
+    from datetime import datetime
+
+    def log_progress(msg: str):
+        """Write progress message to stdout and optionally to file."""
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        full_msg = f"[{timestamp}] {msg}"
+        print(full_msg, flush=True)
+        if progress_file:
+            with open(progress_file, "w") as f:
+                f.write(f"{full_msg}\n")
+
     # Get all topics
     topics = get_all_topics()
     if not topics:
@@ -117,11 +181,23 @@ def build_topic_graph(
         embedding_ids = [t[0] for t in topic_data]
         embeddings = np.array([topic_id_to_embedding[tid] for tid in embedding_ids])
 
+        n = len(embedding_ids)
+        total_pairs = n * (n - 1) // 2
+        log_progress(f"Computing embedding similarity: {n:,} topics, {total_pairs:,} pairs")
+
         # Compute similarity matrix
+        log_progress("Building similarity matrix...")
         sim_matrix = np.dot(embeddings, embeddings.T)
+        log_progress("Similarity matrix complete, scanning for edges...")
+
+        start_time = time.time()
+        checked = 0
+        log_interval = 1_000_000  # Log every 1M pairs
+        edges_found = 0
 
         for i in range(len(embedding_ids)):
             for j in range(i + 1, len(embedding_ids)):
+                checked += 1
                 sim = sim_matrix[i, j]
                 if sim >= embedding_threshold:
                     t1, t2 = embedding_ids[i], embedding_ids[j]
@@ -129,16 +205,37 @@ def build_topic_graph(
                         edges.append((id_to_idx[t1], id_to_idx[t2]))
                         weights.append(float(sim))
                         edge_types.append("embedding")
+                        edges_found += 1
+
+                # Log progress periodically
+                if checked % log_interval == 0:
+                    elapsed = time.time() - start_time
+                    rate = checked / elapsed if elapsed > 0 else 0
+                    remaining = (total_pairs - checked) / rate if rate > 0 else 0
+                    pct = 100 * checked / total_pairs
+                    log_progress(
+                        f"Embedding similarity: {checked:,}/{total_pairs:,} ({pct:.1f}%) | "
+                        f"Edges: {edges_found:,} | Rate: {rate:,.0f}/sec | ETA: {remaining / 60:.1f} min"
+                    )
+
+        # Final log
+        elapsed = time.time() - start_time
+        log_progress(f"Embedding similarity complete: {edges_found:,} edges in {elapsed:.1f}s")
 
     # Add edges from co-occurrence
+    log_progress("Adding co-occurrence edges...")
     with get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT topic1_id, topic2_id, count, pmi
             FROM topic_cooccurrences
             WHERE count >= ? AND (pmi >= ? OR pmi IS NULL)
-        """, (cooccurrence_min, pmi_min))
+        """,
+            (cooccurrence_min, pmi_min),
+        )
 
+        cooccur_count = 0
         for row in cursor.fetchall():
             t1, t2 = row[0], row[1]
             if t1 in id_to_idx and t2 in id_to_idx:
@@ -150,12 +247,16 @@ def build_topic_graph(
                     weight = row[3] if row[3] else math.log(row[2] + 1)
                     weights.append(float(max(0.1, weight)))
                     edge_types.append("cooccurrence")
+                    cooccur_count += 1
+
+    log_progress(f"Co-occurrence edges added: {cooccur_count:,}")
 
     if edges:
         g.add_edges(edges)
         g.es["weight"] = weights
         g.es["type"] = edge_types
 
+    log_progress(f"Graph complete: {g.vcount()} nodes, {g.ecount()} edges")
     return g
 
 
@@ -199,11 +300,14 @@ def build_topic_graph_cooccurrence_only(
     # Add edges from co-occurrence only
     with get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT topic1_id, topic2_id, count, pmi
             FROM topic_cooccurrences
             WHERE count >= ? AND (pmi >= ? OR pmi IS NULL)
-        """, (cooccurrence_min, pmi_min))
+        """,
+            (cooccurrence_min, pmi_min),
+        )
 
         for row in cursor.fetchall():
             t1, t2 = row[0], row[1]
@@ -268,11 +372,14 @@ def build_topic_graph_knn(
     # Add edges from co-occurrence
     with get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT topic1_id, topic2_id, count, pmi
             FROM topic_cooccurrences
             WHERE count >= ? AND (pmi >= ? OR pmi IS NULL)
-        """, (cooccurrence_min, pmi_min))
+        """,
+            (cooccurrence_min, pmi_min),
+        )
 
         for row in cursor.fetchall():
             t1, t2 = row[0], row[1]
@@ -341,8 +448,12 @@ def get_graph_stats(g: ig.Graph) -> dict:
         "density": g.density(),
         "components": len(g.components()),
         "avg_degree": sum(g.degree()) / g.vcount() if g.vcount() > 0 else 0,
-        "embedding_edges": sum(1 for t in g.es["type"] if t == "embedding") if g.ecount() > 0 else 0,
-        "cooccurrence_edges": sum(1 for t in g.es["type"] if t == "cooccurrence") if g.ecount() > 0 else 0,
+        "embedding_edges": sum(1 for t in g.es["type"] if t == "embedding")
+        if g.ecount() > 0
+        else 0,
+        "cooccurrence_edges": sum(1 for t in g.es["type"] if t == "cooccurrence")
+        if g.ecount() > 0
+        else 0,
     }
 
 
@@ -384,13 +495,15 @@ def get_related_topics(topic_label: str, limit: int = 10) -> list[dict]:
     results = []
     for neighbor_idx in neighbors:
         edge_id = g.get_eid(node_idx, neighbor_idx)
-        results.append({
-            "topic_id": g.vs[neighbor_idx]["topic_id"],
-            "label": g.vs[neighbor_idx]["label"],
-            "occurrence_count": g.vs[neighbor_idx]["occurrence_count"],
-            "connection_weight": g.es[edge_id]["weight"],
-            "connection_type": g.es[edge_id]["type"],
-        })
+        results.append(
+            {
+                "topic_id": g.vs[neighbor_idx]["topic_id"],
+                "label": g.vs[neighbor_idx]["label"],
+                "occurrence_count": g.vs[neighbor_idx]["occurrence_count"],
+                "connection_weight": g.es[edge_id]["weight"],
+                "connection_type": g.es[edge_id]["type"],
+            }
+        )
 
     # Sort by weight
     results.sort(key=lambda x: x["connection_weight"], reverse=True)
