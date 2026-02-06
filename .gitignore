@@ -50,3 +50,4 @@ htmlcov/
 
 # Build
 *.log
+.playwright-mcp/

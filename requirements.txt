@@ -1,17 +1,53 @@
-selectolax>=0.3.21
+# LibTrails Dependencies
+# Install with: pip install -r requirements.txt
+
+# ============================================
+# Core CLI & Utilities
+# ============================================
 click>=8.1.0
 rich>=13.0.0
-httpx>=0.27.0
-sentence-transformers>=2.2.0
-numpy>=1.24.0
-sqlite-vec>=0.1.0
-python-igraph>=0.11.0
-leidenalg>=0.10.0
-scikit-learn>=1.0.0
-docling>=2.71.0
 pyyaml>=6.0
 
-# Development/Testing
+# ============================================
+# Document Parsing
+# ============================================
+selectolax>=0.3.21       # EPUB/HTML parsing
+docling>=2.71.0          # PDF extraction
+
+# ============================================
+# Topic Extraction (Ollama API)
+# ============================================
+httpx>=0.27.0
+
+# ============================================
+# Embeddings & Vector Operations
+# ============================================
+numpy>=1.24.0
+sentence-transformers>=2.2.0
+sqlite-vec>=0.1.0        # Vector search extension for SQLite
+
+# ============================================
+# Graph Analysis & Clustering
+# ============================================
+python-igraph>=0.11.0    # Graph construction
+leidenalg>=0.10.0        # Leiden clustering algorithm
+scikit-learn>=1.0.0      # K-means for super-clustering
+
+# ============================================
+# API Server
+# ============================================
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.0.0
+
+# ============================================
+# Visualization (Galaxy View)
+# ============================================
+umap-learn>=0.5.4        # UMAP dimensionality reduction
+
+# ============================================
+# Development/Testing (optional)
+# ============================================
 pytest>=8.0.0
 pytest-cov>=4.0.0
 ruff>=0.4.0

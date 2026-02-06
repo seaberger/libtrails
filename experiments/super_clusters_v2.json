@@ -1,0 +1,7778 @@
+{
+  "meta": {
+    "method": "robust_centroid",
+    "min_label_length": 4,
+    "top_n_topics": 15,
+    "weighting": "log1p(occurrence_count)",
+    "total_super_clusters": 20,
+    "total_leiden_clusters": 845,
+    "excluded_clusters": 0
+  },
+  "super_clusters": [
+    {
+      "super_cluster_id": 0,
+      "label": "Political Systems & States",
+      "leiden_cluster_count": 29,
+      "total_topics": 4167,
+      "leiden_clusters": [
+        {
+          "cluster_id": 4,
+          "size": 358,
+          "top_topics": [
+            "political philosophy",
+            "political systems",
+            "political discourse"
+          ]
+        },
+        {
+          "cluster_id": 21,
+          "size": 302,
+          "top_topics": [
+            "politics",
+            "government",
+            "bureaucracy"
+          ]
+        },
+        {
+          "cluster_id": 51,
+          "size": 255,
+          "top_topics": [
+            "french revolution",
+            "foreign relations",
+            "england"
+          ]
+        },
+        {
+          "cluster_id": 49,
+          "size": 248,
+          "top_topics": [
+            "political conflict",
+            "political instability",
+            "political polarization"
+          ]
+        },
+        {
+          "cluster_id": 66,
+          "size": 234,
+          "top_topics": [
+            "diplomacy",
+            "benghazi",
+            "ariekei"
+          ]
+        },
+        {
+          "cluster_id": 95,
+          "size": 212,
+          "top_topics": [
+            "american politics",
+            "representation",
+            "continental congress"
+          ]
+        },
+        {
+          "cluster_id": 199,
+          "size": 170,
+          "top_topics": [
+            "thomas jefferson",
+            "constitutional law",
+            "constitutional convention"
+          ]
+        },
+        {
+          "cluster_id": 173,
+          "size": 166,
+          "top_topics": [
+            "washington d.c.",
+            "washington",
+            "white house"
+          ]
+        },
+        {
+          "cluster_id": 192,
+          "size": 162,
+          "top_topics": [
+            "terrorism",
+            "religious extremism",
+            "pakistan"
+          ]
+        },
+        {
+          "cluster_id": 229,
+          "size": 162,
+          "top_topics": [
+            "political strategy",
+            "public opinion",
+            "elections"
+          ]
+        },
+        {
+          "cluster_id": 314,
+          "size": 141,
+          "top_topics": [
+            "political activism",
+            "social movements",
+            "social unrest"
+          ]
+        },
+        {
+          "cluster_id": 297,
+          "size": 136,
+          "top_topics": [
+            "freedom",
+            "freedom of speech",
+            "liberty"
+          ]
+        },
+        {
+          "cluster_id": 310,
+          "size": 135,
+          "top_topics": [
+            "british empire",
+            "gandhi",
+            "british politics"
+          ]
+        },
+        {
+          "cluster_id": 344,
+          "size": 133,
+          "top_topics": [
+            "revolution",
+            "political revolution",
+            "political revolutions"
+          ]
+        },
+        {
+          "cluster_id": 353,
+          "size": 124,
+          "top_topics": [
+            "nationalism",
+            "communism",
+            "chinese politics"
+          ]
+        },
+        {
+          "cluster_id": 391,
+          "size": 124,
+          "top_topics": [
+            "nazi germany",
+            "hitler",
+            "nazism"
+          ]
+        },
+        {
+          "cluster_id": 401,
+          "size": 122,
+          "top_topics": [
+            "social conflict",
+            "property disputes",
+            "human conflict"
+          ]
+        },
+        {
+          "cluster_id": 398,
+          "size": 120,
+          "top_topics": [
+            "resistance",
+            "fascism",
+            "political resistance"
+          ]
+        },
+        {
+          "cluster_id": 436,
+          "size": 115,
+          "top_topics": [
+            "rhetoric",
+            "persuasion",
+            "political debate"
+          ]
+        },
+        {
+          "cluster_id": 443,
+          "size": 112,
+          "top_topics": [
+            "ideology",
+            "immortality",
+            "political ideology"
+          ]
+        },
+        {
+          "cluster_id": 456,
+          "size": 105,
+          "top_topics": [
+            "democracy",
+            "early american republic",
+            "early republic"
+          ]
+        },
+        {
+          "cluster_id": 524,
+          "size": 94,
+          "top_topics": [
+            "oppression",
+            "religious persecution",
+            "persecution"
+          ]
+        },
+        {
+          "cluster_id": 551,
+          "size": 89,
+          "top_topics": [
+            "social media",
+            "totalitarianism",
+            "political control"
+          ]
+        },
+        {
+          "cluster_id": 623,
+          "size": 81,
+          "top_topics": [
+            "social control",
+            "rules",
+            "gilgamesh"
+          ]
+        },
+        {
+          "cluster_id": 696,
+          "size": 71,
+          "top_topics": [
+            "geopolitics",
+            "affairs",
+            "international politics"
+          ]
+        },
+        {
+          "cluster_id": 754,
+          "size": 63,
+          "top_topics": [
+            "northern ireland conflict",
+            "northern ireland troubles",
+            "political violence"
+          ]
+        },
+        {
+          "cluster_id": 793,
+          "size": 50,
+          "top_topics": [
+            "political ideologies",
+            "liberalism",
+            "ignorance"
+          ]
+        },
+        {
+          "cluster_id": 814,
+          "size": 47,
+          "top_topics": [
+            "political reform",
+            "social reform",
+            "economic reform"
+          ]
+        },
+        {
+          "cluster_id": 822,
+          "size": 36,
+          "top_topics": [
+            "political nominations",
+            "elite overproduction",
+            "elite schools"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 1,
+      "label": "Mind & Reality",
+      "leiden_cluster_count": 61,
+      "total_topics": 8379,
+      "leiden_clusters": [
+        {
+          "cluster_id": 1,
+          "size": 429,
+          "top_topics": [
+            "human nature",
+            "ethics",
+            "morality"
+          ]
+        },
+        {
+          "cluster_id": 9,
+          "size": 338,
+          "top_topics": [
+            "time",
+            "time perception",
+            "time and memory"
+          ]
+        },
+        {
+          "cluster_id": 28,
+          "size": 277,
+          "top_topics": [
+            "neuroscience",
+            "behavioral economics",
+            "hypnosis"
+          ]
+        },
+        {
+          "cluster_id": 42,
+          "size": 270,
+          "top_topics": [
+            "dreams",
+            "imagination",
+            "hallucination"
+          ]
+        },
+        {
+          "cluster_id": 56,
+          "size": 256,
+          "top_topics": [
+            "conversation",
+            "dialogue",
+            "character dialogue"
+          ]
+        },
+        {
+          "cluster_id": 67,
+          "size": 241,
+          "top_topics": [
+            "evolution",
+            "creation",
+            "evolutionary biology"
+          ]
+        },
+        {
+          "cluster_id": 63,
+          "size": 238,
+          "top_topics": [
+            "control",
+            "cognitive science",
+            "cognitive processes"
+          ]
+        },
+        {
+          "cluster_id": 64,
+          "size": 234,
+          "top_topics": [
+            "mathematics",
+            "calculus",
+            "set theory"
+          ]
+        },
+        {
+          "cluster_id": 68,
+          "size": 232,
+          "top_topics": [
+            "logic",
+            "ontology",
+            "first-order logic"
+          ]
+        },
+        {
+          "cluster_id": 81,
+          "size": 223,
+          "top_topics": [
+            "memory",
+            "memory loss",
+            "memory and loss"
+          ]
+        },
+        {
+          "cluster_id": 133,
+          "size": 186,
+          "top_topics": [
+            "fiction",
+            "reality",
+            "fiction writing"
+          ]
+        },
+        {
+          "cluster_id": 163,
+          "size": 184,
+          "top_topics": [
+            "self-reflection",
+            "self-perception",
+            "self-improvement"
+          ]
+        },
+        {
+          "cluster_id": 156,
+          "size": 181,
+          "top_topics": [
+            "philosophy",
+            "socrates",
+            "plato"
+          ]
+        },
+        {
+          "cluster_id": 150,
+          "size": 176,
+          "top_topics": [
+            "social commentary",
+            "humor",
+            "satire"
+          ]
+        },
+        {
+          "cluster_id": 167,
+          "size": 175,
+          "top_topics": [
+            "mindfulness",
+            "meditation",
+            "dharma"
+          ]
+        },
+        {
+          "cluster_id": 155,
+          "size": 175,
+          "top_topics": [
+            "cosmology",
+            "space",
+            "singularity"
+          ]
+        },
+        {
+          "cluster_id": 213,
+          "size": 168,
+          "top_topics": [
+            "time travel",
+            "childhood memories",
+            "memories"
+          ]
+        },
+        {
+          "cluster_id": 186,
+          "size": 164,
+          "top_topics": [
+            "ghosts",
+            "religious experience",
+            "ghost"
+          ]
+        },
+        {
+          "cluster_id": 223,
+          "size": 163,
+          "top_topics": [
+            "literary theory",
+            "postmodernism",
+            "critical theory"
+          ]
+        },
+        {
+          "cluster_id": 237,
+          "size": 156,
+          "top_topics": [
+            "existentialism",
+            "philosophy of mind",
+            "existential dread"
+          ]
+        },
+        {
+          "cluster_id": 258,
+          "size": 150,
+          "top_topics": [
+            "interpretation",
+            "scientific method",
+            "scientific theories"
+          ]
+        },
+        {
+          "cluster_id": 304,
+          "size": 142,
+          "top_topics": [
+            "observation",
+            "social observation",
+            "scientific observation"
+          ]
+        },
+        {
+          "cluster_id": 286,
+          "size": 139,
+          "top_topics": [
+            "truth",
+            "reason",
+            "salesmanship"
+          ]
+        },
+        {
+          "cluster_id": 333,
+          "size": 137,
+          "top_topics": [
+            "perception",
+            "human perception",
+            "senses"
+          ]
+        },
+        {
+          "cluster_id": 287,
+          "size": 137,
+          "top_topics": [
+            "consciousness",
+            "narcissism",
+            "oedipus complex"
+          ]
+        },
+        {
+          "cluster_id": 328,
+          "size": 133,
+          "top_topics": [
+            "physics",
+            "quantum physics",
+            "quantum mechanics"
+          ]
+        },
+        {
+          "cluster_id": 384,
+          "size": 129,
+          "top_topics": [
+            "identity",
+            "personal identity",
+            "identity crisis"
+          ]
+        },
+        {
+          "cluster_id": 354,
+          "size": 124,
+          "top_topics": [
+            "computer vision",
+            "vision",
+            "blindness"
+          ]
+        },
+        {
+          "cluster_id": 380,
+          "size": 123,
+          "top_topics": [
+            "action",
+            "meaning of life",
+            "life"
+          ]
+        },
+        {
+          "cluster_id": 356,
+          "size": 121,
+          "top_topics": [
+            "venus",
+            "parallel worlds",
+            "heavenly realms"
+          ]
+        },
+        {
+          "cluster_id": 381,
+          "size": 120,
+          "top_topics": [
+            "inspiration",
+            "intuition",
+            "creative inspiration"
+          ]
+        },
+        {
+          "cluster_id": 413,
+          "size": 119,
+          "top_topics": [
+            "sensory experience",
+            "sensory detail",
+            "sensory perception"
+          ]
+        },
+        {
+          "cluster_id": 418,
+          "size": 118,
+          "top_topics": [
+            "free will",
+            "acceptance",
+            "self-acceptance"
+          ]
+        },
+        {
+          "cluster_id": 473,
+          "size": 108,
+          "top_topics": [
+            "metaphor",
+            "semiotics",
+            "figurative language"
+          ]
+        },
+        {
+          "cluster_id": 474,
+          "size": 107,
+          "top_topics": [
+            "knowledge",
+            "wisdom",
+            "understanding"
+          ]
+        },
+        {
+          "cluster_id": 444,
+          "size": 106,
+          "top_topics": [
+            "intellectualism",
+            "intellectual pursuits",
+            "intellectuals"
+          ]
+        },
+        {
+          "cluster_id": 479,
+          "size": 105,
+          "top_topics": [
+            "personal reflection",
+            "reflection",
+            "personal feelings"
+          ]
+        },
+        {
+          "cluster_id": 502,
+          "size": 101,
+          "top_topics": [
+            "transformation",
+            "personal transformation",
+            "religious conversion"
+          ]
+        },
+        {
+          "cluster_id": 512,
+          "size": 100,
+          "top_topics": [
+            "humanity",
+            "androids",
+            "empathy"
+          ]
+        },
+        {
+          "cluster_id": 503,
+          "size": 99,
+          "top_topics": [
+            "personality",
+            "introversion",
+            "personality traits"
+          ]
+        },
+        {
+          "cluster_id": 513,
+          "size": 98,
+          "top_topics": [
+            "horror",
+            "body horror",
+            "psychological horror"
+          ]
+        },
+        {
+          "cluster_id": 556,
+          "size": 94,
+          "top_topics": [
+            "human experience",
+            "experience",
+            "personal experiences"
+          ]
+        },
+        {
+          "cluster_id": 536,
+          "size": 93,
+          "top_topics": [
+            "skepticism",
+            "argumentation",
+            "clipboard management"
+          ]
+        },
+        {
+          "cluster_id": 572,
+          "size": 88,
+          "top_topics": [
+            "perspective",
+            "mindset",
+            "body modification"
+          ]
+        },
+        {
+          "cluster_id": 624,
+          "size": 86,
+          "top_topics": [
+            "artificial life",
+            "seduction",
+            "artificial environments"
+          ]
+        },
+        {
+          "cluster_id": 649,
+          "size": 81,
+          "top_topics": [
+            "scientific research",
+            "research",
+            "political science"
+          ]
+        },
+        {
+          "cluster_id": 657,
+          "size": 78,
+          "top_topics": [
+            "manipulation",
+            "remorse",
+            "self-blame"
+          ]
+        },
+        {
+          "cluster_id": 633,
+          "size": 78,
+          "top_topics": [
+            "imitation",
+            "cloning",
+            "ancient knowledge"
+          ]
+        },
+        {
+          "cluster_id": 679,
+          "size": 75,
+          "top_topics": [
+            "psychoanalysis",
+            "freud",
+            "archetypes"
+          ]
+        },
+        {
+          "cluster_id": 693,
+          "size": 74,
+          "top_topics": [
+            "critical thinking",
+            "judgment",
+            "moral judgment"
+          ]
+        },
+        {
+          "cluster_id": 702,
+          "size": 73,
+          "top_topics": [
+            "attention mechanisms",
+            "self-attention",
+            "attention"
+          ]
+        },
+        {
+          "cluster_id": 711,
+          "size": 71,
+          "top_topics": [
+            "humility",
+            "pride",
+            "egotism"
+          ]
+        },
+        {
+          "cluster_id": 712,
+          "size": 70,
+          "top_topics": [
+            "suicide",
+            "anthropology",
+            "social psychology"
+          ]
+        },
+        {
+          "cluster_id": 706,
+          "size": 69,
+          "top_topics": [
+            "epistemology",
+            "fulcrum",
+            "substance"
+          ]
+        },
+        {
+          "cluster_id": 717,
+          "size": 68,
+          "top_topics": [
+            "non-action",
+            "non-self",
+            "interference"
+          ]
+        },
+        {
+          "cluster_id": 746,
+          "size": 61,
+          "top_topics": [
+            "metaphysics",
+            "western literature",
+            "phenomenology"
+          ]
+        },
+        {
+          "cluster_id": 766,
+          "size": 57,
+          "top_topics": [
+            "society",
+            "individualism",
+            "genius"
+          ]
+        },
+        {
+          "cluster_id": 783,
+          "size": 53,
+          "top_topics": [
+            "aesthetics",
+            "aestheticism",
+            "wordsworth"
+          ]
+        },
+        {
+          "cluster_id": 801,
+          "size": 48,
+          "top_topics": [
+            "dauntless",
+            "abnegation",
+            "dualism"
+          ]
+        },
+        {
+          "cluster_id": 811,
+          "size": 44,
+          "top_topics": [
+            "enlightenment",
+            "scientific theory",
+            "evolution theory"
+          ]
+        },
+        {
+          "cluster_id": 832,
+          "size": 36,
+          "top_topics": [
+            "mirrors",
+            "mirror",
+            "mirrors and reflections"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 2,
+      "label": "Strategic Decision Making",
+      "leiden_cluster_count": 42,
+      "total_topics": 4741,
+      "leiden_clusters": [
+        {
+          "cluster_id": 19,
+          "size": 309,
+          "top_topics": [
+            "chess strategy",
+            "pawn structure",
+            "chess"
+          ]
+        },
+        {
+          "cluster_id": 153,
+          "size": 184,
+          "top_topics": [
+            "strategy",
+            "game theory",
+            "games"
+          ]
+        },
+        {
+          "cluster_id": 145,
+          "size": 183,
+          "top_topics": [
+            "daily life",
+            "daily routine",
+            "routine"
+          ]
+        },
+        {
+          "cluster_id": 154,
+          "size": 178,
+          "top_topics": [
+            "training",
+            "liberal education",
+            "reeducation"
+          ]
+        },
+        {
+          "cluster_id": 174,
+          "size": 172,
+          "top_topics": [
+            "problem solving",
+            "planning",
+            "autonomous vehicles"
+          ]
+        },
+        {
+          "cluster_id": 208,
+          "size": 170,
+          "top_topics": [
+            "conflict resolution",
+            "negotiation",
+            "negotiations"
+          ]
+        },
+        {
+          "cluster_id": 195,
+          "size": 161,
+          "top_topics": [
+            "management",
+            "business management",
+            "company performance"
+          ]
+        },
+        {
+          "cluster_id": 212,
+          "size": 159,
+          "top_topics": [
+            "regulation",
+            "financial regulation",
+            "government oversight"
+          ]
+        },
+        {
+          "cluster_id": 284,
+          "size": 138,
+          "top_topics": [
+            "social impact",
+            "community engagement",
+            "business development"
+          ]
+        },
+        {
+          "cluster_id": 282,
+          "size": 138,
+          "top_topics": [
+            "communication",
+            "customer service",
+            "business relationships"
+          ]
+        },
+        {
+          "cluster_id": 326,
+          "size": 136,
+          "top_topics": [
+            "labor",
+            "baseball",
+            "labor relations"
+          ]
+        },
+        {
+          "cluster_id": 307,
+          "size": 135,
+          "top_topics": [
+            "human resources",
+            "recruitment",
+            "personnel"
+          ]
+        },
+        {
+          "cluster_id": 306,
+          "size": 132,
+          "top_topics": [
+            "motivation",
+            "gratitude",
+            "executive compensation"
+          ]
+        },
+        {
+          "cluster_id": 352,
+          "size": 129,
+          "top_topics": [
+            "responsibility",
+            "military service",
+            "discipline"
+          ]
+        },
+        {
+          "cluster_id": 342,
+          "size": 128,
+          "top_topics": [
+            "career change",
+            "deconstruction",
+            "personal change"
+          ]
+        },
+        {
+          "cluster_id": 376,
+          "size": 124,
+          "top_topics": [
+            "time management",
+            "project management",
+            "knowledge representation"
+          ]
+        },
+        {
+          "cluster_id": 371,
+          "size": 124,
+          "top_topics": [
+            "financial disputes",
+            "legal dispute",
+            "contracts"
+          ]
+        },
+        {
+          "cluster_id": 389,
+          "size": 123,
+          "top_topics": [
+            "crew dynamics",
+            "crew management",
+            "crew"
+          ]
+        },
+        {
+          "cluster_id": 425,
+          "size": 118,
+          "top_topics": [
+            "work",
+            "career",
+            "employment"
+          ]
+        },
+        {
+          "cluster_id": 430,
+          "size": 115,
+          "top_topics": [
+            "workplace",
+            "work-life balance",
+            "office environment"
+          ]
+        },
+        {
+          "cluster_id": 465,
+          "size": 108,
+          "top_topics": [
+            "council",
+            "royal council",
+            "board meetings"
+          ]
+        },
+        {
+          "cluster_id": 491,
+          "size": 101,
+          "top_topics": [
+            "rejection",
+            "cooperation",
+            "interpol"
+          ]
+        },
+        {
+          "cluster_id": 529,
+          "size": 97,
+          "top_topics": [
+            "goal setting",
+            "ambition",
+            "personal values"
+          ]
+        },
+        {
+          "cluster_id": 517,
+          "size": 95,
+          "top_topics": [
+            "infiltration",
+            "concepts",
+            "dependent origination"
+          ]
+        },
+        {
+          "cluster_id": 569,
+          "size": 92,
+          "top_topics": [
+            "social hierarchy",
+            "hierarchy",
+            "military hierarchy"
+          ]
+        },
+        {
+          "cluster_id": 597,
+          "size": 86,
+          "top_topics": [
+            "medical consultation",
+            "appointments",
+            "freelancing"
+          ]
+        },
+        {
+          "cluster_id": 593,
+          "size": 85,
+          "top_topics": [
+            "waiting",
+            "american identity",
+            "corporate culture"
+          ]
+        },
+        {
+          "cluster_id": 604,
+          "size": 82,
+          "top_topics": [
+            "expertise",
+            "advice",
+            "expert systems"
+          ]
+        },
+        {
+          "cluster_id": 625,
+          "size": 81,
+          "top_topics": [
+            "buildings",
+            "government administration",
+            "government officials"
+          ]
+        },
+        {
+          "cluster_id": 613,
+          "size": 80,
+          "top_topics": [
+            "farewell",
+            "interdependency",
+            "endgame"
+          ]
+        },
+        {
+          "cluster_id": 640,
+          "size": 79,
+          "top_topics": [
+            "copyright",
+            "intellectual property",
+            "copyright law"
+          ]
+        },
+        {
+          "cluster_id": 663,
+          "size": 79,
+          "top_topics": [
+            "teamwork",
+            "political rivalry",
+            "rivalry"
+          ]
+        },
+        {
+          "cluster_id": 653,
+          "size": 76,
+          "top_topics": [
+            "custody",
+            "psychological analysis",
+            "guardianship"
+          ]
+        },
+        {
+          "cluster_id": 670,
+          "size": 74,
+          "top_topics": [
+            "dependency",
+            "community development",
+            "petition"
+          ]
+        },
+        {
+          "cluster_id": 723,
+          "size": 70,
+          "top_topics": [
+            "decision making",
+            "decision-making",
+            "decision trees"
+          ]
+        },
+        {
+          "cluster_id": 720,
+          "size": 69,
+          "top_topics": [
+            "self-awareness",
+            "political leadership",
+            "wu wei"
+          ]
+        },
+        {
+          "cluster_id": 724,
+          "size": 68,
+          "top_topics": [
+            "social dynamics",
+            "team dynamics",
+            "workplace dynamics"
+          ]
+        },
+        {
+          "cluster_id": 727,
+          "size": 65,
+          "top_topics": [
+            "personal belongings",
+            "hoarding",
+            "perfectionism"
+          ]
+        },
+        {
+          "cluster_id": 756,
+          "size": 61,
+          "top_topics": [
+            "leadership",
+            "executive leadership",
+            "leadership styles"
+          ]
+        },
+        {
+          "cluster_id": 803,
+          "size": 48,
+          "top_topics": [
+            "operations",
+            "scientific computing",
+            "keepers"
+          ]
+        },
+        {
+          "cluster_id": 802,
+          "size": 46,
+          "top_topics": [
+            "human potential",
+            "carrying capacity",
+            "human modification"
+          ]
+        },
+        {
+          "cluster_id": 807,
+          "size": 43,
+          "top_topics": [
+            "business deals",
+            "office politics",
+            "corporate politics"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 3,
+      "label": "Fantasy & Human Condition",
+      "leiden_cluster_count": 108,
+      "total_topics": 8770,
+      "leiden_clusters": [
+        {
+          "cluster_id": 115,
+          "size": 195,
+          "top_topics": [
+            "race",
+            "grievers",
+            "running"
+          ]
+        },
+        {
+          "cluster_id": 170,
+          "size": 164,
+          "top_topics": [
+            "vikings",
+            "loki",
+            "norse mythology"
+          ]
+        },
+        {
+          "cluster_id": 243,
+          "size": 140,
+          "top_topics": [
+            "fatwa",
+            "elegies",
+            "she'pan"
+          ]
+        },
+        {
+          "cluster_id": 299,
+          "size": 137,
+          "top_topics": [
+            "radchaai",
+            "undergarden",
+            "homesickness"
+          ]
+        },
+        {
+          "cluster_id": 291,
+          "size": 136,
+          "top_topics": [
+            "library",
+            "libraries",
+            "citadel"
+          ]
+        },
+        {
+          "cluster_id": 315,
+          "size": 131,
+          "top_topics": [
+            "political figures",
+            "unicorns",
+            "human appearance"
+          ]
+        },
+        {
+          "cluster_id": 281,
+          "size": 131,
+          "top_topics": [
+            "miso",
+            "pesto",
+            "hiroko"
+          ]
+        },
+        {
+          "cluster_id": 325,
+          "size": 130,
+          "top_topics": [
+            "astrophage",
+            "eva suits",
+            "eva (extravehicular activity)"
+          ]
+        },
+        {
+          "cluster_id": 321,
+          "size": 129,
+          "top_topics": [
+            "opening moves",
+            "knights",
+            "knighthood"
+          ]
+        },
+        {
+          "cluster_id": 341,
+          "size": 127,
+          "top_topics": [
+            "epictetus",
+            "glass bead game",
+            "patronus"
+          ]
+        },
+        {
+          "cluster_id": 317,
+          "size": 127,
+          "top_topics": [
+            "geometers",
+            "centenarians",
+            "hylaean theoric world"
+          ]
+        },
+        {
+          "cluster_id": 374,
+          "size": 127,
+          "top_topics": [
+            "objects",
+            "equipment",
+            "inventory management"
+          ]
+        },
+        {
+          "cluster_id": 360,
+          "size": 125,
+          "top_topics": [
+            "jorge luis borges",
+            "ministry of magic",
+            "hagrid"
+          ]
+        },
+        {
+          "cluster_id": 339,
+          "size": 124,
+          "top_topics": [
+            "luxin",
+            "pern",
+            "ibsen"
+          ]
+        },
+        {
+          "cluster_id": 364,
+          "size": 121,
+          "top_topics": [
+            "aes sedai",
+            "trollocs",
+            "dark one"
+          ]
+        },
+        {
+          "cluster_id": 388,
+          "size": 120,
+          "top_topics": [
+            "stone",
+            "obelisk",
+            "quarrying"
+          ]
+        },
+        {
+          "cluster_id": 363,
+          "size": 120,
+          "top_topics": [
+            "autarch",
+            "ascians",
+            "beasts"
+          ]
+        },
+        {
+          "cluster_id": 385,
+          "size": 118,
+          "top_topics": [
+            "ranch life",
+            "ranching",
+            "cattle"
+          ]
+        },
+        {
+          "cluster_id": 424,
+          "size": 115,
+          "top_topics": [
+            "treasure",
+            "stars",
+            "treasure hunting"
+          ]
+        },
+        {
+          "cluster_id": 403,
+          "size": 114,
+          "top_topics": [
+            "hisa",
+            "downbelow",
+            "caldera"
+          ]
+        },
+        {
+          "cluster_id": 447,
+          "size": 114,
+          "top_topics": [
+            "darkness",
+            "shadows",
+            "defense against the dark arts"
+          ]
+        },
+        {
+          "cluster_id": 428,
+          "size": 110,
+          "top_topics": [
+            "appetizers",
+            "sardinia",
+            "tacos"
+          ]
+        },
+        {
+          "cluster_id": 454,
+          "size": 109,
+          "top_topics": [
+            "ul qoma",
+            "bes\u017ael",
+            "beninia"
+          ]
+        },
+        {
+          "cluster_id": 451,
+          "size": 109,
+          "top_topics": [
+            "voynix",
+            "achilles",
+            "witchcraft"
+          ]
+        },
+        {
+          "cluster_id": 435,
+          "size": 108,
+          "top_topics": [
+            "elric",
+            "melnibone",
+            "amber"
+          ]
+        },
+        {
+          "cluster_id": 427,
+          "size": 107,
+          "top_topics": [
+            "miami",
+            "bimini",
+            "shark attack"
+          ]
+        },
+        {
+          "cluster_id": 449,
+          "size": 105,
+          "top_topics": [
+            "obeah",
+            "hard forks",
+            "tachyons"
+          ]
+        },
+        {
+          "cluster_id": 467,
+          "size": 103,
+          "top_topics": [
+            "hunger games",
+            "public relations",
+            "bullfighting"
+          ]
+        },
+        {
+          "cluster_id": 486,
+          "size": 100,
+          "top_topics": [
+            "athens",
+            "antioch",
+            "julian"
+          ]
+        },
+        {
+          "cluster_id": 527,
+          "size": 100,
+          "top_topics": [
+            "alcohol",
+            "drunkenness",
+            "drinking"
+          ]
+        },
+        {
+          "cluster_id": 526,
+          "size": 98,
+          "top_topics": [
+            "zombies",
+            "attack",
+            "monster"
+          ]
+        },
+        {
+          "cluster_id": 511,
+          "size": 98,
+          "top_topics": [
+            "hell",
+            "hive",
+            "outsiders"
+          ]
+        },
+        {
+          "cluster_id": 509,
+          "size": 98,
+          "top_topics": [
+            "warder",
+            "rotters",
+            "doppelgangers"
+          ]
+        },
+        {
+          "cluster_id": 497,
+          "size": 97,
+          "top_topics": [
+            "yama",
+            "kentucky",
+            "ystad"
+          ]
+        },
+        {
+          "cluster_id": 498,
+          "size": 97,
+          "top_topics": [
+            "gold",
+            "resource extraction",
+            "ancient languages"
+          ]
+        },
+        {
+          "cluster_id": 542,
+          "size": 93,
+          "top_topics": [
+            "capture",
+            "traps",
+            "trapped"
+          ]
+        },
+        {
+          "cluster_id": 516,
+          "size": 92,
+          "top_topics": [
+            "daoism",
+            "air chrysalis",
+            "christopher marlowe"
+          ]
+        },
+        {
+          "cluster_id": 514,
+          "size": 92,
+          "top_topics": [
+            "clowns",
+            "puppets",
+            "builders"
+          ]
+        },
+        {
+          "cluster_id": 555,
+          "size": 91,
+          "top_topics": [
+            "hunting",
+            "bounty hunters",
+            "hunter"
+          ]
+        },
+        {
+          "cluster_id": 573,
+          "size": 88,
+          "top_topics": [
+            "trolls",
+            "giants",
+            "reckoners"
+          ]
+        },
+        {
+          "cluster_id": 608,
+          "size": 85,
+          "top_topics": [
+            "sword",
+            "knife",
+            "swords"
+          ]
+        },
+        {
+          "cluster_id": 606,
+          "size": 84,
+          "top_topics": [
+            "estrangement",
+            "karhide",
+            "zero gravity"
+          ]
+        },
+        {
+          "cluster_id": 586,
+          "size": 83,
+          "top_topics": [
+            "chamber of secrets",
+            "ginny weasley",
+            "riddle"
+          ]
+        },
+        {
+          "cluster_id": 591,
+          "size": 83,
+          "top_topics": [
+            "dark lord",
+            "occlumency",
+            "charms"
+          ]
+        },
+        {
+          "cluster_id": 590,
+          "size": 83,
+          "top_topics": [
+            "blight",
+            "transcendence",
+            "transcendentalism"
+          ]
+        },
+        {
+          "cluster_id": 609,
+          "size": 83,
+          "top_topics": [
+            "dragons",
+            "dragon",
+            "weyrs"
+          ]
+        },
+        {
+          "cluster_id": 577,
+          "size": 83,
+          "top_topics": [
+            "square",
+            "fish filleting",
+            "hazing"
+          ]
+        },
+        {
+          "cluster_id": 618,
+          "size": 82,
+          "top_topics": [
+            "suffocation",
+            "footwear",
+            "injuries"
+          ]
+        },
+        {
+          "cluster_id": 620,
+          "size": 80,
+          "top_topics": [
+            "toads",
+            "purgatory",
+            "alligators"
+          ]
+        },
+        {
+          "cluster_id": 668,
+          "size": 79,
+          "top_topics": [
+            "fremen",
+            "arrakis",
+            "harkonnens"
+          ]
+        },
+        {
+          "cluster_id": 650,
+          "size": 78,
+          "top_topics": [
+            "don quixote",
+            "terra",
+            "jazz"
+          ]
+        },
+        {
+          "cluster_id": 638,
+          "size": 77,
+          "top_topics": [
+            "tattoos",
+            "jewelry",
+            "piece coordination"
+          ]
+        },
+        {
+          "cluster_id": 654,
+          "size": 77,
+          "top_topics": [
+            "prostitution",
+            "butterflies",
+            "bath"
+          ]
+        },
+        {
+          "cluster_id": 646,
+          "size": 77,
+          "top_topics": [
+            "fastai",
+            "sabishii",
+            "mohandas gandhi"
+          ]
+        },
+        {
+          "cluster_id": 660,
+          "size": 77,
+          "top_topics": [
+            "artillery",
+            "basketball",
+            "cricket"
+          ]
+        },
+        {
+          "cluster_id": 643,
+          "size": 75,
+          "top_topics": [
+            "card games",
+            "cards",
+            "credit cards"
+          ]
+        },
+        {
+          "cluster_id": 671,
+          "size": 74,
+          "top_topics": [
+            "potions",
+            "sanatorium",
+            "polyjuice potion"
+          ]
+        },
+        {
+          "cluster_id": 648,
+          "size": 74,
+          "top_topics": [
+            "rooftoppers",
+            "funderlings",
+            "shadowline"
+          ]
+        },
+        {
+          "cluster_id": 681,
+          "size": 74,
+          "top_topics": [
+            "pregnancy",
+            "anomaly",
+            "seclusion"
+          ]
+        },
+        {
+          "cluster_id": 647,
+          "size": 73,
+          "top_topics": [
+            "macondo",
+            "anarres",
+            "syndicates"
+          ]
+        },
+        {
+          "cluster_id": 676,
+          "size": 73,
+          "top_topics": [
+            "cugel",
+            "worms",
+            "herdsmen"
+          ]
+        },
+        {
+          "cluster_id": 678,
+          "size": 72,
+          "top_topics": [
+            "selenites",
+            "orchids",
+            "locke"
+          ]
+        },
+        {
+          "cluster_id": 682,
+          "size": 72,
+          "top_topics": [
+            "cammor",
+            "camorr",
+            "pimping"
+          ]
+        },
+        {
+          "cluster_id": 656,
+          "size": 72,
+          "top_topics": [
+            "god's grove",
+            "leave-one-out",
+            "lavender brown"
+          ]
+        },
+        {
+          "cluster_id": 680,
+          "size": 71,
+          "top_topics": [
+            "pranks",
+            "sterility",
+            "treachery"
+          ]
+        },
+        {
+          "cluster_id": 674,
+          "size": 71,
+          "top_topics": [
+            "schauberger",
+            "scones",
+            "scrimgeour"
+          ]
+        },
+        {
+          "cluster_id": 707,
+          "size": 68,
+          "top_topics": [
+            "simulacrum",
+            "sims",
+            "treehouse"
+          ]
+        },
+        {
+          "cluster_id": 652,
+          "size": 67,
+          "top_topics": [
+            "tofu",
+            "dashi",
+            "machiavelli"
+          ]
+        },
+        {
+          "cluster_id": 721,
+          "size": 67,
+          "top_topics": [
+            "cuda",
+            "lord otori",
+            "shandakor"
+          ]
+        },
+        {
+          "cluster_id": 704,
+          "size": 67,
+          "top_topics": [
+            "falconry",
+            "cambridge",
+            "galton"
+          ]
+        },
+        {
+          "cluster_id": 675,
+          "size": 66,
+          "top_topics": [
+            "mona lisa",
+            "sheva",
+            "wyvern"
+          ]
+        },
+        {
+          "cluster_id": 735,
+          "size": 66,
+          "top_topics": [
+            "birds",
+            "daemon",
+            "daemons"
+          ]
+        },
+        {
+          "cluster_id": 753,
+          "size": 64,
+          "top_topics": [
+            "drafting",
+            "ambush",
+            "prism"
+          ]
+        },
+        {
+          "cluster_id": 728,
+          "size": 63,
+          "top_topics": [
+            "gondolas",
+            "roke",
+            "nose"
+          ]
+        },
+        {
+          "cluster_id": 738,
+          "size": 63,
+          "top_topics": [
+            "glassmaking",
+            "spyglass",
+            "glass"
+          ]
+        },
+        {
+          "cluster_id": 736,
+          "size": 63,
+          "top_topics": [
+            "holograms",
+            "hologram",
+            "holographic technology"
+          ]
+        },
+        {
+          "cluster_id": 731,
+          "size": 61,
+          "top_topics": [
+            "rings",
+            "circles",
+            "kobolds"
+          ]
+        },
+        {
+          "cluster_id": 751,
+          "size": 61,
+          "top_topics": [
+            "orphans",
+            "orphanhood",
+            "barber"
+          ]
+        },
+        {
+          "cluster_id": 741,
+          "size": 61,
+          "top_topics": [
+            "armor",
+            "small arms",
+            "arthritis"
+          ]
+        },
+        {
+          "cluster_id": 732,
+          "size": 60,
+          "top_topics": [
+            "faxnodes",
+            "sark",
+            "rhiannon"
+          ]
+        },
+        {
+          "cluster_id": 750,
+          "size": 60,
+          "top_topics": [
+            "gate",
+            "professor mcgonagall",
+            "gatsby"
+          ]
+        },
+        {
+          "cluster_id": 755,
+          "size": 59,
+          "top_topics": [
+            "alchemy",
+            "data synthesis",
+            "serum"
+          ]
+        },
+        {
+          "cluster_id": 733,
+          "size": 59,
+          "top_topics": [
+            "vortex",
+            "mynster",
+            "voyaging"
+          ]
+        },
+        {
+          "cluster_id": 743,
+          "size": 58,
+          "top_topics": [
+            "diaspar",
+            "halliday",
+            "anorak"
+          ]
+        },
+        {
+          "cluster_id": 764,
+          "size": 55,
+          "top_topics": [
+            "amalfi",
+            "discontinuity",
+            "new earth"
+          ]
+        },
+        {
+          "cluster_id": 757,
+          "size": 55,
+          "top_topics": [
+            "kemmer",
+            "hearth",
+            "per ardua"
+          ]
+        },
+        {
+          "cluster_id": 769,
+          "size": 53,
+          "top_topics": [
+            "red guards",
+            "whiteness",
+            "red people"
+          ]
+        },
+        {
+          "cluster_id": 772,
+          "size": 52,
+          "top_topics": [
+            "sledge",
+            "archimboldi",
+            "alethiometer"
+          ]
+        },
+        {
+          "cluster_id": 773,
+          "size": 51,
+          "top_topics": [
+            "underworld",
+            "criminal underworld",
+            "sushi"
+          ]
+        },
+        {
+          "cluster_id": 792,
+          "size": 48,
+          "top_topics": [
+            "united nations",
+            "unarians",
+            "rear admiral"
+          ]
+        },
+        {
+          "cluster_id": 780,
+          "size": 47,
+          "top_topics": [
+            "semiology",
+            "sphene",
+            "rethrick construction"
+          ]
+        },
+        {
+          "cluster_id": 800,
+          "size": 47,
+          "top_topics": [
+            "bats",
+            "dolls",
+            "oakland"
+          ]
+        },
+        {
+          "cluster_id": 794,
+          "size": 46,
+          "top_topics": [
+            "tau ceti",
+            "ceres",
+            "holden"
+          ]
+        },
+        {
+          "cluster_id": 806,
+          "size": 45,
+          "top_topics": [
+            "protomolecule",
+            "protogen",
+            "mimicry"
+          ]
+        },
+        {
+          "cluster_id": 808,
+          "size": 43,
+          "top_topics": [
+            "sharks",
+            "marlin",
+            "daim\u014dn"
+          ]
+        },
+        {
+          "cluster_id": 809,
+          "size": 43,
+          "top_topics": [
+            "hdf5",
+            "sleigh ride",
+            "spacy"
+          ]
+        },
+        {
+          "cluster_id": 813,
+          "size": 40,
+          "top_topics": [
+            "ezcal",
+            "eagles",
+            "romeo and juliet"
+          ]
+        },
+        {
+          "cluster_id": 821,
+          "size": 38,
+          "top_topics": [
+            "scent tracking",
+            "perfume",
+            "scent"
+          ]
+        },
+        {
+          "cluster_id": 817,
+          "size": 38,
+          "top_topics": [
+            "tempura",
+            "tether",
+            "rect"
+          ]
+        },
+        {
+          "cluster_id": 805,
+          "size": 38,
+          "top_topics": [
+            "serfdom",
+            "ieds",
+            "servitude"
+          ]
+        },
+        {
+          "cluster_id": 824,
+          "size": 34,
+          "top_topics": [
+            "eloquence",
+            "plasmids",
+            "supplication"
+          ]
+        },
+        {
+          "cluster_id": 828,
+          "size": 32,
+          "top_topics": [
+            "neville longbottom",
+            "luna lovegood",
+            "peverells"
+          ]
+        },
+        {
+          "cluster_id": 831,
+          "size": 32,
+          "top_topics": [
+            "tigers",
+            "midnight's children",
+            "nagini"
+          ]
+        },
+        {
+          "cluster_id": 818,
+          "size": 31,
+          "top_topics": [
+            "xlm-r",
+            "r-squared",
+            "shayol ghul"
+          ]
+        },
+        {
+          "cluster_id": 833,
+          "size": 30,
+          "top_topics": [
+            "skandians",
+            "brotherband",
+            "band"
+          ]
+        },
+        {
+          "cluster_id": 835,
+          "size": 30,
+          "top_topics": [
+            "san lorenzo",
+            "bokonon",
+            "bokononism"
+          ]
+        },
+        {
+          "cluster_id": 837,
+          "size": 30,
+          "top_topics": [
+            "sparta",
+            "stasis",
+            "spartan military"
+          ]
+        },
+        {
+          "cluster_id": 838,
+          "size": 27,
+          "top_topics": [
+            "hermann hesse",
+            "sadism",
+            "demian"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 4,
+      "label": "European History & Culture",
+      "leiden_cluster_count": 43,
+      "total_topics": 4157,
+      "leiden_clusters": [
+        {
+          "cluster_id": 99,
+          "size": 196,
+          "top_topics": [
+            "sikhism",
+            "brittany",
+            "joan of arc"
+          ]
+        },
+        {
+          "cluster_id": 123,
+          "size": 190,
+          "top_topics": [
+            "shakespeare",
+            "hamlet",
+            "elizabethan theatre"
+          ]
+        },
+        {
+          "cluster_id": 140,
+          "size": 188,
+          "top_topics": [
+            "harry potter",
+            "hogwarts",
+            "voldemort"
+          ]
+        },
+        {
+          "cluster_id": 147,
+          "size": 178,
+          "top_topics": [
+            "rebellion",
+            "richard ii",
+            "ireland"
+          ]
+        },
+        {
+          "cluster_id": 263,
+          "size": 155,
+          "top_topics": [
+            "royal court",
+            "royal family",
+            "royal power"
+          ]
+        },
+        {
+          "cluster_id": 254,
+          "size": 152,
+          "top_topics": [
+            "alexander hamilton",
+            "hamilton",
+            "john adams"
+          ]
+        },
+        {
+          "cluster_id": 262,
+          "size": 150,
+          "top_topics": [
+            "medieval england",
+            "medieval history",
+            "medieval warfare"
+          ]
+        },
+        {
+          "cluster_id": 285,
+          "size": 149,
+          "top_topics": [
+            "royal succession",
+            "inheritance",
+            "estate management"
+          ]
+        },
+        {
+          "cluster_id": 324,
+          "size": 130,
+          "top_topics": [
+            "charles dickens",
+            "royal society",
+            "john stuart mill"
+          ]
+        },
+        {
+          "cluster_id": 338,
+          "size": 128,
+          "top_topics": [
+            "richard iii",
+            "aquitaine",
+            "salome"
+          ]
+        },
+        {
+          "cluster_id": 433,
+          "size": 123,
+          "top_topics": [
+            "henry iv",
+            "henry viii",
+            "henry v"
+          ]
+        },
+        {
+          "cluster_id": 394,
+          "size": 122,
+          "top_topics": [
+            "royalty",
+            "nobility",
+            "monarchy"
+          ]
+        },
+        {
+          "cluster_id": 410,
+          "size": 121,
+          "top_topics": [
+            "leonardo da vinci",
+            "renaissance art",
+            "renaissance"
+          ]
+        },
+        {
+          "cluster_id": 386,
+          "size": 119,
+          "top_topics": [
+            "british society",
+            "english literature",
+            "portuguese literature"
+          ]
+        },
+        {
+          "cluster_id": 422,
+          "size": 115,
+          "top_topics": [
+            "taoism",
+            "lao tzu",
+            "tao te ching"
+          ]
+        },
+        {
+          "cluster_id": 488,
+          "size": 99,
+          "top_topics": [
+            "pickling",
+            "mark twain",
+            "berry picking"
+          ]
+        },
+        {
+          "cluster_id": 519,
+          "size": 96,
+          "top_topics": [
+            "scientific revolution",
+            "leibniz",
+            "space law"
+          ]
+        },
+        {
+          "cluster_id": 548,
+          "size": 90,
+          "top_topics": [
+            "oscar wilde",
+            "dorian gray",
+            "queensberry"
+          ]
+        },
+        {
+          "cluster_id": 602,
+          "size": 88,
+          "top_topics": [
+            "cromwell",
+            "monastic life",
+            "monastery"
+          ]
+        },
+        {
+          "cluster_id": 564,
+          "size": 88,
+          "top_topics": [
+            "ernest hemingway",
+            "sherlock holmes",
+            "scholarship"
+          ]
+        },
+        {
+          "cluster_id": 574,
+          "size": 87,
+          "top_topics": [
+            "nietzsche",
+            "thomas mann",
+            "goethe"
+          ]
+        },
+        {
+          "cluster_id": 579,
+          "size": 86,
+          "top_topics": [
+            "samuel beckett",
+            "new york campaign",
+            "glyn d\u0175r"
+          ]
+        },
+        {
+          "cluster_id": 626,
+          "size": 84,
+          "top_topics": [
+            "roman politics",
+            "marcus aurelius",
+            "caesar"
+          ]
+        },
+        {
+          "cluster_id": 641,
+          "size": 79,
+          "top_topics": [
+            "king lear",
+            "guerrilla warfare",
+            "charles mitchell"
+          ]
+        },
+        {
+          "cluster_id": 661,
+          "size": 78,
+          "top_topics": [
+            "sirius black",
+            "gryffindor",
+            "hermione granger"
+          ]
+        },
+        {
+          "cluster_id": 628,
+          "size": 78,
+          "top_topics": [
+            "james joyce",
+            "mary todd lincoln",
+            "ulysses s. grant"
+          ]
+        },
+        {
+          "cluster_id": 667,
+          "size": 73,
+          "top_topics": [
+            "hailsham",
+            "mr. crouch",
+            "miss emily"
+          ]
+        },
+        {
+          "cluster_id": 685,
+          "size": 71,
+          "top_topics": [
+            "irish culture",
+            "dublin",
+            "irish literature"
+          ]
+        },
+        {
+          "cluster_id": 687,
+          "size": 71,
+          "top_topics": [
+            "scotland",
+            "scottish culture",
+            "scotland yard"
+          ]
+        },
+        {
+          "cluster_id": 700,
+          "size": 68,
+          "top_topics": [
+            "chaucer",
+            "procession",
+            "parade"
+          ]
+        },
+        {
+          "cluster_id": 713,
+          "size": 67,
+          "top_topics": [
+            "benjamin franklin",
+            "walter pater",
+            "benjamin graham"
+          ]
+        },
+        {
+          "cluster_id": 718,
+          "size": 67,
+          "top_topics": [
+            "herbert hoover",
+            "franklin d. roosevelt",
+            "new deal"
+          ]
+        },
+        {
+          "cluster_id": 740,
+          "size": 65,
+          "top_topics": [
+            "emerson",
+            "theory",
+            "yorktown campaign"
+          ]
+        },
+        {
+          "cluster_id": 744,
+          "size": 64,
+          "top_topics": [
+            "abraham lincoln",
+            "death and remembrance",
+            "9/11"
+          ]
+        },
+        {
+          "cluster_id": 729,
+          "size": 63,
+          "top_topics": [
+            "stevens",
+            "w.h. auden",
+            "auden"
+          ]
+        },
+        {
+          "cluster_id": 758,
+          "size": 61,
+          "top_topics": [
+            "correspondence",
+            "personal correspondence",
+            "puritanism"
+          ]
+        },
+        {
+          "cluster_id": 787,
+          "size": 52,
+          "top_topics": [
+            "robert e. lee",
+            "robert frost",
+            "robert louis stevenson"
+          ]
+        },
+        {
+          "cluster_id": 782,
+          "size": 51,
+          "top_topics": [
+            "stoicism",
+            "stoic philosophy",
+            "hadrian"
+          ]
+        },
+        {
+          "cluster_id": 795,
+          "size": 48,
+          "top_topics": [
+            "radch",
+            "brahma",
+            "kivrin"
+          ]
+        },
+        {
+          "cluster_id": 791,
+          "size": 47,
+          "top_topics": [
+            "george de long",
+            "conrad",
+            "durmstrang"
+          ]
+        },
+        {
+          "cluster_id": 812,
+          "size": 44,
+          "top_topics": [
+            "dante alighieri",
+            "dante",
+            "dante gabriel rossetti"
+          ]
+        },
+        {
+          "cluster_id": 816,
+          "size": 40,
+          "top_topics": [
+            "sonnet",
+            "sonnet analysis",
+            "willie hughes"
+          ]
+        },
+        {
+          "cluster_id": 819,
+          "size": 36,
+          "top_topics": [
+            "charisma",
+            "leo frank",
+            "ralph ellison"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 5,
+      "label": "Computational Information Science",
+      "leiden_cluster_count": 44,
+      "total_topics": 4839,
+      "leiden_clusters": [
+        {
+          "cluster_id": 33,
+          "size": 275,
+          "top_topics": [
+            "language",
+            "writing style",
+            "sentence structure"
+          ]
+        },
+        {
+          "cluster_id": 46,
+          "size": 249,
+          "top_topics": [
+            "python programming",
+            "python",
+            "jupyter notebooks"
+          ]
+        },
+        {
+          "cluster_id": 60,
+          "size": 229,
+          "top_topics": [
+            "bootstrapping",
+            "data extraction",
+            "web scraping"
+          ]
+        },
+        {
+          "cluster_id": 69,
+          "size": 223,
+          "top_topics": [
+            "glyphs",
+            "regular expressions",
+            "strings"
+          ]
+        },
+        {
+          "cluster_id": 88,
+          "size": 210,
+          "top_topics": [
+            "photography",
+            "anomaly detection",
+            "composition"
+          ]
+        },
+        {
+          "cluster_id": 137,
+          "size": 181,
+          "top_topics": [
+            "search",
+            "information retrieval",
+            "learning strategies"
+          ]
+        },
+        {
+          "cluster_id": 131,
+          "size": 178,
+          "top_topics": [
+            "pygame",
+            "image classification",
+            "rats"
+          ]
+        },
+        {
+          "cluster_id": 247,
+          "size": 153,
+          "top_topics": [
+            "data types",
+            "data compression",
+            "data representation"
+          ]
+        },
+        {
+          "cluster_id": 221,
+          "size": 153,
+          "top_topics": [
+            "mail delivery",
+            "delivery",
+            "post office"
+          ]
+        },
+        {
+          "cluster_id": 294,
+          "size": 136,
+          "top_topics": [
+            "error handling",
+            "loops",
+            "conditional statements"
+          ]
+        },
+        {
+          "cluster_id": 289,
+          "size": 135,
+          "top_topics": [
+            "privacy",
+            "cryptography",
+            "data privacy"
+          ]
+        },
+        {
+          "cluster_id": 302,
+          "size": 135,
+          "top_topics": [
+            "object-oriented programming",
+            "peasant life",
+            "class"
+          ]
+        },
+        {
+          "cluster_id": 311,
+          "size": 133,
+          "top_topics": [
+            "one-hot encoding",
+            "gateway",
+            "n-grams"
+          ]
+        },
+        {
+          "cluster_id": 340,
+          "size": 127,
+          "top_topics": [
+            "revision",
+            "repentance",
+            "relu"
+          ]
+        },
+        {
+          "cluster_id": 392,
+          "size": 122,
+          "top_topics": [
+            "data processing",
+            "string manipulation",
+            "eros"
+          ]
+        },
+        {
+          "cluster_id": 478,
+          "size": 109,
+          "top_topics": [
+            "balance",
+            "mistakes",
+            "error function"
+          ]
+        },
+        {
+          "cluster_id": 463,
+          "size": 109,
+          "top_topics": [
+            "stochastic gradient descent",
+            "legal",
+            "online learning"
+          ]
+        },
+        {
+          "cluster_id": 464,
+          "size": 106,
+          "top_topics": [
+            "tokenization",
+            "nanotechnology",
+            "gpt-2"
+          ]
+        },
+        {
+          "cluster_id": 495,
+          "size": 101,
+          "top_topics": [
+            "performance",
+            "statistics",
+            "performance evaluation"
+          ]
+        },
+        {
+          "cluster_id": 505,
+          "size": 101,
+          "top_topics": [
+            "data splitting",
+            "assessment",
+            "evaluation"
+          ]
+        },
+        {
+          "cluster_id": 494,
+          "size": 98,
+          "top_topics": [
+            "art authentication",
+            "market profile",
+            "user registration"
+          ]
+        },
+        {
+          "cluster_id": 510,
+          "size": 97,
+          "top_topics": [
+            "data cleaning",
+            "data acquisition",
+            "data recovery"
+          ]
+        },
+        {
+          "cluster_id": 538,
+          "size": 95,
+          "top_topics": [
+            "variables",
+            "parameters",
+            "variable assignment"
+          ]
+        },
+        {
+          "cluster_id": 533,
+          "size": 93,
+          "top_topics": [
+            "loss functions",
+            "loss function",
+            "early stopping"
+          ]
+        },
+        {
+          "cluster_id": 522,
+          "size": 93,
+          "top_topics": [
+            "data manipulation",
+            "data management",
+            "discharge"
+          ]
+        },
+        {
+          "cluster_id": 537,
+          "size": 91,
+          "top_topics": [
+            "organization",
+            "data organization",
+            "data transfer"
+          ]
+        },
+        {
+          "cluster_id": 582,
+          "size": 88,
+          "top_topics": [
+            "theoretical physics",
+            "lockpicking",
+            "key-value pairs"
+          ]
+        },
+        {
+          "cluster_id": 596,
+          "size": 83,
+          "top_topics": [
+            "measurement",
+            "work units",
+            "government programs"
+          ]
+        },
+        {
+          "cluster_id": 621,
+          "size": 80,
+          "top_topics": [
+            "dating",
+            "internet",
+            "civilisation"
+          ]
+        },
+        {
+          "cluster_id": 642,
+          "size": 78,
+          "top_topics": [
+            "functions",
+            "debugging",
+            "function calls"
+          ]
+        },
+        {
+          "cluster_id": 715,
+          "size": 72,
+          "top_topics": [
+            "security protocols",
+            "formalism",
+            "defamiliarization"
+          ]
+        },
+        {
+          "cluster_id": 695,
+          "size": 71,
+          "top_topics": [
+            "python modules",
+            "iatrogenics",
+            "linear layers"
+          ]
+        },
+        {
+          "cluster_id": 697,
+          "size": 71,
+          "top_topics": [
+            "wine reduction",
+            "data reduction",
+            "cast iron cooking"
+          ]
+        },
+        {
+          "cluster_id": 708,
+          "size": 70,
+          "top_topics": [
+            "user input",
+            "input/output",
+            "digital signatures"
+          ]
+        },
+        {
+          "cluster_id": 734,
+          "size": 65,
+          "top_topics": [
+            "dataframes",
+            "pandas",
+            "data validation"
+          ]
+        },
+        {
+          "cluster_id": 765,
+          "size": 57,
+          "top_topics": [
+            "activation functions",
+            "rnns",
+            "hooks"
+          ]
+        },
+        {
+          "cluster_id": 767,
+          "size": 54,
+          "top_topics": [
+            "pytorch",
+            "pytorch tensors",
+            "anaconda"
+          ]
+        },
+        {
+          "cluster_id": 778,
+          "size": 53,
+          "top_topics": [
+            "resource management",
+            "hacking",
+            "resourcefulness"
+          ]
+        },
+        {
+          "cluster_id": 774,
+          "size": 53,
+          "top_topics": [
+            "data distribution",
+            "distribution",
+            "distributions"
+          ]
+        },
+        {
+          "cluster_id": 799,
+          "size": 48,
+          "top_topics": [
+            "writer's block",
+            "prompt engineering",
+            "datablock"
+          ]
+        },
+        {
+          "cluster_id": 796,
+          "size": 48,
+          "top_topics": [
+            "screenwriting",
+            "trace",
+            "tracing"
+          ]
+        },
+        {
+          "cluster_id": 797,
+          "size": 46,
+          "top_topics": [
+            "training loop",
+            "audio recording",
+            "exceptions"
+          ]
+        },
+        {
+          "cluster_id": 826,
+          "size": 36,
+          "top_topics": [
+            "productivity",
+            "author productivity",
+            "work productivity"
+          ]
+        },
+        {
+          "cluster_id": 825,
+          "size": 34,
+          "top_topics": [
+            "big o notation",
+            "mathematical notation",
+            "notation"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 6,
+      "label": "Military and Space",
+      "leiden_cluster_count": 25,
+      "total_topics": 3661,
+      "leiden_clusters": [
+        {
+          "cluster_id": 8,
+          "size": 357,
+          "top_topics": [
+            "space exploration",
+            "space travel",
+            "military conflict"
+          ]
+        },
+        {
+          "cluster_id": 45,
+          "size": 285,
+          "top_topics": [
+            "conflict",
+            "combat",
+            "warfare"
+          ]
+        },
+        {
+          "cluster_id": 61,
+          "size": 246,
+          "top_topics": [
+            "continental army",
+            "british army",
+            "british military"
+          ]
+        },
+        {
+          "cluster_id": 52,
+          "size": 245,
+          "top_topics": [
+            "weapons",
+            "shooting",
+            "weaponry"
+          ]
+        },
+        {
+          "cluster_id": 162,
+          "size": 183,
+          "top_topics": [
+            "american revolution",
+            "george washington",
+            "battle"
+          ]
+        },
+        {
+          "cluster_id": 176,
+          "size": 182,
+          "top_topics": [
+            "military strategy",
+            "military tactics",
+            "urban warfare"
+          ]
+        },
+        {
+          "cluster_id": 166,
+          "size": 174,
+          "top_topics": [
+            "world war ii",
+            "germany",
+            "berlin"
+          ]
+        },
+        {
+          "cluster_id": 171,
+          "size": 172,
+          "top_topics": [
+            "maritime history",
+            "shipbuilding",
+            "ottoman empire"
+          ]
+        },
+        {
+          "cluster_id": 198,
+          "size": 160,
+          "top_topics": [
+            "military leadership",
+            "military personnel",
+            "military command"
+          ]
+        },
+        {
+          "cluster_id": 214,
+          "size": 159,
+          "top_topics": [
+            "military training",
+            "military equipment",
+            "close quarters battle"
+          ]
+        },
+        {
+          "cluster_id": 226,
+          "size": 157,
+          "top_topics": [
+            "international relations",
+            "explosions",
+            "nuclear weapons"
+          ]
+        },
+        {
+          "cluster_id": 232,
+          "size": 151,
+          "top_topics": [
+            "military operations",
+            "isis",
+            "azkaban"
+          ]
+        },
+        {
+          "cluster_id": 271,
+          "size": 145,
+          "top_topics": [
+            "interrogation",
+            "military life",
+            "soldiers"
+          ]
+        },
+        {
+          "cluster_id": 320,
+          "size": 129,
+          "top_topics": [
+            "ancient warfare",
+            "roman military",
+            "greek history"
+          ]
+        },
+        {
+          "cluster_id": 347,
+          "size": 125,
+          "top_topics": [
+            "military",
+            "military units",
+            "military presence"
+          ]
+        },
+        {
+          "cluster_id": 408,
+          "size": 119,
+          "top_topics": [
+            "castle",
+            "castles",
+            "fortifications"
+          ]
+        },
+        {
+          "cluster_id": 399,
+          "size": 118,
+          "top_topics": [
+            "vietnam war",
+            "casualties",
+            "vietnam"
+          ]
+        },
+        {
+          "cluster_id": 605,
+          "size": 89,
+          "top_topics": [
+            "civil war",
+            "american civil war",
+            "seneca"
+          ]
+        },
+        {
+          "cluster_id": 592,
+          "size": 82,
+          "top_topics": [
+            "seals",
+            "special operations",
+            "physical training"
+          ]
+        },
+        {
+          "cluster_id": 615,
+          "size": 81,
+          "top_topics": [
+            "world war i",
+            "human cost of war",
+            "world war"
+          ]
+        },
+        {
+          "cluster_id": 677,
+          "size": 74,
+          "top_topics": [
+            "conquest",
+            "invasion",
+            "alien and sedition acts"
+          ]
+        },
+        {
+          "cluster_id": 748,
+          "size": 66,
+          "top_topics": [
+            "insurgency",
+            "militia",
+            "militias"
+          ]
+        },
+        {
+          "cluster_id": 762,
+          "size": 58,
+          "top_topics": [
+            "naval warfare",
+            "ship combat",
+            "naval combat"
+          ]
+        },
+        {
+          "cluster_id": 776,
+          "size": 53,
+          "top_topics": [
+            "loyalists",
+            "retreat",
+            "military retreat"
+          ]
+        },
+        {
+          "cluster_id": 785,
+          "size": 51,
+          "top_topics": [
+            "combat operations",
+            "afghanistan",
+            "athletes"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 7,
+      "label": "Transportation & Technology",
+      "leiden_cluster_count": 43,
+      "total_topics": 5386,
+      "leiden_clusters": [
+        {
+          "cluster_id": 18,
+          "size": 301,
+          "top_topics": [
+            "energy",
+            "renewable energy",
+            "oil and gas industry"
+          ]
+        },
+        {
+          "cluster_id": 53,
+          "size": 239,
+          "top_topics": [
+            "aviation",
+            "drones",
+            "aircraft"
+          ]
+        },
+        {
+          "cluster_id": 79,
+          "size": 221,
+          "top_topics": [
+            "spacecraft",
+            "mars exploration",
+            "spacecraft design"
+          ]
+        },
+        {
+          "cluster_id": 94,
+          "size": 215,
+          "top_topics": [
+            "surveillance",
+            "counterterrorism",
+            "surveillance technology"
+          ]
+        },
+        {
+          "cluster_id": 130,
+          "size": 185,
+          "top_topics": [
+            "ship repair",
+            "mechanical devices",
+            "repair"
+          ]
+        },
+        {
+          "cluster_id": 136,
+          "size": 185,
+          "top_topics": [
+            "technology",
+            "engineering",
+            "design"
+          ]
+        },
+        {
+          "cluster_id": 141,
+          "size": 179,
+          "top_topics": [
+            "radio",
+            "radio communication",
+            "data transmission"
+          ]
+        },
+        {
+          "cluster_id": 191,
+          "size": 168,
+          "top_topics": [
+            "ship design",
+            "ship operations",
+            "naval operations"
+          ]
+        },
+        {
+          "cluster_id": 218,
+          "size": 154,
+          "top_topics": [
+            "robotics",
+            "robots",
+            "automation"
+          ]
+        },
+        {
+          "cluster_id": 234,
+          "size": 154,
+          "top_topics": [
+            "networking",
+            "communication systems",
+            "telecommunications"
+          ]
+        },
+        {
+          "cluster_id": 253,
+          "size": 149,
+          "top_topics": [
+            "cryptocurrency",
+            "bitcoin",
+            "cryptocurrencies"
+          ]
+        },
+        {
+          "cluster_id": 256,
+          "size": 143,
+          "top_topics": [
+            "woods",
+            "power imbalance",
+            "generator"
+          ]
+        },
+        {
+          "cluster_id": 290,
+          "size": 139,
+          "top_topics": [
+            "logistics",
+            "shipping",
+            "military logistics"
+          ]
+        },
+        {
+          "cluster_id": 316,
+          "size": 137,
+          "top_topics": [
+            "steve jobs",
+            "apple inc.",
+            "apple"
+          ]
+        },
+        {
+          "cluster_id": 295,
+          "size": 136,
+          "top_topics": [
+            "virtual reality",
+            "simulation",
+            "gaming"
+          ]
+        },
+        {
+          "cluster_id": 309,
+          "size": 135,
+          "top_topics": [
+            "security",
+            "security operations",
+            "security systems"
+          ]
+        },
+        {
+          "cluster_id": 336,
+          "size": 132,
+          "top_topics": [
+            "capitalism",
+            "industrial revolution",
+            "industrialization"
+          ]
+        },
+        {
+          "cluster_id": 327,
+          "size": 130,
+          "top_topics": [
+            "underwater exploration",
+            "submarines",
+            "cable laying"
+          ]
+        },
+        {
+          "cluster_id": 334,
+          "size": 128,
+          "top_topics": [
+            "mechanical failure",
+            "failure",
+            "technological failure"
+          ]
+        },
+        {
+          "cluster_id": 369,
+          "size": 122,
+          "top_topics": [
+            "invention",
+            "research and development",
+            "technology and innovation"
+          ]
+        },
+        {
+          "cluster_id": 378,
+          "size": 122,
+          "top_topics": [
+            "gravity",
+            "levitation",
+            "artificial gravity"
+          ]
+        },
+        {
+          "cluster_id": 441,
+          "size": 114,
+          "top_topics": [
+            "shipboard life",
+            "shipboard",
+            "shipboard operations"
+          ]
+        },
+        {
+          "cluster_id": 466,
+          "size": 108,
+          "top_topics": [
+            "technological innovation",
+            "economic impact",
+            "technological development"
+          ]
+        },
+        {
+          "cluster_id": 446,
+          "size": 107,
+          "top_topics": [
+            "animation",
+            "graphics",
+            "pixar"
+          ]
+        },
+        {
+          "cluster_id": 459,
+          "size": 105,
+          "top_topics": [
+            "gpu computing",
+            "intel",
+            "gpus"
+          ]
+        },
+        {
+          "cluster_id": 496,
+          "size": 102,
+          "top_topics": [
+            "mining",
+            "tunnel",
+            "tunnel exploration"
+          ]
+        },
+        {
+          "cluster_id": 501,
+          "size": 100,
+          "top_topics": [
+            "military technology",
+            "technological warfare",
+            "weapons technology"
+          ]
+        },
+        {
+          "cluster_id": 525,
+          "size": 94,
+          "top_topics": [
+            "particle physics",
+            "uranium",
+            "nuclear power"
+          ]
+        },
+        {
+          "cluster_id": 531,
+          "size": 93,
+          "top_topics": [
+            "space stations",
+            "propulsion systems",
+            "plasma"
+          ]
+        },
+        {
+          "cluster_id": 540,
+          "size": 91,
+          "top_topics": [
+            "data storage",
+            "cloud computing",
+            "dust"
+          ]
+        },
+        {
+          "cluster_id": 581,
+          "size": 91,
+          "top_topics": [
+            "innovation",
+            "technological advancement",
+            "pharmaceuticals"
+          ]
+        },
+        {
+          "cluster_id": 575,
+          "size": 88,
+          "top_topics": [
+            "spatial awareness",
+            "motion",
+            "spatial relationships"
+          ]
+        },
+        {
+          "cluster_id": 561,
+          "size": 88,
+          "top_topics": [
+            "orbital mechanics",
+            "asteroids",
+            "asteroid mining"
+          ]
+        },
+        {
+          "cluster_id": 617,
+          "size": 87,
+          "top_topics": [
+            "signal processing",
+            "sensor technology",
+            "sensors"
+          ]
+        },
+        {
+          "cluster_id": 601,
+          "size": 86,
+          "top_topics": [
+            "future",
+            "future planning",
+            "futurism"
+          ]
+        },
+        {
+          "cluster_id": 600,
+          "size": 86,
+          "top_topics": [
+            "concealment",
+            "invisibility cloak",
+            "stealth"
+          ]
+        },
+        {
+          "cluster_id": 635,
+          "size": 84,
+          "top_topics": [
+            "cybersecurity",
+            "cybercrime",
+            "cybernetics"
+          ]
+        },
+        {
+          "cluster_id": 603,
+          "size": 81,
+          "top_topics": [
+            "escapism",
+            "sophons",
+            "resource allocation"
+          ]
+        },
+        {
+          "cluster_id": 673,
+          "size": 75,
+          "top_topics": [
+            "cyberpunk",
+            "steampunk",
+            "boilers"
+          ]
+        },
+        {
+          "cluster_id": 701,
+          "size": 70,
+          "top_topics": [
+            "laboratory",
+            "medical monitoring",
+            "monitoring"
+          ]
+        },
+        {
+          "cluster_id": 689,
+          "size": 68,
+          "top_topics": [
+            "biosphere",
+            "hyperspace",
+            "datasphere"
+          ]
+        },
+        {
+          "cluster_id": 777,
+          "size": 56,
+          "top_topics": [
+            "software development",
+            "manufacturing",
+            "development"
+          ]
+        },
+        {
+          "cluster_id": 820,
+          "size": 38,
+          "top_topics": [
+            "collision detection",
+            "sprites",
+            "collision"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 8,
+      "label": "Arts and Literature",
+      "leiden_cluster_count": 47,
+      "total_topics": 7505,
+      "leiden_clusters": [
+        {
+          "cluster_id": 2,
+          "size": 392,
+          "top_topics": [
+            "writing",
+            "creative writing",
+            "writing process"
+          ]
+        },
+        {
+          "cluster_id": 17,
+          "size": 314,
+          "top_topics": [
+            "character development",
+            "literary analysis",
+            "storytelling"
+          ]
+        },
+        {
+          "cluster_id": 16,
+          "size": 307,
+          "top_topics": [
+            "education",
+            "school",
+            "school life"
+          ]
+        },
+        {
+          "cluster_id": 26,
+          "size": 291,
+          "top_topics": [
+            "journalism",
+            "media",
+            "media coverage"
+          ]
+        },
+        {
+          "cluster_id": 25,
+          "size": 288,
+          "top_topics": [
+            "theater",
+            "drama",
+            "music performance"
+          ]
+        },
+        {
+          "cluster_id": 24,
+          "size": 288,
+          "top_topics": [
+            "portraiture",
+            "light",
+            "color"
+          ]
+        },
+        {
+          "cluster_id": 58,
+          "size": 243,
+          "top_topics": [
+            "appearance",
+            "fashion",
+            "clothing"
+          ]
+        },
+        {
+          "cluster_id": 55,
+          "size": 239,
+          "top_topics": [
+            "higher education",
+            "university life",
+            "college life"
+          ]
+        },
+        {
+          "cluster_id": 62,
+          "size": 235,
+          "top_topics": [
+            "television",
+            "hollywood",
+            "film production"
+          ]
+        },
+        {
+          "cluster_id": 76,
+          "size": 230,
+          "top_topics": [
+            "poetry",
+            "walt whitman",
+            "romanticism"
+          ]
+        },
+        {
+          "cluster_id": 98,
+          "size": 204,
+          "top_topics": [
+            "books",
+            "lists",
+            "publishing history"
+          ]
+        },
+        {
+          "cluster_id": 109,
+          "size": 197,
+          "top_topics": [
+            "music",
+            "opera",
+            "music education"
+          ]
+        },
+        {
+          "cluster_id": 165,
+          "size": 191,
+          "top_topics": [
+            "characters",
+            "character interaction",
+            "character description"
+          ]
+        },
+        {
+          "cluster_id": 122,
+          "size": 188,
+          "top_topics": [
+            "mentorship",
+            "literary influence",
+            "political influence"
+          ]
+        },
+        {
+          "cluster_id": 148,
+          "size": 182,
+          "top_topics": [
+            "art and creativity",
+            "art and culture",
+            "sculpture"
+          ]
+        },
+        {
+          "cluster_id": 135,
+          "size": 181,
+          "top_topics": [
+            "artistic process",
+            "creative pursuits",
+            "drawing"
+          ]
+        },
+        {
+          "cluster_id": 190,
+          "size": 170,
+          "top_topics": [
+            "criticism",
+            "art criticism",
+            "art and aesthetics"
+          ]
+        },
+        {
+          "cluster_id": 172,
+          "size": 168,
+          "top_topics": [
+            "literature",
+            "reading",
+            "reader engagement"
+          ]
+        },
+        {
+          "cluster_id": 215,
+          "size": 162,
+          "top_topics": [
+            "art history",
+            "artifacts",
+            "art collection"
+          ]
+        },
+        {
+          "cluster_id": 201,
+          "size": 161,
+          "top_topics": [
+            "dance",
+            "harmony",
+            "dancing"
+          ]
+        },
+        {
+          "cluster_id": 228,
+          "size": 160,
+          "top_topics": [
+            "personal history",
+            "memoir",
+            "personal life"
+          ]
+        },
+        {
+          "cluster_id": 227,
+          "size": 152,
+          "top_topics": [
+            "collaboration",
+            "literary relationships",
+            "creative collaboration"
+          ]
+        },
+        {
+          "cluster_id": 240,
+          "size": 151,
+          "top_topics": [
+            "competition",
+            "literary awards",
+            "art appreciation"
+          ]
+        },
+        {
+          "cluster_id": 242,
+          "size": 150,
+          "top_topics": [
+            "museums",
+            "museum",
+            "fair"
+          ]
+        },
+        {
+          "cluster_id": 265,
+          "size": 148,
+          "top_topics": [
+            "literary style",
+            "literary devices",
+            "genre"
+          ]
+        },
+        {
+          "cluster_id": 260,
+          "size": 143,
+          "top_topics": [
+            "craftsmanship",
+            "circus",
+            "local government"
+          ]
+        },
+        {
+          "cluster_id": 296,
+          "size": 135,
+          "top_topics": [
+            "editing",
+            "literary agents",
+            "book production"
+          ]
+        },
+        {
+          "cluster_id": 330,
+          "size": 134,
+          "top_topics": [
+            "science fiction",
+            "american literature",
+            "sci-fi"
+          ]
+        },
+        {
+          "cluster_id": 335,
+          "size": 130,
+          "top_topics": [
+            "publishing",
+            "book publishing",
+            "journaling"
+          ]
+        },
+        {
+          "cluster_id": 390,
+          "size": 125,
+          "top_topics": [
+            "creativity",
+            "interviews",
+            "creative block"
+          ]
+        },
+        {
+          "cluster_id": 368,
+          "size": 123,
+          "top_topics": [
+            "manuscripts",
+            "archive",
+            "archives"
+          ]
+        },
+        {
+          "cluster_id": 402,
+          "size": 119,
+          "top_topics": [
+            "crowd",
+            "crowd dynamics",
+            "crowds"
+          ]
+        },
+        {
+          "cluster_id": 431,
+          "size": 116,
+          "top_topics": [
+            "academia",
+            "literacy",
+            "literature and reading"
+          ]
+        },
+        {
+          "cluster_id": 485,
+          "size": 106,
+          "top_topics": [
+            "names",
+            "recognition",
+            "names and identity"
+          ]
+        },
+        {
+          "cluster_id": 489,
+          "size": 104,
+          "top_topics": [
+            "literary figures",
+            "imagery",
+            "literary references"
+          ]
+        },
+        {
+          "cluster_id": 480,
+          "size": 104,
+          "top_topics": [
+            "translation",
+            "classical literature",
+            "machine translation"
+          ]
+        },
+        {
+          "cluster_id": 534,
+          "size": 97,
+          "top_topics": [
+            "biography",
+            "biographies",
+            "literary biography"
+          ]
+        },
+        {
+          "cluster_id": 541,
+          "size": 92,
+          "top_topics": [
+            "paris",
+            "french literature",
+            "french culture"
+          ]
+        },
+        {
+          "cluster_id": 552,
+          "size": 91,
+          "top_topics": [
+            "manuscript",
+            "typography",
+            "literary allusions"
+          ]
+        },
+        {
+          "cluster_id": 568,
+          "size": 91,
+          "top_topics": [
+            "empiricism",
+            "frittata",
+            "fritters"
+          ]
+        },
+        {
+          "cluster_id": 578,
+          "size": 88,
+          "top_topics": [
+            "painting",
+            "materials science",
+            "painting techniques"
+          ]
+        },
+        {
+          "cluster_id": 716,
+          "size": 68,
+          "top_topics": [
+            "conference",
+            "academic conferences",
+            "peace conference"
+          ]
+        },
+        {
+          "cluster_id": 747,
+          "size": 65,
+          "top_topics": [
+            "celebrity",
+            "fame",
+            "celebrities"
+          ]
+        },
+        {
+          "cluster_id": 771,
+          "size": 53,
+          "top_topics": [
+            "literary history",
+            "historical narrative",
+            "literary canon"
+          ]
+        },
+        {
+          "cluster_id": 775,
+          "size": 53,
+          "top_topics": [
+            "comic books",
+            "villain",
+            "character design"
+          ]
+        },
+        {
+          "cluster_id": 784,
+          "size": 52,
+          "top_topics": [
+            "modernism",
+            "modern literature",
+            "modernist literature"
+          ]
+        },
+        {
+          "cluster_id": 841,
+          "size": 24,
+          "top_topics": [
+            "art studio",
+            "studio",
+            "studio environment"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 9,
+      "label": "Travel and Maritime",
+      "leiden_cluster_count": 56,
+      "total_topics": 6158,
+      "leiden_clusters": [
+        {
+          "cluster_id": 44,
+          "size": 267,
+          "top_topics": [
+            "adventure",
+            "exploration",
+            "urban exploration"
+          ]
+        },
+        {
+          "cluster_id": 70,
+          "size": 230,
+          "top_topics": [
+            "disaster",
+            "shipwreck",
+            "shipwrecks"
+          ]
+        },
+        {
+          "cluster_id": 85,
+          "size": 226,
+          "top_topics": [
+            "sailing",
+            "boating",
+            "seafaring"
+          ]
+        },
+        {
+          "cluster_id": 92,
+          "size": 214,
+          "top_topics": [
+            "hospitality",
+            "hotel",
+            "nightlife"
+          ]
+        },
+        {
+          "cluster_id": 128,
+          "size": 193,
+          "top_topics": [
+            "setting",
+            "setting description",
+            "tourism"
+          ]
+        },
+        {
+          "cluster_id": 178,
+          "size": 167,
+          "top_topics": [
+            "transportation",
+            "driving",
+            "traffic"
+          ]
+        },
+        {
+          "cluster_id": 185,
+          "size": 167,
+          "top_topics": [
+            "night",
+            "nighttime",
+            "summer"
+          ]
+        },
+        {
+          "cluster_id": 210,
+          "size": 166,
+          "top_topics": [
+            "rescue",
+            "rescue operation",
+            "rescue operations"
+          ]
+        },
+        {
+          "cluster_id": 207,
+          "size": 163,
+          "top_topics": [
+            "river",
+            "rivers",
+            "canals"
+          ]
+        },
+        {
+          "cluster_id": 204,
+          "size": 163,
+          "top_topics": [
+            "road trip",
+            "roads",
+            "cartography"
+          ]
+        },
+        {
+          "cluster_id": 230,
+          "size": 161,
+          "top_topics": [
+            "urban life",
+            "city life",
+            "urban setting"
+          ]
+        },
+        {
+          "cluster_id": 241,
+          "size": 159,
+          "top_topics": [
+            "weather",
+            "storm",
+            "rain"
+          ]
+        },
+        {
+          "cluster_id": 216,
+          "size": 158,
+          "top_topics": [
+            "fire",
+            "property damage",
+            "arson"
+          ]
+        },
+        {
+          "cluster_id": 268,
+          "size": 150,
+          "top_topics": [
+            "architecture",
+            "urban development",
+            "california"
+          ]
+        },
+        {
+          "cluster_id": 277,
+          "size": 145,
+          "top_topics": [
+            "village life",
+            "local culture",
+            "neighborhood"
+          ]
+        },
+        {
+          "cluster_id": 298,
+          "size": 142,
+          "top_topics": [
+            "small town life",
+            "local politics",
+            "small town"
+          ]
+        },
+        {
+          "cluster_id": 276,
+          "size": 142,
+          "top_topics": [
+            "vehicles",
+            "automobiles",
+            "cars"
+          ]
+        },
+        {
+          "cluster_id": 367,
+          "size": 126,
+          "top_topics": [
+            "horses",
+            "horseback riding",
+            "horse racing"
+          ]
+        },
+        {
+          "cluster_id": 379,
+          "size": 123,
+          "top_topics": [
+            "prison life",
+            "camping",
+            "camp life"
+          ]
+        },
+        {
+          "cluster_id": 365,
+          "size": 121,
+          "top_topics": [
+            "harbor",
+            "coastal defense",
+            "new york harbor"
+          ]
+        },
+        {
+          "cluster_id": 406,
+          "size": 116,
+          "top_topics": [
+            "cycles",
+            "cycling",
+            "bicycles"
+          ]
+        },
+        {
+          "cluster_id": 383,
+          "size": 116,
+          "top_topics": [
+            "doors",
+            "sage",
+            "elevator"
+          ]
+        },
+        {
+          "cluster_id": 416,
+          "size": 113,
+          "top_topics": [
+            "climbing",
+            "mountaineering",
+            "rope"
+          ]
+        },
+        {
+          "cluster_id": 450,
+          "size": 112,
+          "top_topics": [
+            "sports",
+            "game",
+            "pool"
+          ]
+        },
+        {
+          "cluster_id": 445,
+          "size": 111,
+          "top_topics": [
+            "ruins",
+            "ancient ruins",
+            "abandonment"
+          ]
+        },
+        {
+          "cluster_id": 452,
+          "size": 111,
+          "top_topics": [
+            "train travel",
+            "railroads",
+            "train journey"
+          ]
+        },
+        {
+          "cluster_id": 476,
+          "size": 107,
+          "top_topics": [
+            "mountains",
+            "spring",
+            "canyons"
+          ]
+        },
+        {
+          "cluster_id": 477,
+          "size": 102,
+          "top_topics": [
+            "gambling",
+            "betting",
+            "las vegas"
+          ]
+        },
+        {
+          "cluster_id": 490,
+          "size": 101,
+          "top_topics": [
+            "new york city",
+            "new york",
+            "manhattan"
+          ]
+        },
+        {
+          "cluster_id": 487,
+          "size": 99,
+          "top_topics": [
+            "brooklyn",
+            "zen buddhism",
+            "eastern europe"
+          ]
+        },
+        {
+          "cluster_id": 523,
+          "size": 98,
+          "top_topics": [
+            "movement",
+            "displacement",
+            "footprints"
+          ]
+        },
+        {
+          "cluster_id": 546,
+          "size": 94,
+          "top_topics": [
+            "sound",
+            "waves",
+            "sounds"
+          ]
+        },
+        {
+          "cluster_id": 559,
+          "size": 90,
+          "top_topics": [
+            "radiation",
+            "shields",
+            "walls"
+          ]
+        },
+        {
+          "cluster_id": 567,
+          "size": 90,
+          "top_topics": [
+            "suspension",
+            "bridge",
+            "chamber"
+          ]
+        },
+        {
+          "cluster_id": 570,
+          "size": 89,
+          "top_topics": [
+            "construction",
+            "chicago",
+            "historical sites"
+          ]
+        },
+        {
+          "cluster_id": 619,
+          "size": 86,
+          "top_topics": [
+            "underground",
+            "underground spaces",
+            "underground exploration"
+          ]
+        },
+        {
+          "cluster_id": 636,
+          "size": 83,
+          "top_topics": [
+            "navigation",
+            "ship navigation",
+            "river navigation"
+          ]
+        },
+        {
+          "cluster_id": 629,
+          "size": 83,
+          "top_topics": [
+            "pursuit",
+            "chase",
+            "car chase"
+          ]
+        },
+        {
+          "cluster_id": 651,
+          "size": 78,
+          "top_topics": [
+            "surfing",
+            "hawaii",
+            "wave riding"
+          ]
+        },
+        {
+          "cluster_id": 631,
+          "size": 78,
+          "top_topics": [
+            "san francisco",
+            "los angeles",
+            "corporate influence"
+          ]
+        },
+        {
+          "cluster_id": 644,
+          "size": 76,
+          "top_topics": [
+            "carriage",
+            "cart",
+            "goodness"
+          ]
+        },
+        {
+          "cluster_id": 688,
+          "size": 75,
+          "top_topics": [
+            "entertainment",
+            "boredom",
+            "recreation"
+          ]
+        },
+        {
+          "cluster_id": 683,
+          "size": 72,
+          "top_topics": [
+            "descent",
+            "screaming",
+            "airplane"
+          ]
+        },
+        {
+          "cluster_id": 686,
+          "size": 70,
+          "top_topics": [
+            "new orleans",
+            "louisiana",
+            "cockfight"
+          ]
+        },
+        {
+          "cluster_id": 752,
+          "size": 61,
+          "top_topics": [
+            "golf",
+            "slughorn",
+            "social clubs"
+          ]
+        },
+        {
+          "cluster_id": 749,
+          "size": 61,
+          "top_topics": [
+            "flight",
+            "air travel",
+            "airline industry"
+          ]
+        },
+        {
+          "cluster_id": 761,
+          "size": 59,
+          "top_topics": [
+            "lake",
+            "ohio",
+            "lakes"
+          ]
+        },
+        {
+          "cluster_id": 786,
+          "size": 52,
+          "top_topics": [
+            "tower",
+            "towers",
+            "skyscrapers"
+          ]
+        },
+        {
+          "cluster_id": 781,
+          "size": 52,
+          "top_topics": [
+            "caravan",
+            "rover technology",
+            "caravans"
+          ]
+        },
+        {
+          "cluster_id": 798,
+          "size": 48,
+          "top_topics": [
+            "aurora",
+            "cliff",
+            "erosion"
+          ]
+        },
+        {
+          "cluster_id": 804,
+          "size": 43,
+          "top_topics": [
+            "vacation",
+            "atlanta",
+            "georgia"
+          ]
+        },
+        {
+          "cluster_id": 815,
+          "size": 42,
+          "top_topics": [
+            "morning routine",
+            "morning",
+            "mayday"
+          ]
+        },
+        {
+          "cluster_id": 834,
+          "size": 32,
+          "top_topics": [
+            "band dynamics",
+            "swap lines",
+            "line"
+          ]
+        },
+        {
+          "cluster_id": 836,
+          "size": 31,
+          "top_topics": [
+            "ship",
+            "omc system",
+            "reverend william sheppard"
+          ]
+        },
+        {
+          "cluster_id": 840,
+          "size": 27,
+          "top_topics": [
+            "homecoming",
+            "return",
+            "return home"
+          ]
+        },
+        {
+          "cluster_id": 842,
+          "size": 17,
+          "top_topics": [
+            "balloon",
+            "hot air balloons",
+            "balloon travel"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 10,
+      "label": "Human Suffering & Crisis",
+      "leiden_cluster_count": 26,
+      "total_topics": 3574,
+      "leiden_clusters": [
+        {
+          "cluster_id": 23,
+          "size": 285,
+          "top_topics": [
+            "urban decay",
+            "death and decay",
+            "economic decline"
+          ]
+        },
+        {
+          "cluster_id": 48,
+          "size": 259,
+          "top_topics": [
+            "despair",
+            "loss and grief",
+            "desperation"
+          ]
+        },
+        {
+          "cluster_id": 65,
+          "size": 234,
+          "top_topics": [
+            "fear",
+            "danger",
+            "threat"
+          ]
+        },
+        {
+          "cluster_id": 119,
+          "size": 203,
+          "top_topics": [
+            "mental state",
+            "emotional distress",
+            "psychological distress"
+          ]
+        },
+        {
+          "cluster_id": 127,
+          "size": 191,
+          "top_topics": [
+            "anger",
+            "frustration",
+            "revenge"
+          ]
+        },
+        {
+          "cluster_id": 188,
+          "size": 173,
+          "top_topics": [
+            "emotion",
+            "emotions",
+            "human emotion"
+          ]
+        },
+        {
+          "cluster_id": 175,
+          "size": 171,
+          "top_topics": [
+            "psychology",
+            "human psychology",
+            "psychiatry"
+          ]
+        },
+        {
+          "cluster_id": 209,
+          "size": 170,
+          "top_topics": [
+            "violence",
+            "domestic violence",
+            "abuse"
+          ]
+        },
+        {
+          "cluster_id": 219,
+          "size": 160,
+          "top_topics": [
+            "crisis management",
+            "crisis",
+            "disaster response"
+          ]
+        },
+        {
+          "cluster_id": 233,
+          "size": 156,
+          "top_topics": [
+            "personal development",
+            "overfitting",
+            "stress"
+          ]
+        },
+        {
+          "cluster_id": 300,
+          "size": 144,
+          "top_topics": [
+            "anxiety",
+            "panic",
+            "fear and anxiety"
+          ]
+        },
+        {
+          "cluster_id": 308,
+          "size": 142,
+          "top_topics": [
+            "regret",
+            "interpersonal conflict",
+            "personal struggles"
+          ]
+        },
+        {
+          "cluster_id": 313,
+          "size": 138,
+          "top_topics": [
+            "obsession",
+            "paranoia",
+            "madness"
+          ]
+        },
+        {
+          "cluster_id": 387,
+          "size": 124,
+          "top_topics": [
+            "emergency response",
+            "emotional response",
+            "community response"
+          ]
+        },
+        {
+          "cluster_id": 434,
+          "size": 117,
+          "top_topics": [
+            "isolation",
+            "loneliness",
+            "social isolation"
+          ]
+        },
+        {
+          "cluster_id": 448,
+          "size": 114,
+          "top_topics": [
+            "guilt",
+            "shame",
+            "guilt and shame"
+          ]
+        },
+        {
+          "cluster_id": 438,
+          "size": 114,
+          "top_topics": [
+            "domestic dispute",
+            "domestic conflict",
+            "family dysfunction"
+          ]
+        },
+        {
+          "cluster_id": 549,
+          "size": 92,
+          "top_topics": [
+            "mental illness",
+            "disability",
+            "autism"
+          ]
+        },
+        {
+          "cluster_id": 580,
+          "size": 87,
+          "top_topics": [
+            "self-harm",
+            "self-defense",
+            "self-sacrifice"
+          ]
+        },
+        {
+          "cluster_id": 589,
+          "size": 85,
+          "top_topics": [
+            "criminal behavior",
+            "misbehavior",
+            "childhood mischief"
+          ]
+        },
+        {
+          "cluster_id": 594,
+          "size": 83,
+          "top_topics": [
+            "communication breakdown",
+            "communication failure",
+            "communication issues"
+          ]
+        },
+        {
+          "cluster_id": 616,
+          "size": 80,
+          "top_topics": [
+            "creative struggle",
+            "artistic struggle",
+            "artwork damage"
+          ]
+        },
+        {
+          "cluster_id": 666,
+          "size": 76,
+          "top_topics": [
+            "desolation",
+            "hypocrisy",
+            "cannibalism"
+          ]
+        },
+        {
+          "cluster_id": 699,
+          "size": 73,
+          "top_topics": [
+            "psychological effects",
+            "causation",
+            "cause and effect"
+          ]
+        },
+        {
+          "cluster_id": 726,
+          "size": 66,
+          "top_topics": [
+            "behavior",
+            "behavior change",
+            "behavioral patterns"
+          ]
+        },
+        {
+          "cluster_id": 827,
+          "size": 37,
+          "top_topics": [
+            "resilience",
+            "antifragility",
+            "fragility"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 11,
+      "label": "Religion and Belief",
+      "leiden_cluster_count": 38,
+      "total_topics": 4715,
+      "leiden_clusters": [
+        {
+          "cluster_id": 59,
+          "size": 244,
+          "top_topics": [
+            "death and mourning",
+            "funeral",
+            "death and burial"
+          ]
+        },
+        {
+          "cluster_id": 71,
+          "size": 232,
+          "top_topics": [
+            "folklore",
+            "vampires",
+            "allegory"
+          ]
+        },
+        {
+          "cluster_id": 72,
+          "size": 226,
+          "top_topics": [
+            "religious conflict",
+            "religious doubt",
+            "religious figure"
+          ]
+        },
+        {
+          "cluster_id": 90,
+          "size": 212,
+          "top_topics": [
+            "religious history",
+            "jewish identity",
+            "holocaust"
+          ]
+        },
+        {
+          "cluster_id": 107,
+          "size": 198,
+          "top_topics": [
+            "christianity",
+            "religious texts",
+            "religious themes"
+          ]
+        },
+        {
+          "cluster_id": 113,
+          "size": 197,
+          "top_topics": [
+            "religious imagery",
+            "church",
+            "temple"
+          ]
+        },
+        {
+          "cluster_id": 146,
+          "size": 184,
+          "top_topics": [
+            "prophecy",
+            "fate",
+            "guardians"
+          ]
+        },
+        {
+          "cluster_id": 179,
+          "size": 168,
+          "top_topics": [
+            "malcolm x",
+            "socialism",
+            "islam"
+          ]
+        },
+        {
+          "cluster_id": 249,
+          "size": 163,
+          "top_topics": [
+            "religion",
+            "faith",
+            "religious beliefs"
+          ]
+        },
+        {
+          "cluster_id": 224,
+          "size": 163,
+          "top_topics": [
+            "symbolism",
+            "religious symbolism",
+            "symbols"
+          ]
+        },
+        {
+          "cluster_id": 248,
+          "size": 152,
+          "top_topics": [
+            "magic",
+            "templars",
+            "sorcery"
+          ]
+        },
+        {
+          "cluster_id": 273,
+          "size": 143,
+          "top_topics": [
+            "chaos",
+            "religious orders",
+            "order"
+          ]
+        },
+        {
+          "cluster_id": 279,
+          "size": 140,
+          "top_topics": [
+            "catholicism",
+            "rosicrucianism",
+            "virginity"
+          ]
+        },
+        {
+          "cluster_id": 343,
+          "size": 138,
+          "top_topics": [
+            "ritual",
+            "rituals",
+            "religious rituals"
+          ]
+        },
+        {
+          "cluster_id": 331,
+          "size": 137,
+          "top_topics": [
+            "death and dying",
+            "angels",
+            "heaven"
+          ]
+        },
+        {
+          "cluster_id": 332,
+          "size": 137,
+          "top_topics": [
+            "mythology",
+            "greek mythology",
+            "ancient egypt"
+          ]
+        },
+        {
+          "cluster_id": 358,
+          "size": 126,
+          "top_topics": [
+            "redemption",
+            "forgiveness",
+            "evil"
+          ]
+        },
+        {
+          "cluster_id": 382,
+          "size": 119,
+          "top_topics": [
+            "brotherhood",
+            "religious groups",
+            "religious sects"
+          ]
+        },
+        {
+          "cluster_id": 426,
+          "size": 117,
+          "top_topics": [
+            "historical figures",
+            "religious figures",
+            "mythological creatures"
+          ]
+        },
+        {
+          "cluster_id": 461,
+          "size": 113,
+          "top_topics": [
+            "creatures",
+            "magical creatures",
+            "creature"
+          ]
+        },
+        {
+          "cluster_id": 471,
+          "size": 106,
+          "top_topics": [
+            "pilgrimage",
+            "cave exploration",
+            "caves"
+          ]
+        },
+        {
+          "cluster_id": 507,
+          "size": 100,
+          "top_topics": [
+            "resurrection",
+            "women's rights",
+            "spiritual awakening"
+          ]
+        },
+        {
+          "cluster_id": 506,
+          "size": 98,
+          "top_topics": [
+            "whaling",
+            "the beatles",
+            "choir"
+          ]
+        },
+        {
+          "cluster_id": 544,
+          "size": 92,
+          "top_topics": [
+            "empire",
+            "satanic verses",
+            "princess"
+          ]
+        },
+        {
+          "cluster_id": 563,
+          "size": 89,
+          "top_topics": [
+            "sacrifice",
+            "centaurs",
+            "kali"
+          ]
+        },
+        {
+          "cluster_id": 571,
+          "size": 88,
+          "top_topics": [
+            "fantasy",
+            "oasis",
+            "worldbuilding"
+          ]
+        },
+        {
+          "cluster_id": 598,
+          "size": 86,
+          "top_topics": [
+            "prayer",
+            "alienation",
+            "spiritual practice"
+          ]
+        },
+        {
+          "cluster_id": 587,
+          "size": 85,
+          "top_topics": [
+            "gnosticism",
+            "jesus",
+            "american religion"
+          ]
+        },
+        {
+          "cluster_id": 599,
+          "size": 84,
+          "top_topics": [
+            "divine intervention",
+            "adultery",
+            "divine providence"
+          ]
+        },
+        {
+          "cluster_id": 627,
+          "size": 77,
+          "top_topics": [
+            "anarchism",
+            "anarchy",
+            "social revolution"
+          ]
+        },
+        {
+          "cluster_id": 662,
+          "size": 77,
+          "top_topics": [
+            "galileo galilei",
+            "theology",
+            "inquisition"
+          ]
+        },
+        {
+          "cluster_id": 714,
+          "size": 75,
+          "top_topics": [
+            "religious practices",
+            "festivals",
+            "festival"
+          ]
+        },
+        {
+          "cluster_id": 698,
+          "size": 72,
+          "top_topics": [
+            "heroism",
+            "role models",
+            "heroes"
+          ]
+        },
+        {
+          "cluster_id": 719,
+          "size": 66,
+          "top_topics": [
+            "ancient cities",
+            "ancient mesopotamia",
+            "babylon"
+          ]
+        },
+        {
+          "cluster_id": 745,
+          "size": 63,
+          "top_topics": [
+            "body image",
+            "spirit",
+            "soul"
+          ]
+        },
+        {
+          "cluster_id": 779,
+          "size": 54,
+          "top_topics": [
+            "cults",
+            "initiation",
+            "religious cults"
+          ]
+        },
+        {
+          "cluster_id": 788,
+          "size": 49,
+          "top_topics": [
+            "martyrdom",
+            "victory",
+            "defeat"
+          ]
+        },
+        {
+          "cluster_id": 810,
+          "size": 45,
+          "top_topics": [
+            "mysticism",
+            "spiritualism",
+            "golem"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 12,
+      "label": "Dark Justice",
+      "leiden_cluster_count": 26,
+      "total_topics": 4109,
+      "leiden_clusters": [
+        {
+          "cluster_id": 29,
+          "size": 284,
+          "top_topics": [
+            "political intrigue",
+            "espionage",
+            "intelligence"
+          ]
+        },
+        {
+          "cluster_id": 78,
+          "size": 234,
+          "top_topics": [
+            "prison",
+            "prisoner",
+            "prisoners"
+          ]
+        },
+        {
+          "cluster_id": 74,
+          "size": 228,
+          "top_topics": [
+            "deception",
+            "fraud",
+            "propaganda"
+          ]
+        },
+        {
+          "cluster_id": 77,
+          "size": 227,
+          "top_topics": [
+            "secrets",
+            "family secrets",
+            "secrecy"
+          ]
+        },
+        {
+          "cluster_id": 83,
+          "size": 222,
+          "top_topics": [
+            "criminal justice",
+            "justice",
+            "crime and punishment"
+          ]
+        },
+        {
+          "cluster_id": 89,
+          "size": 216,
+          "top_topics": [
+            "people",
+            "suspicious activity",
+            "suspicious individuals"
+          ]
+        },
+        {
+          "cluster_id": 111,
+          "size": 213,
+          "top_topics": [
+            "suspense",
+            "mystery",
+            "conspiracy"
+          ]
+        },
+        {
+          "cluster_id": 101,
+          "size": 208,
+          "top_topics": [
+            "legal proceedings",
+            "legal disputes",
+            "legal issues"
+          ]
+        },
+        {
+          "cluster_id": 104,
+          "size": 202,
+          "top_topics": [
+            "loss",
+            "missing person",
+            "disappearance"
+          ]
+        },
+        {
+          "cluster_id": 105,
+          "size": 201,
+          "top_topics": [
+            "escape",
+            "departure",
+            "runaway"
+          ]
+        },
+        {
+          "cluster_id": 144,
+          "size": 184,
+          "top_topics": [
+            "crime",
+            "criminal activity",
+            "crime and violence"
+          ]
+        },
+        {
+          "cluster_id": 180,
+          "size": 175,
+          "top_topics": [
+            "law enforcement",
+            "police investigation",
+            "police"
+          ]
+        },
+        {
+          "cluster_id": 181,
+          "size": 171,
+          "top_topics": [
+            "robbery",
+            "financial crime",
+            "theft"
+          ]
+        },
+        {
+          "cluster_id": 264,
+          "size": 155,
+          "top_topics": [
+            "suspicion",
+            "treason",
+            "blackmail"
+          ]
+        },
+        {
+          "cluster_id": 269,
+          "size": 149,
+          "top_topics": [
+            "corruption",
+            "political corruption",
+            "corporate espionage"
+          ]
+        },
+        {
+          "cluster_id": 322,
+          "size": 140,
+          "top_topics": [
+            "crime investigation",
+            "criminal investigation",
+            "murder"
+          ]
+        },
+        {
+          "cluster_id": 405,
+          "size": 125,
+          "top_topics": [
+            "witness testimony",
+            "illusion",
+            "confession"
+          ]
+        },
+        {
+          "cluster_id": 442,
+          "size": 116,
+          "top_topics": [
+            "kidnapping",
+            "hostage situation",
+            "abduction"
+          ]
+        },
+        {
+          "cluster_id": 421,
+          "size": 114,
+          "top_topics": [
+            "miscommunication",
+            "misinformation",
+            "courtroom drama"
+          ]
+        },
+        {
+          "cluster_id": 483,
+          "size": 106,
+          "top_topics": [
+            "plot development",
+            "plot",
+            "plot structure"
+          ]
+        },
+        {
+          "cluster_id": 470,
+          "size": 104,
+          "top_topics": [
+            "data collection",
+            "edward snowden",
+            "media criticism"
+          ]
+        },
+        {
+          "cluster_id": 585,
+          "size": 88,
+          "top_topics": [
+            "pirates",
+            "drug trafficking",
+            "piracy"
+          ]
+        },
+        {
+          "cluster_id": 709,
+          "size": 72,
+          "top_topics": [
+            "gossip",
+            "rumors",
+            "rumors and gossip"
+          ]
+        },
+        {
+          "cluster_id": 737,
+          "size": 63,
+          "top_topics": [
+            "intrusion",
+            "enemy",
+            "intruder"
+          ]
+        },
+        {
+          "cluster_id": 760,
+          "size": 61,
+          "top_topics": [
+            "investigation",
+            "fbi investigation",
+            "government investigation"
+          ]
+        },
+        {
+          "cluster_id": 789,
+          "size": 51,
+          "top_topics": [
+            "assassination",
+            "political assassination",
+            "assassins"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 13,
+      "label": "Financial and Economic Systems",
+      "leiden_cluster_count": 41,
+      "total_topics": 6074,
+      "leiden_clusters": [
+        {
+          "cluster_id": 0,
+          "size": 506,
+          "top_topics": [
+            "financial markets",
+            "investment strategies",
+            "stock market"
+          ]
+        },
+        {
+          "cluster_id": 27,
+          "size": 288,
+          "top_topics": [
+            "finance",
+            "real estate",
+            "personal finance"
+          ]
+        },
+        {
+          "cluster_id": 34,
+          "size": 270,
+          "top_topics": [
+            "taxation",
+            "corporate finance",
+            "budgeting"
+          ]
+        },
+        {
+          "cluster_id": 38,
+          "size": 269,
+          "top_topics": [
+            "marketing",
+            "advertising",
+            "silicon valley"
+          ]
+        },
+        {
+          "cluster_id": 41,
+          "size": 261,
+          "top_topics": [
+            "money",
+            "inflation",
+            "monetary policy"
+          ]
+        },
+        {
+          "cluster_id": 54,
+          "size": 247,
+          "top_topics": [
+            "commerce",
+            "trade",
+            "trade and commerce"
+          ]
+        },
+        {
+          "cluster_id": 87,
+          "size": 211,
+          "top_topics": [
+            "technical analysis",
+            "market trends",
+            "social trends"
+          ]
+        },
+        {
+          "cluster_id": 121,
+          "size": 197,
+          "top_topics": [
+            "business",
+            "property",
+            "land ownership"
+          ]
+        },
+        {
+          "cluster_id": 157,
+          "size": 184,
+          "top_topics": [
+            "risk management",
+            "trading strategies",
+            "trading"
+          ]
+        },
+        {
+          "cluster_id": 159,
+          "size": 177,
+          "top_topics": [
+            "economic policy",
+            "financial trouble",
+            "financial difficulties"
+          ]
+        },
+        {
+          "cluster_id": 142,
+          "size": 177,
+          "top_topics": [
+            "sales",
+            "book sales",
+            "auction"
+          ]
+        },
+        {
+          "cluster_id": 203,
+          "size": 163,
+          "top_topics": [
+            "financial planning",
+            "financial matters",
+            "financial literacy"
+          ]
+        },
+        {
+          "cluster_id": 202,
+          "size": 162,
+          "top_topics": [
+            "risk assessment",
+            "financial risk",
+            "risk"
+          ]
+        },
+        {
+          "cluster_id": 252,
+          "size": 151,
+          "top_topics": [
+            "personal growth",
+            "success",
+            "career development"
+          ]
+        },
+        {
+          "cluster_id": 266,
+          "size": 146,
+          "top_topics": [
+            "social inequality",
+            "economic inequality",
+            "wealth inequality"
+          ]
+        },
+        {
+          "cluster_id": 270,
+          "size": 145,
+          "top_topics": [
+            "shopping",
+            "retail",
+            "business operations"
+          ]
+        },
+        {
+          "cluster_id": 348,
+          "size": 131,
+          "top_topics": [
+            "investor behavior",
+            "behavioral finance",
+            "market psychology"
+          ]
+        },
+        {
+          "cluster_id": 323,
+          "size": 131,
+          "top_topics": [
+            "forecasting",
+            "expectations",
+            "market timing"
+          ]
+        },
+        {
+          "cluster_id": 373,
+          "size": 125,
+          "top_topics": [
+            "time series analysis",
+            "financial modeling",
+            "financial management"
+          ]
+        },
+        {
+          "cluster_id": 357,
+          "size": 125,
+          "top_topics": [
+            "international finance",
+            "international travel",
+            "international operations"
+          ]
+        },
+        {
+          "cluster_id": 372,
+          "size": 124,
+          "top_topics": [
+            "economics",
+            "investment",
+            "industry"
+          ]
+        },
+        {
+          "cluster_id": 346,
+          "size": 123,
+          "top_topics": [
+            "entrepreneurship",
+            "venture capital",
+            "self-employment"
+          ]
+        },
+        {
+          "cluster_id": 395,
+          "size": 123,
+          "top_topics": [
+            "banking",
+            "financial transactions",
+            "federal reserve"
+          ]
+        },
+        {
+          "cluster_id": 397,
+          "size": 121,
+          "top_topics": [
+            "economic history",
+            "financial history",
+            "financial data"
+          ]
+        },
+        {
+          "cluster_id": 362,
+          "size": 120,
+          "top_topics": [
+            "speculation",
+            "economic cycles",
+            "great depression"
+          ]
+        },
+        {
+          "cluster_id": 409,
+          "size": 117,
+          "top_topics": [
+            "business strategy",
+            "strategic planning",
+            "insurance"
+          ]
+        },
+        {
+          "cluster_id": 453,
+          "size": 116,
+          "top_topics": [
+            "wealth",
+            "luxury",
+            "luxury goods"
+          ]
+        },
+        {
+          "cluster_id": 432,
+          "size": 111,
+          "top_topics": [
+            "business failure",
+            "financial loss",
+            "job loss"
+          ]
+        },
+        {
+          "cluster_id": 482,
+          "size": 106,
+          "top_topics": [
+            "financial statements",
+            "data",
+            "accounting"
+          ]
+        },
+        {
+          "cluster_id": 528,
+          "size": 96,
+          "top_topics": [
+            "private equity",
+            "financial assets",
+            "illiquidity premium"
+          ]
+        },
+        {
+          "cluster_id": 530,
+          "size": 93,
+          "top_topics": [
+            "indexing",
+            "python lists",
+            "stock market trends"
+          ]
+        },
+        {
+          "cluster_id": 566,
+          "size": 91,
+          "top_topics": [
+            "market analysis",
+            "investment analysis",
+            "market research"
+          ]
+        },
+        {
+          "cluster_id": 557,
+          "size": 89,
+          "top_topics": [
+            "government funding",
+            "funding",
+            "research funding"
+          ]
+        },
+        {
+          "cluster_id": 607,
+          "size": 89,
+          "top_topics": [
+            "values",
+            "value",
+            "pricing"
+          ]
+        },
+        {
+          "cluster_id": 610,
+          "size": 86,
+          "top_topics": [
+            "consumerism",
+            "personal preferences",
+            "consumer behavior"
+          ]
+        },
+        {
+          "cluster_id": 612,
+          "size": 84,
+          "top_topics": [
+            "retirement",
+            "retirement planning",
+            "personal finances"
+          ]
+        },
+        {
+          "cluster_id": 595,
+          "size": 82,
+          "top_topics": [
+            "sharpe ratio",
+            "financial ratios",
+            "stock performance"
+          ]
+        },
+        {
+          "cluster_id": 630,
+          "size": 81,
+          "top_topics": [
+            "corporate governance",
+            "shareholder value",
+            "market share"
+          ]
+        },
+        {
+          "cluster_id": 705,
+          "size": 70,
+          "top_topics": [
+            "futures markets",
+            "futures trading",
+            "stock options"
+          ]
+        },
+        {
+          "cluster_id": 790,
+          "size": 51,
+          "top_topics": [
+            "small business",
+            "bakery",
+            "small business management"
+          ]
+        },
+        {
+          "cluster_id": 823,
+          "size": 35,
+          "top_topics": [
+            "discount rate",
+            "discount rates",
+            "offer"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 14,
+      "label": "Food and Beverage",
+      "leiden_cluster_count": 26,
+      "total_topics": 4439,
+      "leiden_clusters": [
+        {
+          "cluster_id": 6,
+          "size": 345,
+          "top_topics": [
+            "food preservation",
+            "trees",
+            "fruit"
+          ]
+        },
+        {
+          "cluster_id": 10,
+          "size": 343,
+          "top_topics": [
+            "cheese",
+            "recipes",
+            "seafood"
+          ]
+        },
+        {
+          "cluster_id": 11,
+          "size": 330,
+          "top_topics": [
+            "cooking techniques",
+            "italian cuisine",
+            "food preparation"
+          ]
+        },
+        {
+          "cluster_id": 30,
+          "size": 298,
+          "top_topics": [
+            "baking",
+            "bread making",
+            "baking techniques"
+          ]
+        },
+        {
+          "cluster_id": 43,
+          "size": 262,
+          "top_topics": [
+            "seasoning",
+            "spice blends",
+            "mediterranean cuisine"
+          ]
+        },
+        {
+          "cluster_id": 82,
+          "size": 219,
+          "top_topics": [
+            "grilling",
+            "smoking",
+            "meat cooking"
+          ]
+        },
+        {
+          "cluster_id": 80,
+          "size": 218,
+          "top_topics": [
+            "ingredient preparation",
+            "fish preparation",
+            "fish cooking"
+          ]
+        },
+        {
+          "cluster_id": 100,
+          "size": 207,
+          "top_topics": [
+            "meat preparation",
+            "chicken recipes",
+            "roasting"
+          ]
+        },
+        {
+          "cluster_id": 160,
+          "size": 170,
+          "top_topics": [
+            "coffee",
+            "coffee brewing",
+            "beer"
+          ]
+        },
+        {
+          "cluster_id": 187,
+          "size": 166,
+          "top_topics": [
+            "desserts",
+            "dessert",
+            "dessert recipes"
+          ]
+        },
+        {
+          "cluster_id": 231,
+          "size": 161,
+          "top_topics": [
+            "food",
+            "cooking",
+            "food and drink"
+          ]
+        },
+        {
+          "cluster_id": 205,
+          "size": 159,
+          "top_topics": [
+            "food storage",
+            "storage",
+            "kitchen equipment"
+          ]
+        },
+        {
+          "cluster_id": 239,
+          "size": 154,
+          "top_topics": [
+            "meat dishes",
+            "beef recipes",
+            "artichokes"
+          ]
+        },
+        {
+          "cluster_id": 251,
+          "size": 152,
+          "top_topics": [
+            "pressure cooking",
+            "soup recipes",
+            "soup"
+          ]
+        },
+        {
+          "cluster_id": 305,
+          "size": 139,
+          "top_topics": [
+            "pasta",
+            "pasta dishes",
+            "pasta making"
+          ]
+        },
+        {
+          "cluster_id": 350,
+          "size": 131,
+          "top_topics": [
+            "pizza dough",
+            "pizza making",
+            "pizza toppings"
+          ]
+        },
+        {
+          "cluster_id": 337,
+          "size": 125,
+          "top_topics": [
+            "beans",
+            "indian cuisine",
+            "instant pot recipes"
+          ]
+        },
+        {
+          "cluster_id": 349,
+          "size": 122,
+          "top_topics": [
+            "potato preparation",
+            "omelets",
+            "pie crust"
+          ]
+        },
+        {
+          "cluster_id": 414,
+          "size": 119,
+          "top_topics": [
+            "italy",
+            "italian cooking",
+            "italian culture"
+          ]
+        },
+        {
+          "cluster_id": 475,
+          "size": 110,
+          "top_topics": [
+            "breakfast",
+            "risotto",
+            "rice dishes"
+          ]
+        },
+        {
+          "cluster_id": 547,
+          "size": 96,
+          "top_topics": [
+            "salads",
+            "salad recipes",
+            "salad"
+          ]
+        },
+        {
+          "cluster_id": 553,
+          "size": 91,
+          "top_topics": [
+            "wine",
+            "picnic",
+            "cellar"
+          ]
+        },
+        {
+          "cluster_id": 550,
+          "size": 90,
+          "top_topics": [
+            "food safety",
+            "recipe instructions",
+            "grilling techniques"
+          ]
+        },
+        {
+          "cluster_id": 584,
+          "size": 90,
+          "top_topics": [
+            "recipe",
+            "recipe ingredients",
+            "recipe preparation"
+          ]
+        },
+        {
+          "cluster_id": 639,
+          "size": 78,
+          "top_topics": [
+            "eggs",
+            "egg dishes",
+            "egg preparation"
+          ]
+        },
+        {
+          "cluster_id": 730,
+          "size": 64,
+          "top_topics": [
+            "couscous",
+            "ingredient measurement",
+            "glaze"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 15,
+      "label": "Human Health & Life",
+      "leiden_cluster_count": 28,
+      "total_topics": 4212,
+      "leiden_clusters": [
+        {
+          "cluster_id": 7,
+          "size": 360,
+          "top_topics": [
+            "trauma",
+            "illness",
+            "health"
+          ]
+        },
+        {
+          "cluster_id": 32,
+          "size": 276,
+          "top_topics": [
+            "genetics",
+            "genetic engineering",
+            "biotechnology"
+          ]
+        },
+        {
+          "cluster_id": 50,
+          "size": 254,
+          "top_topics": [
+            "habit formation",
+            "personal habits",
+            "habits"
+          ]
+        },
+        {
+          "cluster_id": 73,
+          "size": 225,
+          "top_topics": [
+            "photosynthesis",
+            "cell biology",
+            "metabolism"
+          ]
+        },
+        {
+          "cluster_id": 86,
+          "size": 219,
+          "top_topics": [
+            "power",
+            "physical endurance",
+            "physical activity"
+          ]
+        },
+        {
+          "cluster_id": 124,
+          "size": 190,
+          "top_topics": [
+            "healthcare",
+            "hospital",
+            "human condition"
+          ]
+        },
+        {
+          "cluster_id": 126,
+          "size": 189,
+          "top_topics": [
+            "aging",
+            "old age",
+            "longevity"
+          ]
+        },
+        {
+          "cluster_id": 110,
+          "size": 189,
+          "top_topics": [
+            "human physiology",
+            "diabetes",
+            "physiology"
+          ]
+        },
+        {
+          "cluster_id": 139,
+          "size": 184,
+          "top_topics": [
+            "death",
+            "grief",
+            "mortality"
+          ]
+        },
+        {
+          "cluster_id": 149,
+          "size": 182,
+          "top_topics": [
+            "disease",
+            "public health",
+            "medical research"
+          ]
+        },
+        {
+          "cluster_id": 168,
+          "size": 167,
+          "top_topics": [
+            "hormones",
+            "chemistry",
+            "biochemistry"
+          ]
+        },
+        {
+          "cluster_id": 169,
+          "size": 164,
+          "top_topics": [
+            "human remains",
+            "diving",
+            "waste management"
+          ]
+        },
+        {
+          "cluster_id": 222,
+          "size": 152,
+          "top_topics": [
+            "cell division",
+            "meiosis",
+            "miscarriage"
+          ]
+        },
+        {
+          "cluster_id": 267,
+          "size": 150,
+          "top_topics": [
+            "addiction",
+            "drug use",
+            "alcohol consumption"
+          ]
+        },
+        {
+          "cluster_id": 329,
+          "size": 140,
+          "top_topics": [
+            "experimentation",
+            "experiment",
+            "experimental design"
+          ]
+        },
+        {
+          "cluster_id": 280,
+          "size": 139,
+          "top_topics": [
+            "cancer",
+            "epidemiology",
+            "medical investigation"
+          ]
+        },
+        {
+          "cluster_id": 400,
+          "size": 118,
+          "top_topics": [
+            "medical diagnosis",
+            "testing",
+            "blood"
+          ]
+        },
+        {
+          "cluster_id": 429,
+          "size": 114,
+          "top_topics": [
+            "medical treatment",
+            "therapy",
+            "intervention"
+          ]
+        },
+        {
+          "cluster_id": 439,
+          "size": 108,
+          "top_topics": [
+            "abortion",
+            "time period",
+            "contraception"
+          ]
+        },
+        {
+          "cluster_id": 455,
+          "size": 106,
+          "top_topics": [
+            "yoga",
+            "breathing techniques",
+            "challenge"
+          ]
+        },
+        {
+          "cluster_id": 532,
+          "size": 96,
+          "top_topics": [
+            "medical emergency",
+            "emergency",
+            "emergency procedures"
+          ]
+        },
+        {
+          "cluster_id": 554,
+          "size": 89,
+          "top_topics": [
+            "sleep",
+            "insomnia",
+            "cryonics"
+          ]
+        },
+        {
+          "cluster_id": 703,
+          "size": 73,
+          "top_topics": [
+            "anatomy",
+            "human anatomy",
+            "human body"
+          ]
+        },
+        {
+          "cluster_id": 690,
+          "size": 71,
+          "top_topics": [
+            "health issues",
+            "preparation",
+            "medical issues"
+          ]
+        },
+        {
+          "cluster_id": 694,
+          "size": 70,
+          "top_topics": [
+            "medical technology",
+            "medical supplies",
+            "first aid"
+          ]
+        },
+        {
+          "cluster_id": 725,
+          "size": 68,
+          "top_topics": [
+            "medical procedures",
+            "surgery",
+            "euthanasia"
+          ]
+        },
+        {
+          "cluster_id": 739,
+          "size": 67,
+          "top_topics": [
+            "medical examination",
+            "medical",
+            "student life"
+          ]
+        },
+        {
+          "cluster_id": 768,
+          "size": 52,
+          "top_topics": [
+            "toxicology",
+            "medical cases",
+            "contamination"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 16,
+      "label": "Earth and Space Science",
+      "leiden_cluster_count": 44,
+      "total_topics": 6093,
+      "leiden_clusters": [
+        {
+          "cluster_id": 3,
+          "size": 362,
+          "top_topics": [
+            "geology",
+            "paleontology",
+            "plate tectonics"
+          ]
+        },
+        {
+          "cluster_id": 12,
+          "size": 323,
+          "top_topics": [
+            "winter",
+            "snow",
+            "hibernation"
+          ]
+        },
+        {
+          "cluster_id": 14,
+          "size": 311,
+          "top_topics": [
+            "water",
+            "plant physiology",
+            "plant anatomy"
+          ]
+        },
+        {
+          "cluster_id": 75,
+          "size": 234,
+          "top_topics": [
+            "animals",
+            "animal behavior",
+            "dogs"
+          ]
+        },
+        {
+          "cluster_id": 97,
+          "size": 207,
+          "top_topics": [
+            "mars",
+            "space colonization",
+            "mars colonization"
+          ]
+        },
+        {
+          "cluster_id": 108,
+          "size": 197,
+          "top_topics": [
+            "extinction",
+            "environmentalism",
+            "faulkner"
+          ]
+        },
+        {
+          "cluster_id": 114,
+          "size": 195,
+          "top_topics": [
+            "terraforming",
+            "planetary science",
+            "planetary exploration"
+          ]
+        },
+        {
+          "cluster_id": 125,
+          "size": 190,
+          "top_topics": [
+            "oceanography",
+            "beach",
+            "ocean"
+          ]
+        },
+        {
+          "cluster_id": 138,
+          "size": 179,
+          "top_topics": [
+            "astronomy",
+            "astrophysics",
+            "comets"
+          ]
+        },
+        {
+          "cluster_id": 194,
+          "size": 168,
+          "top_topics": [
+            "arctic exploration",
+            "antarctica",
+            "polar bears"
+          ]
+        },
+        {
+          "cluster_id": 196,
+          "size": 159,
+          "top_topics": [
+            "autumn",
+            "plant morphology",
+            "flowers"
+          ]
+        },
+        {
+          "cluster_id": 197,
+          "size": 158,
+          "top_topics": [
+            "microbiology",
+            "hydroponics",
+            "kiln"
+          ]
+        },
+        {
+          "cluster_id": 225,
+          "size": 154,
+          "top_topics": [
+            "survival",
+            "apocalypse",
+            "desert survival"
+          ]
+        },
+        {
+          "cluster_id": 235,
+          "size": 153,
+          "top_topics": [
+            "animal welfare",
+            "domestic animals",
+            "domestication"
+          ]
+        },
+        {
+          "cluster_id": 245,
+          "size": 150,
+          "top_topics": [
+            "climate change",
+            "domestic disturbance",
+            "environmental policy"
+          ]
+        },
+        {
+          "cluster_id": 275,
+          "size": 149,
+          "top_topics": [
+            "landscape",
+            "geography",
+            "rural landscapes"
+          ]
+        },
+        {
+          "cluster_id": 244,
+          "size": 145,
+          "top_topics": [
+            "bryophytes",
+            "life cycle",
+            "vascular plants"
+          ]
+        },
+        {
+          "cluster_id": 319,
+          "size": 136,
+          "top_topics": [
+            "ecology",
+            "island exploration",
+            "island"
+          ]
+        },
+        {
+          "cluster_id": 366,
+          "size": 125,
+          "top_topics": [
+            "wildlife",
+            "marine biology",
+            "dolphins"
+          ]
+        },
+        {
+          "cluster_id": 351,
+          "size": 124,
+          "top_topics": [
+            "adaptation",
+            "human adaptation",
+            "species"
+          ]
+        },
+        {
+          "cluster_id": 375,
+          "size": 124,
+          "top_topics": [
+            "agriculture",
+            "farming",
+            "flashlight"
+          ]
+        },
+        {
+          "cluster_id": 404,
+          "size": 120,
+          "top_topics": [
+            "beauty",
+            "wildlife observation",
+            "irish history"
+          ]
+        },
+        {
+          "cluster_id": 396,
+          "size": 118,
+          "top_topics": [
+            "gardening",
+            "gardens",
+            "plants"
+          ]
+        },
+        {
+          "cluster_id": 411,
+          "size": 118,
+          "top_topics": [
+            "reproduction",
+            "plant reproduction",
+            "angiosperms"
+          ]
+        },
+        {
+          "cluster_id": 423,
+          "size": 112,
+          "top_topics": [
+            "fishing",
+            "data science",
+            "fly fishing"
+          ]
+        },
+        {
+          "cluster_id": 460,
+          "size": 111,
+          "top_topics": [
+            "nature",
+            "science",
+            "forest"
+          ]
+        },
+        {
+          "cluster_id": 440,
+          "size": 110,
+          "top_topics": [
+            "wild animals",
+            "jungle",
+            "jungle exploration"
+          ]
+        },
+        {
+          "cluster_id": 458,
+          "size": 105,
+          "top_topics": [
+            "ocean exploration",
+            "coastal exploration",
+            "river exploration"
+          ]
+        },
+        {
+          "cluster_id": 499,
+          "size": 102,
+          "top_topics": [
+            "desert",
+            "africa",
+            "desert warfare"
+          ]
+        },
+        {
+          "cluster_id": 484,
+          "size": 101,
+          "top_topics": [
+            "antiquities",
+            "cancer research",
+            "biological research"
+          ]
+        },
+        {
+          "cluster_id": 500,
+          "size": 97,
+          "top_topics": [
+            "lighthouses",
+            "fossils",
+            "phylogeny"
+          ]
+        },
+        {
+          "cluster_id": 518,
+          "size": 96,
+          "top_topics": [
+            "fireworks",
+            "insects",
+            "human error"
+          ]
+        },
+        {
+          "cluster_id": 560,
+          "size": 95,
+          "top_topics": [
+            "environment",
+            "outdoor activities",
+            "marine life"
+          ]
+        },
+        {
+          "cluster_id": 539,
+          "size": 93,
+          "top_topics": [
+            "heat",
+            "climate",
+            "weather and environment"
+          ]
+        },
+        {
+          "cluster_id": 545,
+          "size": 92,
+          "top_topics": [
+            "eels",
+            "ocean currents",
+            "pressure"
+          ]
+        },
+        {
+          "cluster_id": 558,
+          "size": 90,
+          "top_topics": [
+            "interactions",
+            "antitrust law",
+            "biodiversity"
+          ]
+        },
+        {
+          "cluster_id": 583,
+          "size": 85,
+          "top_topics": [
+            "earth",
+            "long earth",
+            "byron"
+          ]
+        },
+        {
+          "cluster_id": 632,
+          "size": 82,
+          "top_topics": [
+            "classification",
+            "botany",
+            "taxonomy"
+          ]
+        },
+        {
+          "cluster_id": 658,
+          "size": 78,
+          "top_topics": [
+            "woodworking",
+            "wood anatomy",
+            "forestry"
+          ]
+        },
+        {
+          "cluster_id": 664,
+          "size": 77,
+          "top_topics": [
+            "biology",
+            "plant biology",
+            "spiders"
+          ]
+        },
+        {
+          "cluster_id": 692,
+          "size": 72,
+          "top_topics": [
+            "water management",
+            "sustainability",
+            "factory"
+          ]
+        },
+        {
+          "cluster_id": 710,
+          "size": 68,
+          "top_topics": [
+            "water supply",
+            "supplies",
+            "rationing"
+          ]
+        },
+        {
+          "cluster_id": 691,
+          "size": 68,
+          "top_topics": [
+            "wraiths",
+            "gibbon",
+            "chimpanzees"
+          ]
+        },
+        {
+          "cluster_id": 763,
+          "size": 60,
+          "top_topics": [
+            "volcanoes",
+            "volcano",
+            "volcanic activity"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 17,
+      "label": "Data Science & AI",
+      "leiden_cluster_count": 53,
+      "total_topics": 6808,
+      "leiden_clusters": [
+        {
+          "cluster_id": 5,
+          "size": 355,
+          "top_topics": [
+            "linear algebra",
+            "dimensionality reduction",
+            "vector spaces"
+          ]
+        },
+        {
+          "cluster_id": 39,
+          "size": 274,
+          "top_topics": [
+            "linear regression",
+            "probability distributions",
+            "logistic regression"
+          ]
+        },
+        {
+          "cluster_id": 57,
+          "size": 243,
+          "top_topics": [
+            "neural networks",
+            "deep learning",
+            "keras"
+          ]
+        },
+        {
+          "cluster_id": 93,
+          "size": 215,
+          "top_topics": [
+            "cognitive bias",
+            "image recognition",
+            "bias"
+          ]
+        },
+        {
+          "cluster_id": 112,
+          "size": 203,
+          "top_topics": [
+            "natural language processing",
+            "linguistics",
+            "large language models"
+          ]
+        },
+        {
+          "cluster_id": 117,
+          "size": 201,
+          "top_topics": [
+            "bayesian networks",
+            "bayesian inference",
+            "bayes' theorem"
+          ]
+        },
+        {
+          "cluster_id": 116,
+          "size": 191,
+          "top_topics": [
+            "geometry",
+            "coordinate systems",
+            "dirigibles"
+          ]
+        },
+        {
+          "cluster_id": 132,
+          "size": 189,
+          "top_topics": [
+            "data structures",
+            "search algorithms",
+            "maze"
+          ]
+        },
+        {
+          "cluster_id": 118,
+          "size": 189,
+          "top_topics": [
+            "machine learning",
+            "model evaluation",
+            "scikit-learn"
+          ]
+        },
+        {
+          "cluster_id": 143,
+          "size": 173,
+          "top_topics": [
+            "data augmentation",
+            "image generation",
+            "image resizing"
+          ]
+        },
+        {
+          "cluster_id": 189,
+          "size": 170,
+          "top_topics": [
+            "artificial intelligence",
+            "computer science",
+            "foundation models"
+          ]
+        },
+        {
+          "cluster_id": 161,
+          "size": 169,
+          "top_topics": [
+            "optimization",
+            "reinforcement learning",
+            "optimization algorithms"
+          ]
+        },
+        {
+          "cluster_id": 182,
+          "size": 169,
+          "top_topics": [
+            "text generation",
+            "masks",
+            "data generation"
+          ]
+        },
+        {
+          "cluster_id": 257,
+          "size": 150,
+          "top_topics": [
+            "model training",
+            "text classification",
+            "datasets"
+          ]
+        },
+        {
+          "cluster_id": 236,
+          "size": 150,
+          "top_topics": [
+            "algorithms",
+            "algorithm design",
+            "sorting algorithms"
+          ]
+        },
+        {
+          "cluster_id": 250,
+          "size": 148,
+          "top_topics": [
+            "latent variables",
+            "covariance matrix",
+            "correlation"
+          ]
+        },
+        {
+          "cluster_id": 272,
+          "size": 147,
+          "top_topics": [
+            "stock picking",
+            "quantitative finance",
+            "numerical methods"
+          ]
+        },
+        {
+          "cluster_id": 283,
+          "size": 144,
+          "top_topics": [
+            "data preprocessing",
+            "learning rate",
+            "transformer models"
+          ]
+        },
+        {
+          "cluster_id": 293,
+          "size": 140,
+          "top_topics": [
+            "probability",
+            "uncertainty",
+            "randomness"
+          ]
+        },
+        {
+          "cluster_id": 312,
+          "size": 138,
+          "top_topics": [
+            "model deployment",
+            "model architecture",
+            "voigt-kampff scale"
+          ]
+        },
+        {
+          "cluster_id": 355,
+          "size": 131,
+          "top_topics": [
+            "transfer learning",
+            "word embeddings",
+            "unsupervised learning"
+          ]
+        },
+        {
+          "cluster_id": 318,
+          "size": 130,
+          "top_topics": [
+            "regularization",
+            "social norms",
+            "moving averages"
+          ]
+        },
+        {
+          "cluster_id": 345,
+          "size": 126,
+          "top_topics": [
+            "support vector machines",
+            "classification algorithms",
+            "perceptron"
+          ]
+        },
+        {
+          "cluster_id": 361,
+          "size": 124,
+          "top_topics": [
+            "statistical analysis",
+            "statistical inference",
+            "hypothesis testing"
+          ]
+        },
+        {
+          "cluster_id": 419,
+          "size": 122,
+          "top_topics": [
+            "convolutional neural networks",
+            "image processing",
+            "convolutional networks"
+          ]
+        },
+        {
+          "cluster_id": 407,
+          "size": 122,
+          "top_topics": [
+            "tensorflow",
+            "tensor operations",
+            "data loading"
+          ]
+        },
+        {
+          "cluster_id": 393,
+          "size": 121,
+          "top_topics": [
+            "data analysis",
+            "analysis",
+            "mathematical modeling"
+          ]
+        },
+        {
+          "cluster_id": 377,
+          "size": 118,
+          "top_topics": [
+            "numpy",
+            "boolean satisfiability",
+            "np-completeness"
+          ]
+        },
+        {
+          "cluster_id": 437,
+          "size": 118,
+          "top_topics": [
+            "data visualization",
+            "graph theory",
+            "graphical models"
+          ]
+        },
+        {
+          "cluster_id": 370,
+          "size": 118,
+          "top_topics": [
+            "derivatives",
+            "skateboarding",
+            "differential equations"
+          ]
+        },
+        {
+          "cluster_id": 415,
+          "size": 115,
+          "top_topics": [
+            "autoencoders",
+            "entropy",
+            "variational autoencoders"
+          ]
+        },
+        {
+          "cluster_id": 412,
+          "size": 114,
+          "top_topics": [
+            "reasoning",
+            "abstraction",
+            "abstract art"
+          ]
+        },
+        {
+          "cluster_id": 469,
+          "size": 111,
+          "top_topics": [
+            "gradient descent",
+            "gradient boosting",
+            "gradients"
+          ]
+        },
+        {
+          "cluster_id": 493,
+          "size": 104,
+          "top_topics": [
+            "statistical modeling",
+            "random forests",
+            "probabilistic models"
+          ]
+        },
+        {
+          "cluster_id": 492,
+          "size": 103,
+          "top_topics": [
+            "programming",
+            "learning",
+            "information theory"
+          ]
+        },
+        {
+          "cluster_id": 521,
+          "size": 95,
+          "top_topics": [
+            "cross-validation",
+            "network flow",
+            "maxflow"
+          ]
+        },
+        {
+          "cluster_id": 515,
+          "size": 95,
+          "top_topics": [
+            "fine-tuning",
+            "hyperparameter tuning",
+            "finetuning"
+          ]
+        },
+        {
+          "cluster_id": 588,
+          "size": 88,
+          "top_topics": [
+            "regression",
+            "superforecasting",
+            "regression analysis"
+          ]
+        },
+        {
+          "cluster_id": 565,
+          "size": 88,
+          "top_topics": [
+            "supervised learning",
+            "data mining",
+            "density estimation"
+          ]
+        },
+        {
+          "cluster_id": 576,
+          "size": 87,
+          "top_topics": [
+            "recommendation systems",
+            "diffusion models",
+            "rating agencies"
+          ]
+        },
+        {
+          "cluster_id": 614,
+          "size": 87,
+          "top_topics": [
+            "prediction",
+            "predictive modeling",
+            "model selection"
+          ]
+        },
+        {
+          "cluster_id": 611,
+          "size": 84,
+          "top_topics": [
+            "transfiguration",
+            "linear transformations",
+            "transmutation"
+          ]
+        },
+        {
+          "cluster_id": 655,
+          "size": 82,
+          "top_topics": [
+            "segmentation",
+            "art market",
+            "image segmentation"
+          ]
+        },
+        {
+          "cluster_id": 622,
+          "size": 82,
+          "top_topics": [
+            "clustering",
+            "k-means clustering",
+            "clustering algorithms"
+          ]
+        },
+        {
+          "cluster_id": 637,
+          "size": 80,
+          "top_topics": [
+            "causality",
+            "causal inference",
+            "counterfactuals"
+          ]
+        },
+        {
+          "cluster_id": 672,
+          "size": 77,
+          "top_topics": [
+            "inference",
+            "siamese networks",
+            "inference algorithms"
+          ]
+        },
+        {
+          "cluster_id": 659,
+          "size": 77,
+          "top_topics": [
+            "backpropagation",
+            "automatic differentiation",
+            "chain rule"
+          ]
+        },
+        {
+          "cluster_id": 669,
+          "size": 75,
+          "top_topics": [
+            "feature selection",
+            "mercenaries",
+            "lasso regression"
+          ]
+        },
+        {
+          "cluster_id": 759,
+          "size": 59,
+          "top_topics": [
+            "environmental issues",
+            "time complexity",
+            "model complexity"
+          ]
+        },
+        {
+          "cluster_id": 829,
+          "size": 37,
+          "top_topics": [
+            "machine learning algorithms",
+            "machine learning models",
+            "supervised machine learning"
+          ]
+        },
+        {
+          "cluster_id": 830,
+          "size": 35,
+          "top_topics": [
+            "ensemble methods",
+            "ensemble learning",
+            "bagging"
+          ]
+        },
+        {
+          "cluster_id": 839,
+          "size": 27,
+          "top_topics": [
+            "pattern recognition",
+            "mnist dataset",
+            "mnist"
+          ]
+        },
+        {
+          "cluster_id": 843,
+          "size": 18,
+          "top_topics": [
+            "heuristics",
+            "heuristic search",
+            "heuristic functions"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 18,
+      "label": "Global History & Culture",
+      "leiden_cluster_count": 42,
+      "total_topics": 6730,
+      "leiden_clusters": [
+        {
+          "cluster_id": 15,
+          "size": 310,
+          "top_topics": [
+            "colonialism",
+            "imperialism",
+            "colonial america"
+          ]
+        },
+        {
+          "cluster_id": 22,
+          "size": 295,
+          "top_topics": [
+            "cold war",
+            "russian literature",
+            "russia"
+          ]
+        },
+        {
+          "cluster_id": 20,
+          "size": 293,
+          "top_topics": [
+            "buenos aires",
+            "mexico",
+            "argentine literature"
+          ]
+        },
+        {
+          "cluster_id": 31,
+          "size": 280,
+          "top_topics": [
+            "historical events",
+            "historical context",
+            "political history"
+          ]
+        },
+        {
+          "cluster_id": 37,
+          "size": 279,
+          "top_topics": [
+            "indigenous peoples",
+            "tribes",
+            "indian culture"
+          ]
+        },
+        {
+          "cluster_id": 36,
+          "size": 278,
+          "top_topics": [
+            "race relations",
+            "social justice",
+            "caste system"
+          ]
+        },
+        {
+          "cluster_id": 35,
+          "size": 273,
+          "top_topics": [
+            "culture",
+            "cultural exchange",
+            "cultural revolution"
+          ]
+        },
+        {
+          "cluster_id": 47,
+          "size": 247,
+          "top_topics": [
+            "china",
+            "chinese culture",
+            "economic development"
+          ]
+        },
+        {
+          "cluster_id": 84,
+          "size": 220,
+          "top_topics": [
+            "ancient greece",
+            "roman empire",
+            "roman history"
+          ]
+        },
+        {
+          "cluster_id": 103,
+          "size": 202,
+          "top_topics": [
+            "japanese cuisine",
+            "japanese culture",
+            "japan"
+          ]
+        },
+        {
+          "cluster_id": 106,
+          "size": 201,
+          "top_topics": [
+            "immigration",
+            "migration",
+            "exile"
+          ]
+        },
+        {
+          "cluster_id": 120,
+          "size": 192,
+          "top_topics": [
+            "early american politics",
+            "19th century literature",
+            "russian history"
+          ]
+        },
+        {
+          "cluster_id": 129,
+          "size": 182,
+          "top_topics": [
+            "history",
+            "venice",
+            "crusades"
+          ]
+        },
+        {
+          "cluster_id": 177,
+          "size": 173,
+          "top_topics": [
+            "colonization",
+            "settlement",
+            "american west"
+          ]
+        },
+        {
+          "cluster_id": 211,
+          "size": 169,
+          "top_topics": [
+            "social customs",
+            "tradition",
+            "cultural traditions"
+          ]
+        },
+        {
+          "cluster_id": 200,
+          "size": 164,
+          "top_topics": [
+            "chinese history",
+            "european history",
+            "emperor"
+          ]
+        },
+        {
+          "cluster_id": 183,
+          "size": 163,
+          "top_topics": [
+            "mediterranean trade",
+            "mediterranean history",
+            "etruscans"
+          ]
+        },
+        {
+          "cluster_id": 184,
+          "size": 158,
+          "top_topics": [
+            "20th century literature",
+            "political change",
+            "1920s"
+          ]
+        },
+        {
+          "cluster_id": 246,
+          "size": 154,
+          "top_topics": [
+            "social class",
+            "poverty",
+            "hunger"
+          ]
+        },
+        {
+          "cluster_id": 274,
+          "size": 150,
+          "top_topics": [
+            "generational differences",
+            "generations",
+            "depression"
+          ]
+        },
+        {
+          "cluster_id": 261,
+          "size": 147,
+          "top_topics": [
+            "civil rights",
+            "civil rights movement",
+            "african american history"
+          ]
+        },
+        {
+          "cluster_id": 259,
+          "size": 146,
+          "top_topics": [
+            "travel",
+            "india",
+            "new guinea"
+          ]
+        },
+        {
+          "cluster_id": 278,
+          "size": 140,
+          "top_topics": [
+            "reconstruction",
+            "art restoration",
+            "restoration"
+          ]
+        },
+        {
+          "cluster_id": 292,
+          "size": 139,
+          "top_topics": [
+            "post-apocalyptic",
+            "resource scarcity",
+            "disaster recovery"
+          ]
+        },
+        {
+          "cluster_id": 301,
+          "size": 138,
+          "top_topics": [
+            "ancient civilizations",
+            "civilization",
+            "human history"
+          ]
+        },
+        {
+          "cluster_id": 288,
+          "size": 138,
+          "top_topics": [
+            "barcelona",
+            "spain",
+            "spanish conquest"
+          ]
+        },
+        {
+          "cluster_id": 303,
+          "size": 134,
+          "top_topics": [
+            "local history",
+            "american society",
+            "boston"
+          ]
+        },
+        {
+          "cluster_id": 359,
+          "size": 124,
+          "top_topics": [
+            "demographics",
+            "population growth",
+            "population dynamics"
+          ]
+        },
+        {
+          "cluster_id": 420,
+          "size": 118,
+          "top_topics": [
+            "slavery",
+            "captivity",
+            "slaves"
+          ]
+        },
+        {
+          "cluster_id": 417,
+          "size": 114,
+          "top_topics": [
+            "family history",
+            "genealogy",
+            "family background"
+          ]
+        },
+        {
+          "cluster_id": 468,
+          "size": 108,
+          "top_topics": [
+            "early american history",
+            "dinosaurs",
+            "ancient cultures"
+          ]
+        },
+        {
+          "cluster_id": 472,
+          "size": 106,
+          "top_topics": [
+            "social welfare",
+            "east india company",
+            "servants"
+          ]
+        },
+        {
+          "cluster_id": 457,
+          "size": 106,
+          "top_topics": [
+            "human rights",
+            "cuba",
+            "dictatorship"
+          ]
+        },
+        {
+          "cluster_id": 520,
+          "size": 105,
+          "top_topics": [
+            "rural life",
+            "rural setting",
+            "american culture"
+          ]
+        },
+        {
+          "cluster_id": 508,
+          "size": 101,
+          "top_topics": [
+            "southern culture",
+            "southern society",
+            "southern history"
+          ]
+        },
+        {
+          "cluster_id": 504,
+          "size": 99,
+          "top_topics": [
+            "archaeology",
+            "ancient technology",
+            "mycenaean civilization"
+          ]
+        },
+        {
+          "cluster_id": 543,
+          "size": 95,
+          "top_topics": [
+            "cultural differences",
+            "cultural comparison",
+            "historical comparisons"
+          ]
+        },
+        {
+          "cluster_id": 665,
+          "size": 81,
+          "top_topics": [
+            "american history",
+            "military history",
+            "change"
+          ]
+        },
+        {
+          "cluster_id": 634,
+          "size": 78,
+          "top_topics": [
+            "european union",
+            "europe",
+            "international conflict"
+          ]
+        },
+        {
+          "cluster_id": 742,
+          "size": 61,
+          "top_topics": [
+            "disaster relief",
+            "humanitarian aid",
+            "humanitarian crisis"
+          ]
+        },
+        {
+          "cluster_id": 770,
+          "size": 52,
+          "top_topics": [
+            "shamanism",
+            "genghis khan",
+            "barbarian tribes"
+          ]
+        },
+        {
+          "cluster_id": 844,
+          "size": 17,
+          "top_topics": [
+            "nomads",
+            "nomadism",
+            "digital nomadism"
+          ]
+        }
+      ]
+    },
+    {
+      "super_cluster_id": 19,
+      "label": "Human Connection & Family",
+      "leiden_cluster_count": 23,
+      "total_topics": 3731,
+      "leiden_clusters": [
+        {
+          "cluster_id": 13,
+          "size": 330,
+          "top_topics": [
+            "relationships",
+            "literary criticism",
+            "power dynamics"
+          ]
+        },
+        {
+          "cluster_id": 40,
+          "size": 268,
+          "top_topics": [
+            "family relationships",
+            "family",
+            "childhood"
+          ]
+        },
+        {
+          "cluster_id": 96,
+          "size": 223,
+          "top_topics": [
+            "domestic life",
+            "domesticity",
+            "family life"
+          ]
+        },
+        {
+          "cluster_id": 91,
+          "size": 212,
+          "top_topics": [
+            "youth",
+            "children",
+            "child behavior"
+          ]
+        },
+        {
+          "cluster_id": 102,
+          "size": 204,
+          "top_topics": [
+            "family dynamics",
+            "mental health",
+            "family conflict"
+          ]
+        },
+        {
+          "cluster_id": 134,
+          "size": 195,
+          "top_topics": [
+            "love",
+            "desire",
+            "passion"
+          ]
+        },
+        {
+          "cluster_id": 151,
+          "size": 187,
+          "top_topics": [
+            "social interactions",
+            "social interaction",
+            "community"
+          ]
+        },
+        {
+          "cluster_id": 152,
+          "size": 180,
+          "top_topics": [
+            "relationship dynamics",
+            "sensuality",
+            "sexual encounter"
+          ]
+        },
+        {
+          "cluster_id": 164,
+          "size": 178,
+          "top_topics": [
+            "social status",
+            "social issues",
+            "social change"
+          ]
+        },
+        {
+          "cluster_id": 158,
+          "size": 175,
+          "top_topics": [
+            "friendship",
+            "childhood trauma",
+            "childhood experiences"
+          ]
+        },
+        {
+          "cluster_id": 217,
+          "size": 164,
+          "top_topics": [
+            "marriage",
+            "relationship conflict",
+            "divorce"
+          ]
+        },
+        {
+          "cluster_id": 206,
+          "size": 164,
+          "top_topics": [
+            "betrayal",
+            "trust",
+            "loyalty"
+          ]
+        },
+        {
+          "cluster_id": 193,
+          "size": 162,
+          "top_topics": [
+            "gift giving",
+            "charity",
+            "philanthropy"
+          ]
+        },
+        {
+          "cluster_id": 238,
+          "size": 155,
+          "top_topics": [
+            "human interaction",
+            "human relationships",
+            "interaction"
+          ]
+        },
+        {
+          "cluster_id": 255,
+          "size": 153,
+          "top_topics": [
+            "meeting",
+            "personal interactions",
+            "strangers"
+          ]
+        },
+        {
+          "cluster_id": 220,
+          "size": 151,
+          "top_topics": [
+            "christmas",
+            "christmas traditions",
+            "thanksgiving"
+          ]
+        },
+        {
+          "cluster_id": 481,
+          "size": 107,
+          "top_topics": [
+            "social etiquette",
+            "guilds",
+            "guild"
+          ]
+        },
+        {
+          "cluster_id": 462,
+          "size": 106,
+          "top_topics": [
+            "happiness",
+            "wealth and status",
+            "physical health"
+          ]
+        },
+        {
+          "cluster_id": 562,
+          "size": 93,
+          "top_topics": [
+            "personal relationships",
+            "romance",
+            "intimacy"
+          ]
+        },
+        {
+          "cluster_id": 535,
+          "size": 93,
+          "top_topics": [
+            "telepathy",
+            "sibling relationships",
+            "sibling rivalry"
+          ]
+        },
+        {
+          "cluster_id": 645,
+          "size": 79,
+          "top_topics": [
+            "child development",
+            "outsourcing",
+            "child psychology"
+          ]
+        },
+        {
+          "cluster_id": 684,
+          "size": 78,
+          "top_topics": [
+            "celebration",
+            "parties",
+            "party"
+          ]
+        },
+        {
+          "cluster_id": 722,
+          "size": 74,
+          "top_topics": [
+            "interpersonal relationships",
+            "interpersonal dynamics",
+            "interpersonal communication"
+          ]
+        }
+      ]
+    }
+  ]
+}

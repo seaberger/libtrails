@@ -241,15 +241,32 @@ data/
 
 ---
 
-## Page Structure
+## Page Structure (Updated Feb 2025)
 
 ```
-/                       → Theme Browser (home)
-/theme/[id]             → Theme Detail (books in theme)
-/book/[id]              → Book Detail (single book + related)
+/                       → Galaxy View (stunning homepage)
+/themes                 → Domain Browser (25 super-clusters, two-panel)
+/clusters               → Leiden Cluster Grid (845 clusters, filterable)
+/clusters/[id]          → Cluster Detail (books in cluster)
 /books                  → All Books (flat list/grid)
+/books/[id]             → Book Detail (single book + related)
 /search?q=...           → Search Results (optional dedicated page)
 ```
+
+### Navigation Tabs
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  LibTrails    [Universe]  [Themes]  [Clusters]  [Books]     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+| Tab | Route | Description |
+|-----|-------|-------------|
+| **Universe** | `/` | Galaxy/constellation UMAP visualization (homepage) |
+| **Themes** | `/themes` | 25 broad domains with two-panel browser |
+| **Clusters** | `/clusters` | 845 Leiden clusters in searchable grid |
+| **Books** | `/books` | All indexed books |
 
 ---
 
@@ -644,10 +661,9 @@ libtrails deploy # Uses saved Lightsail config
 
 ### Remaining Work
 
-**Phase 5: Search & Filter** (Not Started):
-- [ ] Add SearchBar.tsx React component
-- [ ] Debounced search with API calls
-- [ ] Real-time filtering on Theme Browser
+**Phase 5: Search & Filter** (Partial):
+- [x] Semantic theme search bar on clusters page
+- [ ] Add SearchBar.tsx React component for global search
 - [ ] Autocomplete suggestions
 
 **Phase 6: Polish & Deploy** (Not Started):
@@ -656,6 +672,14 @@ libtrails deploy # Uses saved Lightsail config
 - [ ] SEO metadata
 - [ ] Deploy to AWS Lightsail
 - [ ] Custom domain setup
+
+**Phase 7: Hierarchy & Navigation** (In Progress):
+- [x] Super-cluster generation (25 domains via robust k-means)
+- [x] UMAP projection for Galaxy view
+- [ ] Galaxy homepage component (D3.js)
+- [ ] Themes page (two-panel domain browser)
+- [ ] Rename current themes → clusters
+- [ ] Domain filter on clusters page
 
 **Additional Enhancements**:
 - [ ] LLM-generated cluster labels (instead of "topic1 / topic2 / topic3")
@@ -745,47 +769,63 @@ Browsing 845 Leiden clusters directly is overwhelming. Users need a higher-level
 **Method**: K-means on Leiden cluster centroid embeddings
 
 ```python
-# 1. Compute centroid for each of 845 Leiden clusters
-centroids[cluster_id] = mean(topic_embeddings_in_cluster)
+# Robust centroid approach - filters noise from short topic labels
+def compute_robust_centroid(cluster_id, top_n=15, min_label_length=4):
+    topics = get_cluster_topics(cluster_id)
+    # Filter short labels (< 4 chars) - weak embedding signal
+    topics = [t for t in topics if len(t['label']) >= min_label_length]
+    # Take top N by occurrence count
+    topics = sorted(topics, key=lambda t: t['occurrence_count'], reverse=True)[:top_n]
+    if len(topics) < 3:
+        return None
+    embeddings = [t['embedding'] for t in topics]
+    # Weight by log1p(occurrence) for stability
+    weights = np.array([np.log1p(t['occurrence_count']) for t in topics])
+    weights = weights / weights.sum()
+    return np.average(embeddings, axis=0, weights=weights)
 
-# 2. K-means clustering on centroids → 20 super-clusters
-kmeans = KMeans(n_clusters=20)
+# K-means on robust centroids → 25 super-clusters
+kmeans = KMeans(n_clusters=25)
 super_assignments = kmeans.fit_predict(centroid_matrix)
-
-# 3. LLM generates label for each super-cluster
 ```
 
-**Results** (Feb 5, 2025):
+**Results (v2 - Robust Centroids)** (Feb 5, 2025):
 
-| Domain | Label | Clusters | Topics |
-|--------|-------|----------|--------|
-| 0 | Conflict and Warfare | 31 | 3,779 |
-| 1 | Technology & Systems | 66 | 7,657 |
-| 2 | Chess & Strategy | 97 | 8,460 |
-| 3 | Social & Ethical Issues | 42 | 5,328 |
-| 4 | International Relations & Law | 38 | 5,538 |
-| 5 | Energy & Industry | 34 | 3,856 |
-| 6 | Business & Education | 34 | 3,715 |
-| 7 | Food & Drink | 28 | 4,663 |
-| 8 | Transportation & Rescue | 26 | 3,278 |
-| 9 | Biology & Health | 41 | 5,448 |
-| 10 | Creative Writing & Mind | 53 | 8,081 |
-| 11 | Artificial Intelligence & Math | 68 | 8,750 |
-| 12 | Ancient Civilizations & Cultures | 36 | 5,076 |
-| 13 | Human Condition | 39 | 5,960 |
-| 14 | Space Exploration & Earth | 42 | 5,733 |
-| 15 | Intelligence & Deception | 23 | 3,719 |
-| 16 | Financial Markets & Assets | 38 | 5,600 |
-| 17 | Entertainment & Culture | 43 | 6,043 |
-| 18 | Spirituality & Belief | 26 | 3,733 |
-| 19 | 18th Century European History | 40 | 4,251 |
+| ID | Label (auto-generated from top 3 topics) | Clusters |
+|----|------------------------------------------|----------|
+| 8 | Fiction & Fantasy (harry potter / oscar wilde / hogwarts) | 101 |
+| 15 | Daily Life (weather / domestic life / architecture) | 64 |
+| 9 | Philosophy (characters / conversation / philosophy) | 52 |
+| 7 | Nature & Survival (survival / rural life / nature) | 50 |
+| 14 | Technology (technology / surveillance / engineering) | 50 |
+| 23 | AI & Sci-Fi (artificial intelligence / time / robotics) | 46 |
+| 17 | History & Travel (travel / history / culture) | 41 |
+| 22 | Social Dynamics (communication / social class / leadership) | 37 |
+| 1 | Finance (risk management / finance / risk assessment) | 35 |
+| 4 | Thriller/Crime (crime / suspense / violence) | 34 |
+| 19 | Machine Learning (machine learning / neural networks / deep learning) | 33 |
+| 24 | Religion & Mythology (religion / magic / mythology) | 33 |
+| 18 | Consciousness (memory / death / dreams) | 32 |
+| 21 | Relationships (relationships / family relationships / family) | 31 |
+| 2 | Politics (politics / race relations / government) | 30 |
+| 3 | Space & Military (space exploration / space travel / military conflict) | 29 |
+| 5 | Food & Cooking (cooking techniques / food / baking) | 27 |
+| 10 | Arts & Perception (music / appearance / perception) | 23 |
+| 6 | Literature & Writing (literature / poetry / writing) | 20 |
+| 12 | Emergency/Security (rescue / security / medical emergency) | 19 |
+| 11 | Conflict (conflict / combat / military operations) | 17 |
+| 16 | Military Strategy (military / military strategy / interrogation) | 17 |
+| 20 | Adventure (adventure / exploration / navigation) | 15 |
+| 13 | Introspection (personal reflection / time travel / self-reflection) | 7 |
+| 0 | Identity (identity / personal identity / identity crisis) | 2 |
 
-**Quality Issues**:
-- Some domains are coherent (Transportation & Rescue, Financial Markets)
-- Some are junk drawers (Chess & Strategy contains random short-word topics)
-- Short topic labels (≤3 chars) have weak embedding signal
+**Data**: `experiments/super_clusters_robust.json`
 
-**Data**: `experiments/super_clusters.json`
+**Quality Improvements**:
+- Filtering labels < 4 chars removes embedding noise
+- Weighting by occurrence focuses on significant topics
+- Using top-N topics (instead of all) reduces outlier influence
+- Labels are now thematically coherent
 
 ### Implementation Tasks
 
@@ -847,27 +887,109 @@ super_assignments = kmeans.fit_predict(centroid_matrix)
 ### URL Structure (Updated)
 
 ```
-/                       → Redirect to /themes
-/themes                 → Domain browser (two-panel)
+/                       → Galaxy/Universe view (stunning homepage)
+/themes                 → Domain browser (two-panel, 25 super-clusters)
 /themes/{domain_id}     → Same page, domain pre-selected
-/clusters               → All clusters grid (renamed from /themes)
+/clusters               → All clusters grid (845 Leiden clusters)
 /clusters?domain={id}   → Filtered by domain
-/clusters/{cluster_id}  → Cluster detail (existing theme detail)
+/clusters/{cluster_id}  → Cluster detail (books in cluster)
 /books                  → All books
 /books/{book_id}        → Book detail
 ```
 
+### Phase 7d: Universe Tab - Galaxy/Constellation View (NEW)
+
+**Concept**: UMAP projection of cluster centroids into 2D space, creating a visual "galaxy" of knowledge where semantically similar themes cluster together spatially.
+
+```
+                    ★ Quantum Physics
+              ★ Cosmology
+         ★ Astrophysics          ★ Statistics
+                                      ★ Machine Learning
+    ★ Philosophy of Science              ★ Neural Networks
+
+  ★ Ethics                    ★ Linear Algebra
+       ★ Stoicism
+                         ★ Economics
+    ★ Eastern Philosophy              ★ Finance
+```
+
+**Features**:
+- Each star (★) represents a Leiden cluster
+- Position determined by UMAP projection of cluster centroid embedding
+- Color-coded by super-cluster (domain)
+- Hover reveals theme name and book count
+- Click drills into cluster detail
+- Zoom/pan for exploration
+- Optional: animate stars with slight parallax movement
+
+**Technical Implementation**:
+
+```python
+# Generate UMAP coordinates for all 845 Leiden clusters
+from umap import UMAP
+
+# Use same robust centroids as super-clustering
+centroids = [compute_robust_centroid(c) for c in cluster_ids]
+
+# UMAP projection to 2D
+umap = UMAP(n_neighbors=15, min_dist=0.3, metric='cosine', random_state=42)
+coords_2d = umap.fit_transform(np.array(centroids))
+
+# Output: {cluster_id: {x, y, super_cluster_id, label, book_count}}
+```
+
+**Visualization Options**:
+1. **Canvas-based**: D3.js with force simulation, smooth animations
+2. **WebGL**: Three.js for 3D rotation, particle effects
+3. **SVG**: Simple, accessible, good for static views
+
+**Recommended**: D3.js for initial implementation - balance of interactivity and simplicity.
+
+**API Endpoint**:
+
+```
+GET /api/v1/universe
+```
+
+Returns:
+```json
+{
+  "clusters": [
+    {
+      "cluster_id": 5,
+      "label": "machine learning",
+      "x": 0.342,
+      "y": 0.721,
+      "domain_id": 19,
+      "domain_label": "Machine Learning",
+      "book_count": 142,
+      "size": 357
+    }
+  ],
+  "domains": [
+    {"domain_id": 19, "label": "Machine Learning", "color": "#4A90D9"}
+  ]
+}
+```
+
+**Data**: Generate with `experiments/umap_universe.py` → `experiments/universe_coords.json`
+
+---
+
 ### Open Questions
 
-1. **Super-cluster quality**: How to handle junk drawer domains?
-   - Filter Leiden clusters with mostly short topics
-   - Manual curation of the 20 domains
-   - Use hierarchical Leiden instead of k-means
+1. ~~**Super-cluster quality**: How to handle junk drawer domains?~~ ✅ Solved with robust centroids
 
-2. **Number of domains**: Is 20 the right number?
-   - Could try 15 (broader) or 25 (more specific)
-   - Could make it dynamic based on cluster coherence
+2. **Number of domains**: 25 seems good balance
+   - Could allow user to toggle between 15/25/50
 
 3. **Domain naming**:
-   - LLM-generated (current) vs manual curation
+   - Auto-generated from top 3 topics (current)
+   - Could use LLM for more polished names
    - Could add icons for visual distinction
+
+4. **Universe visualization**:
+   - Should stars be sized by book count or topic count?
+   - Should connections (edges) be shown between related clusters?
+   - How to handle overlapping labels?
