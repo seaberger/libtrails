@@ -849,12 +849,22 @@ def search_semantic(query: str, limit: int):
 
 
 @main.command()
-@click.option("--threshold", "-t", default=0.85, help="Similarity threshold (0.0-1.0)")
+@click.option("--threshold", "-t", default=0.94, help="Similarity threshold (0.0-1.0). Higher=stricter")
 @click.option("--dry-run", is_flag=True, help="Preview without making changes")
 @click.option(
-    "--full-matrix", is_flag=True, help="Use full matrix approach (requires lots of memory)"
+    "--sample-size",
+    "-s",
+    default=None,
+    type=int,
+    help="Process only N topics (for testing speed)",
 )
-@click.option("--k-neighbors", "-k", default=50, help="Number of neighbors to check in batch mode")
+@click.option(
+    "--batch-size",
+    "-b",
+    default=5000,
+    type=int,
+    help="Batch size for numpy processing (tune for memory)",
+)
 @click.option(
     "--progress-file",
     "-p",
@@ -862,20 +872,45 @@ def search_semantic(query: str, limit: int):
     help="File to write progress updates (for background runs)",
 )
 def dedupe(
-    threshold: float, dry_run: bool, full_matrix: bool, k_neighbors: int, progress_file: str
+    threshold: float,
+    dry_run: bool,
+    sample_size: int,
+    batch_size: int,
+    progress_file: str,
 ):
     """Deduplicate similar topics based on embeddings.
 
-    By default uses memory-efficient batch mode with vector search.
-    Use --full-matrix for the original approach (requires ~100GB+ RAM for large datasets).
+    Uses fast numpy batch processing (~15-20 seconds for 175K topics).
+
+    Threshold guide:
+        0.97 = Very strict (only near-exact duplicates like "behavior"/"behaviors")
+        0.94 = Recommended (catches plurals, spelling variants, word order) [DEFAULT]
+        0.95 = Strict (only near-exact matches)
+        0.90 = Looser (may create transitive chains)
+
+    Examples:
+        libtrails dedupe --dry-run              # Preview with default threshold
+        libtrails dedupe --dry-run -t 0.97      # Preview with strict threshold
+        libtrails dedupe                        # Run deduplication
+        libtrails dedupe -s 5000                # Test with 5K topic sample
     """
     from .deduplication import deduplicate_topics, get_deduplication_preview
 
-    use_batch = not full_matrix
+    # Show settings
+    settings = [f"threshold={threshold}"]
+    if sample_size:
+        settings.append(f"sample={sample_size:,}")
+    console.print(f"[dim]Settings: {', '.join(settings)}[/dim]\n")
 
     if dry_run:
         console.print(f"[bold]Preview: Deduplication with threshold {threshold}[/bold]\n")
-        preview = get_deduplication_preview(threshold, limit=20)
+        preview = get_deduplication_preview(
+            threshold,
+            limit=20,
+            sample_size=sample_size,
+            batch_size=batch_size,
+            progress_file=progress_file,
+        )
 
         if not preview:
             console.print("[yellow]No duplicates found[/yellow]")
@@ -893,13 +928,12 @@ def dedupe(
             f"[yellow]Found {len(preview)} duplicate groups. Run without --dry-run to merge.[/yellow]"
         )
     else:
-        mode = "batch vector search" if use_batch else "full matrix"
-        console.print(f"[bold]Deduplicating topics with threshold {threshold} ({mode})...[/bold]\n")
+        console.print(f"[bold]Deduplicating topics with threshold {threshold}...[/bold]\n")
         result = deduplicate_topics(
             threshold,
             dry_run=False,
-            use_batch=use_batch,
-            k_neighbors=k_neighbors,
+            sample_size=sample_size,
+            batch_size=batch_size,
             progress_file=progress_file,
         )
 

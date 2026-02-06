@@ -1,13 +1,16 @@
 """Topic deduplication using embedding similarity."""
 
+import sqlite3
+import time
 from collections import defaultdict
+from datetime import datetime
 
 import numpy as np
 from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
 
-from .database import get_db, get_topic_embeddings
-from .embeddings import bytes_to_embedding, cosine_similarity_matrix
-from .vector_search import get_vec_db
+from .config import IPAD_DB_PATH
+from .database import get_db
+from .embeddings import bytes_to_embedding
 
 
 class UnionFind:
@@ -39,63 +42,38 @@ class UnionFind:
             result[self.find(i)].append(i)
         return dict(result)
 
-    def to_dict(self) -> dict:
-        """Serialize state for checkpointing."""
-        return {
-            "parent": self.parent,
-            "rank": self.rank,
-        }
 
-    @classmethod
-    def from_dict(cls, data: dict) -> "UnionFind":
-        """Restore from checkpoint."""
-        n = len(data["parent"])
-        uf = cls(n)
-        uf.parent = data["parent"]
-        uf.rank = data["rank"]
-        return uf
-
-
-def find_duplicate_groups_batch(
+def find_duplicate_groups_numpy(
     threshold: float = 0.85,
-    batch_size: int = 1000,
-    k_neighbors: int = 50,
     show_progress: bool = True,
     progress_file: str | None = None,
-    checkpoint_file: str | None = "/tmp/libtrails_dedupe_checkpoint.json",
-    checkpoint_interval: int = 10000,
+    sample_size: int | None = None,
+    batch_size: int = 5000,
 ) -> list[list[dict]]:
     """
-    Find groups of topics that should be merged using batch vector search.
+    Find duplicate groups using numpy batch operations (FAST).
 
-    This is more memory-efficient than the full matrix approach as it uses
-    sqlite-vec for finding similar topics.
+    Instead of querying sqlite-vec one topic at a time, this loads all
+    embeddings into memory and uses vectorized numpy operations to find
+    similar topics in batches.
 
     Args:
-        threshold: Cosine similarity threshold for merging (0.85 = very similar)
-        batch_size: Number of topics to process per batch
-        k_neighbors: Number of nearest neighbors to check per topic
+        threshold: Cosine similarity threshold (0.85 = very similar)
         show_progress: Whether to show progress bars
-        progress_file: Optional file path to write progress updates (for background runs)
-        checkpoint_file: Optional file path for saving/resuming checkpoints
-        checkpoint_interval: Save checkpoint every N topics processed
+        progress_file: Optional file path to write progress updates
+        sample_size: If set, only process this many topics (for testing)
+        batch_size: Process this many topics per batch (tune for memory)
 
     Returns:
-        List of groups, where each group is a list of topic dicts
-        that should be merged together. First topic in each group is canonical.
+        List of duplicate groups, first topic in each is canonical.
     """
-    import json
-    import os
-    import time
-    from datetime import datetime
+    start_time = time.time()
 
-    # Distance threshold: similarity = 1 - distance, so distance = 1 - similarity
-    distance_threshold = 1.0 - threshold
-
-    conn = get_vec_db()
+    # Load all embeddings into memory
+    conn = sqlite3.connect(IPAD_DB_PATH, timeout=30.0)
+    conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
-    # Get all topic IDs with embeddings
     cursor.execute("""
         SELECT t.id, t.label, t.occurrence_count, t.embedding
         FROM topics t
@@ -103,55 +81,45 @@ def find_duplicate_groups_batch(
         ORDER BY t.id
     """)
     all_topics = cursor.fetchall()
+    conn.close()
 
     if not all_topics:
-        conn.close()
         return []
+
+    total_topics = len(all_topics)
+
+    # Sample if requested
+    if sample_size and sample_size < total_topics:
+        import random
+        random.seed(42)
+        all_topics = random.sample(list(all_topics), sample_size)
+        print(f"Sampled {sample_size:,} topics from {total_topics:,}", flush=True)
 
     n = len(all_topics)
     topic_ids = [t["id"] for t in all_topics]
-    id_to_idx = {tid: idx for idx, tid in enumerate(topic_ids)}
 
-    # Check for checkpoint to resume from
-    start_idx = 0
-    pairs_found = 0
-    uf = UnionFind(n)
+    # Convert all embeddings to numpy array
+    print(f"Loading {n:,} embeddings into memory...", flush=True)
+    embeddings = np.array([bytes_to_embedding(t["embedding"]) for t in all_topics])
 
-    if checkpoint_file and os.path.exists(checkpoint_file):
-        try:
-            with open(checkpoint_file, "r") as f:
-                checkpoint = json.load(f)
-            # Validate checkpoint is for same dataset
-            if checkpoint.get("n") == n and checkpoint.get("threshold") == threshold:
-                uf = UnionFind.from_dict(checkpoint["union_find"])
-                start_idx = checkpoint["iteration"]
-                pairs_found = checkpoint["pairs_found"]
-                print(
-                    f"Resuming from checkpoint: iteration {start_idx:,}/{n:,}, pairs found: {pairs_found:,}",
-                    flush=True,
-                )
-        except (json.JSONDecodeError, KeyError, TypeError) as e:
-            print(f"Warning: Could not load checkpoint, starting fresh: {e}", flush=True)
+    # Normalize embeddings for cosine similarity
+    norms = np.linalg.norm(embeddings, axis=1, keepdims=True)
+    norms[norms == 0] = 1  # Avoid division by zero
+    embeddings = embeddings / norms
 
-    start_time = time.time()
+    print(f"Embeddings shape: {embeddings.shape}", flush=True)
 
-    # Progress logging interval
-    log_interval = 5000  # Log every 5000 topics
-
-    def write_progress(i: int, pairs: int):
-        """Write progress to file and stdout."""
+    def write_progress(processed: int, pairs: int):
         elapsed = time.time() - start_time
-        # Adjust rate calculation for resumed runs
-        processed = i - start_idx
         rate = processed / elapsed if elapsed > 0 else 0
-        remaining = (n - i) / rate if rate > 0 else 0
-        pct = 100 * i / n
+        remaining = (n - processed) / rate if rate > 0 else 0
+        pct = 100 * processed / n
 
         msg = (
             f"[{datetime.now().strftime('%H:%M:%S')}] "
-            f"Progress: {i:,}/{n:,} ({pct:.1f}%) | "
+            f"Progress: {processed:,}/{n:,} ({pct:.1f}%) | "
             f"Pairs found: {pairs:,} | "
-            f"Rate: {rate:.1f}/sec | "
+            f"Rate: {rate:.0f}/sec | "
             f"ETA: {remaining / 60:.1f} min"
         )
         print(msg, flush=True)
@@ -159,28 +127,13 @@ def find_duplicate_groups_batch(
         if progress_file:
             with open(progress_file, "w") as f:
                 f.write(f"{msg}\n")
-                f.write(f"elapsed_sec={elapsed:.1f}\n")
-                f.write(f"processed={i}\n")
-                f.write(f"total={n}\n")
-                f.write(f"pairs_found={pairs}\n")
 
-    def save_checkpoint(i: int, pairs: int):
-        """Save checkpoint for crash recovery."""
-        if not checkpoint_file:
-            return
-        checkpoint = {
-            "n": n,
-            "threshold": threshold,
-            "iteration": i,
-            "pairs_found": pairs,
-            "union_find": uf.to_dict(),
-            "timestamp": datetime.now().isoformat(),
-        }
-        # Write to temp file first, then rename (atomic on POSIX)
-        tmp_file = checkpoint_file + ".tmp"
-        with open(tmp_file, "w") as f:
-            json.dump(checkpoint, f)
-        os.rename(tmp_file, checkpoint_file)
+    # Union-Find for grouping
+    uf = UnionFind(n)
+    pairs_found = 0
+
+    # Process in batches
+    num_batches = (n + batch_size - 1) // batch_size
 
     with Progress(
         SpinnerColumn(),
@@ -189,231 +142,83 @@ def find_duplicate_groups_batch(
         TaskProgressColumn(),
         disable=not show_progress,
     ) as progress:
-        task = progress.add_task("Finding similar topics via vector search...", total=n)
+        task = progress.add_task("Finding duplicates (numpy batch)...", total=n)
 
-        # Initial progress message
-        if start_idx == 0:
-            print(f"Starting vector search for {n:,} topics (threshold={threshold})...", flush=True)
-        else:
-            print(f"Continuing vector search from {start_idx:,}/{n:,}...", flush=True)
+        for batch_idx in range(num_batches):
+            batch_start = batch_idx * batch_size
+            batch_end = min(batch_start + batch_size, n)
+            batch_embeddings = embeddings[batch_start:batch_end]
 
-        # Advance progress bar to start position if resuming
-        if start_idx > 0:
-            progress.update(task, completed=start_idx)
+            # Compute similarity: batch x all_embeddings
+            # For normalized vectors, cosine similarity = dot product
+            similarities = np.dot(batch_embeddings, embeddings.T)
 
-        for i, topic in enumerate(all_topics):
-            # Skip already processed topics when resuming
-            if i < start_idx:
-                continue
+            # For each topic in batch, find neighbors above threshold
+            for i, row in enumerate(similarities):
+                topic_idx = batch_start + i
 
-            topic_id = topic["id"]
-            embedding = topic["embedding"]
+                # Set self-similarity to 0 to exclude it
+                row[topic_idx] = 0
 
-            # Query sqlite-vec for similar topics
-            cursor.execute(
-                """
-                SELECT tv.topic_id, tv.distance
-                FROM topic_vectors tv
-                WHERE tv.embedding MATCH ? AND k = ?
-                ORDER BY tv.distance
-            """,
-                (embedding, k_neighbors),
-            )
+                # Find neighbors above threshold
+                above_threshold = np.where(row >= threshold)[0]
 
-            for row in cursor.fetchall():
-                neighbor_id = row["topic_id"]
-                distance = row["distance"]
-
-                # Skip self
-                if neighbor_id == topic_id:
-                    continue
-
-                # Check if similar enough
-                if distance <= distance_threshold:
-                    neighbor_idx = id_to_idx.get(neighbor_id)
-                    if neighbor_idx is not None:
-                        uf.union(i, neighbor_idx)
+                for neighbor_idx in above_threshold:
+                    if neighbor_idx != topic_idx:
+                        uf.union(topic_idx, neighbor_idx)
                         pairs_found += 1
 
-            progress.advance(task)
+            progress.update(task, completed=batch_end)
 
-            # Log progress periodically
-            if (i + 1) % log_interval == 0:
-                write_progress(i + 1, pairs_found)
+            # Progress logging
+            if (batch_idx + 1) % 5 == 0 or batch_idx == num_batches - 1:
+                write_progress(batch_end, pairs_found)
 
-            # Save checkpoint periodically
-            if checkpoint_file and (i + 1) % checkpoint_interval == 0:
-                save_checkpoint(i + 1, pairs_found)
+    elapsed = time.time() - start_time
+    print(f"Complete: {n:,} topics in {elapsed:.1f}s ({n/elapsed:.0f}/sec)", flush=True)
+    print(f"Found {pairs_found:,} similar pairs", flush=True)
 
-        # Final progress
-        write_progress(n, pairs_found)
-        progress.console.print(f"Found {pairs_found} similar pairs")
-
-    # IMPORTANT: Close the vec connection completely before reopening
-    conn.close()
-    del conn
-    del cursor
-
-    # Delete checkpoint file on successful completion
-    if checkpoint_file and os.path.exists(checkpoint_file):
-        os.remove(checkpoint_file)
-        print("Checkpoint file removed (completed successfully)", flush=True)
-
-    # Get groups and build result
+    # Build duplicate groups
     groups = uf.groups()
+    duplicate_groups = {k: v for k, v in groups.items() if len(v) > 1}
 
-    # Use regular database connection (not vec) to fetch topic details
-    # This avoids any lingering locks from sqlite-vec
-    import sqlite3
+    print(f"Building {len(duplicate_groups):,} duplicate groups...", flush=True)
 
-    from .config import IPAD_DB_PATH
-
-    db_conn = sqlite3.connect(IPAD_DB_PATH, timeout=30.0)
-    db_conn.row_factory = sqlite3.Row
-    cursor = db_conn.cursor()
+    # Reconnect to get topic details
+    conn = sqlite3.connect(IPAD_DB_PATH, timeout=30.0)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
 
     result = []
-    for root, members in groups.items():
-        if len(members) > 1:  # Only groups with duplicates
-            group_topics = []
-            for idx in members:
-                topic_id = topic_ids[idx]
-                cursor.execute(
-                    "SELECT id, label, occurrence_count FROM topics WHERE id = ?", (topic_id,)
-                )
-                row = cursor.fetchone()
-                if row:
-                    group_topics.append(
-                        {
-                            "id": row[0],
-                            "label": row[1],
-                            "occurrence_count": row[2],
-                        }
-                    )
+    for root, members in duplicate_groups.items():
+        group_topics = []
+        for idx in members:
+            topic_id = topic_ids[idx]
+            cursor.execute(
+                "SELECT id, label, occurrence_count FROM topics WHERE id = ?", (topic_id,)
+            )
+            row = cursor.fetchone()
+            if row:
+                group_topics.append({
+                    "id": row[0],
+                    "label": row[1],
+                    "occurrence_count": row[2],
+                })
 
-            # Sort by occurrence count (keep most frequent as canonical)
-            group_topics.sort(key=lambda x: x["occurrence_count"], reverse=True)
+        # Sort by occurrence count (most frequent = canonical)
+        group_topics.sort(key=lambda x: x["occurrence_count"], reverse=True)
 
-            if len(group_topics) > 1:
-                result.append(group_topics)
+        if len(group_topics) > 1:
+            result.append(group_topics)
 
-    db_conn.close()
+    conn.close()
+    print(f"Ready: {len(result):,} duplicate groups", flush=True)
+
+    if progress_file:
+        with open(progress_file, "w") as f:
+            f.write(f"Complete: {len(result):,} duplicate groups in {elapsed:.1f}s\n")
+
     return result
-
-
-def find_duplicate_groups(threshold: float = 0.85, show_progress: bool = True) -> list[list[dict]]:
-    """
-    Find groups of topics that should be merged based on embedding similarity.
-
-    Uses Union-Find for initial grouping, then validates that all members
-    are directly similar to the canonical topic (highest occurrence count).
-    This prevents transitive chains where A~B and B~C would group A,B,C
-    even when A and C aren't similar.
-
-    Args:
-        threshold: Cosine similarity threshold for merging (0.85 = very similar)
-        show_progress: Whether to show progress bars
-
-    Returns:
-        List of groups, where each group is a list of topic dicts
-        that should be merged together. First topic in each group is canonical.
-    """
-    # Get all topic embeddings
-    topic_data = get_topic_embeddings()
-    if not topic_data:
-        return []
-
-    topic_ids = [t[0] for t in topic_data]
-
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        TaskProgressColumn(),
-        disable=not show_progress,
-    ) as progress:
-        # Convert embeddings with progress
-        embed_task = progress.add_task("Converting embeddings...", total=len(topic_data))
-        embeddings_list = []
-        for t in topic_data:
-            embeddings_list.append(bytes_to_embedding(t[1]))
-            progress.advance(embed_task)
-        embeddings = np.array(embeddings_list)
-
-        # Build index mapping topic_id -> array index
-        {tid: idx for idx, tid in enumerate(topic_ids)}
-
-        # Compute similarity matrix
-        progress.add_task("Computing similarity matrix...", total=None)
-        sim_matrix = cosine_similarity_matrix(embeddings)
-
-        # Use Union-Find to group similar topics (initial pass)
-        n = len(topic_ids)
-        uf = UnionFind(n)
-
-        # Calculate total pairs for progress
-        total_pairs = n * (n - 1) // 2
-        pair_task = progress.add_task("Finding similar pairs...", total=total_pairs)
-
-        pairs_checked = 0
-        for i in range(n):
-            for j in range(i + 1, n):
-                if sim_matrix[i, j] >= threshold:
-                    uf.union(i, j)
-                pairs_checked += 1
-                if pairs_checked % 100000 == 0:  # Update every 100k pairs
-                    progress.update(pair_task, completed=pairs_checked)
-        progress.update(pair_task, completed=total_pairs)
-
-    # Get groups and fetch topic details
-    groups = uf.groups()
-
-    # Get topic details and validate groups
-    with get_db() as conn:
-        cursor = conn.cursor()
-
-        result = []
-        for root, members in groups.items():
-            if len(members) > 1:  # Only process groups with potential duplicates
-                group_topics = []
-                for idx in members:
-                    topic_id = topic_ids[idx]
-                    cursor.execute(
-                        "SELECT id, label, occurrence_count FROM topics WHERE id = ?", (topic_id,)
-                    )
-                    row = cursor.fetchone()
-                    if row:
-                        group_topics.append(
-                            {
-                                "id": row[0],
-                                "label": row[1],
-                                "occurrence_count": row[2],
-                                "_idx": idx,  # Keep track of embedding index
-                            }
-                        )
-
-                # Sort by occurrence count (keep most frequent as canonical)
-                group_topics.sort(key=lambda x: x["occurrence_count"], reverse=True)
-
-                # Validate: only keep members that are similar to canonical
-                canonical = group_topics[0]
-                canonical_idx = canonical["_idx"]
-
-                validated_group = [canonical]
-                for topic in group_topics[1:]:
-                    topic_idx = topic["_idx"]
-                    if sim_matrix[canonical_idx, topic_idx] >= threshold:
-                        validated_group.append(topic)
-
-                # Clean up internal index before returning
-                for topic in validated_group:
-                    del topic["_idx"]
-
-                # Only include groups with actual duplicates after validation
-                if len(validated_group) > 1:
-                    result.append(validated_group)
-
-        return result
 
 
 def merge_topic_group(group: list[dict], dry_run: bool = False) -> dict:
@@ -461,7 +266,6 @@ def merge_topic_group(group: list[dict], dry_run: bool = False) -> dict:
             cursor.execute("DELETE FROM chunk_topic_links WHERE topic_id = ?", (dup["id"],))
 
             # Handle cooccurrences - merge counts for conflicts, then delete duplicates
-            # First, update cooccurrences where canonical doesn't already have a relationship
             # For topic1_id updates
             cursor.execute(
                 """
@@ -556,10 +360,6 @@ def merge_groups_batch(groups: list[list[dict]], commit_every: int = 100) -> dic
     Returns:
         Statistics about the merge operation
     """
-    import sqlite3
-
-    from .config import IPAD_DB_PATH
-
     if not groups:
         return {"groups_merged": 0, "topics_merged": 0}
 
@@ -645,36 +445,31 @@ def merge_groups_batch(groups: list[list[dict]], commit_every: int = 100) -> dic
 
 
 def deduplicate_topics(
-    threshold: float = 0.85,
+    threshold: float = 0.94,
     dry_run: bool = False,
-    use_batch: bool = True,
-    batch_size: int = 1000,
-    k_neighbors: int = 50,
+    sample_size: int | None = None,
+    batch_size: int = 5000,
     progress_file: str | None = None,
 ) -> dict:
     """
-    Deduplicate all topics based on embedding similarity.
+    Deduplicate all topics using fast numpy batch processing.
 
     Args:
-        threshold: Cosine similarity threshold for merging
+        threshold: Cosine similarity threshold for merging (0.95 recommended)
         dry_run: If True, only report what would be merged
-        use_batch: If True, use memory-efficient batch approach with vector search
-        batch_size: Number of topics to process per batch (only for batch mode)
-        k_neighbors: Number of nearest neighbors to check (only for batch mode)
-        progress_file: Optional file path to write progress updates (for background runs)
+        sample_size: If set, only process this many topics (for testing)
+        batch_size: Number of topics to process per numpy batch
+        progress_file: Optional file path to write progress updates
 
     Returns:
         Statistics about the deduplication
     """
-    if use_batch:
-        groups = find_duplicate_groups_batch(
-            threshold=threshold,
-            batch_size=batch_size,
-            k_neighbors=k_neighbors,
-            progress_file=progress_file,
-        )
-    else:
-        groups = find_duplicate_groups(threshold)
+    groups = find_duplicate_groups_numpy(
+        threshold=threshold,
+        sample_size=sample_size,
+        batch_size=batch_size,
+        progress_file=progress_file,
+    )
 
     if not groups:
         return {
@@ -706,58 +501,32 @@ def deduplicate_topics(
     }
 
 
-def deduplicate_topics_old(
-    threshold: float = 0.85,
-    dry_run: bool = False,
-    use_batch: bool = True,
-    batch_size: int = 1000,
-    k_neighbors: int = 50,
-) -> dict:
-    """Old version - kept for reference. Use deduplicate_topics instead."""
-    if use_batch:
-        groups = find_duplicate_groups_batch(
-            threshold=threshold,
-            batch_size=batch_size,
-            k_neighbors=k_neighbors,
-        )
-    else:
-        groups = find_duplicate_groups(threshold)
-
-    if not groups:
-        return {
-            "duplicate_groups": 0,
-            "topics_merged": 0,
-            "dry_run": dry_run,
-        }
-
-    total_merged = 0
-    merge_results = []
-
-    for group in groups:
-        result = merge_topic_group(group, dry_run=dry_run)
-        merge_results.append(result)
-        total_merged += len(result.get("merged", []))
-
-    return {
-        "duplicate_groups": len(groups),
-        "topics_merged": total_merged,
-        "merges": merge_results[:10],  # Show first 10 merges
-        "dry_run": dry_run,
-    }
-
-
-def get_deduplication_preview(threshold: float = 0.85, limit: int = 20) -> list[dict]:
+def get_deduplication_preview(
+    threshold: float = 0.94,
+    limit: int = 20,
+    sample_size: int | None = None,
+    batch_size: int = 5000,
+    progress_file: str | None = None,
+) -> list[dict]:
     """
     Preview what topics would be deduplicated without making changes.
 
     Args:
         threshold: Cosine similarity threshold
         limit: Maximum number of groups to return
+        sample_size: If set, only process this many topics (for testing)
+        batch_size: Batch size for numpy processing
+        progress_file: Optional file path to write progress updates
 
     Returns:
         List of duplicate groups with their topics
     """
-    groups = find_duplicate_groups(threshold)
+    groups = find_duplicate_groups_numpy(
+        threshold=threshold,
+        sample_size=sample_size,
+        batch_size=batch_size,
+        progress_file=progress_file,
+    )
 
     preview = []
     for group in groups[:limit]:
