@@ -8,34 +8,34 @@ from pathlib import Path
 SUPER_CLUSTERS_PATH = Path(__file__).parent / "super_clusters_robust.json"
 OUTPUT_PATH = Path(__file__).parent / "domain_labels_final.json"
 
-# Human-refined labels based on LLM suggestions + review
+# Human-refined labels based on new super-cluster content (Feb 2026)
 # Maps super_cluster_id -> final label
 REFINED_LABELS = {
-    8: "Literary Worlds",           # was: Literary & Historical Figures (fiction, fantasy)
-    15: "Everyday Life",            # was: Urban Landscapes (domestic, weather, architecture)
-    9: "Human Condition",           # keep LLM (philosophy, conversation, character)
-    7: "Wild Earth",                # keep LLM (nature, survival, rural)
-    14: "Digital Futures",          # keep LLM (technology, surveillance, engineering)
-    23: "AI & Robotics",            # was: Computational Intelligence (speculative AI, robotics)
-    17: "Global Narratives",        # keep LLM (travel, history, culture)
-    22: "Organizational Dynamics",  # keep LLM (leadership, communication, class)
-    1: "Financial Strategy",        # keep LLM (risk, finance, markets)
-    4: "Dark Secrets",              # keep LLM (crime, suspense, violence)
-    19: "Machine Learning",         # was: Artificial Intelligence (technical ML/DL)
-    24: "Sacred Narratives",        # keep LLM (religion, magic, mythology)
-    18: "Inner Landscapes",         # keep LLM (memory, death, dreams)
-    21: "Family Wellbeing",         # keep LLM (relationships, family)
-    2: "Global Affairs",            # keep LLM (politics, race, government)
-    3: "Space & Beyond",            # keep LLM (space exploration, travel)
-    5: "Culinary Arts",             # keep LLM (cooking, food, baking)
-    10: "Arts & Perception",        # was: Visual Culture (music, appearance, aesthetics)
-    6: "Creative Writing",          # keep LLM (literature, poetry)
-    12: "Emergency Response",       # was: Medical Response (rescue, medical, security)
-    11: "Warfare & Conflict",       # merge target: War & Revolution
-    16: "Warfare & Conflict",       # merge: Military Operations → same as 11
-    20: "Maritime Adventures",      # keep LLM (exploration, navigation)
-    13: "Personal Journeys",        # keep LLM (reflection, time travel)
-    0: "Identity Formation",        # keep LLM (identity, self)
+    24: "Literary Worlds",          # allomancy, aes sedai, maze (Mistborn, WoT fantasy)
+    9: "Literary Worlds",           # harry potter, hogwarts, voldemort (merge fantasy fiction)
+    2: "Games & Strategy",          # chess strategy, pawn structure (new domain)
+    20: "Organizational Dynamics",  # natural selection, product development, business models
+    21: "Human Condition",          # human identity, ethical considerations, ideals
+    12: "Digital Futures",          # renewable energy, gate, oil and gas industry (tech/energy)
+    18: "Sports & Athletics",       # cycling, doping, golf (new domain)
+    14: "Wild Earth",               # orchids, pottery, knife (crafts/nature)
+    3: "Financial Strategy",        # investment strategies, risk management, financial markets
+    11: "Warfare & Conflict",       # isis, northern ireland conflict/troubles
+    5: "Global Narratives",         # mediterranean trade, ancient mesopotamia, 19th century
+    17: "Family Wellbeing",         # family tradition, rural communities, military camps
+    10: "Human Condition",          # language and communication, scholarship, philosophers (merge)
+    15: "Personal Journeys",        # relationships, conflict, travel
+    19: "Wild Earth",               # surfing, paleontology, plate tectonics (merge nature/science)
+    23: "Machine Learning",         # glyphs, symbols, machine learning
+    22: "Culinary Arts",            # cooking techniques, baking, cooking
+    8: "Sacred Narratives",         # cultural rituals, religious prophecy, jews
+    4: "Dark Secrets",              # restoration, job loss, human survival (struggle/survival)
+    1: "Warfare & Conflict",        # military regiments, raiding, veterans (merge)
+    7: "Global Affairs",            # political events, political governance, personal interests
+    0: "Arts & Perception",         # cinema, perception and reality, museum exhibits
+    16: "Family Wellbeing",         # nutrition, alzheimer's disease, diabetes (merge health)
+    13: "Inner Landscapes",         # human consciousness, dreams and imagination, sleep
+    6: "Identity Formation",        # sexual relationships, misconceptions, personal desire
 }
 
 def main():

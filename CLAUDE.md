@@ -268,7 +268,37 @@ uv run libtrails search-semantic "query"   # Semantic search
 uv run libtrails tree                      # Browse topic hierarchy
 uv run libtrails related "topic"           # Graph-connected topics
 uv run libtrails cooccur "topic"           # Co-occurring topics
+
+# Domain (Super-cluster) Management
+uv run libtrails regenerate-domains        # Generate super-clusters from Leiden
+uv run libtrails load-domains              # Load domain labels into database
 ```
+
+### Domain Regeneration Workflow
+
+After re-running Leiden clustering, domains (super-clusters) need to be regenerated:
+
+```bash
+# 1. Generate new super-clusters (uses K-means on cluster centroids)
+uv run libtrails regenerate-domains
+
+# 2. Review auto-labels and update the mapping in:
+#    experiments/domain_labels_final.py (REFINED_LABELS dict)
+
+# 3. Generate final domain labels JSON
+uv run python experiments/domain_labels_final.py
+
+# 4. Load into database
+uv run libtrails load-domains
+```
+
+The domain system groups ~600-800 Leiden clusters into ~20-25 high-level themes:
+- **Literary Worlds**: Fantasy fiction (Mistborn, Harry Potter, WoT)
+- **Human Condition**: Philosophy, ethics, identity
+- **Wild Earth**: Nature, paleontology, crafts
+- **Financial Strategy**: Investment, risk management
+- **Machine Learning**: AI/ML technical topics
+- etc.
 
 ---
 
@@ -307,7 +337,8 @@ calibre_lib/
 │   ├── vector_search.py         # sqlite-vec search functions
 │   ├── deduplication.py         # Union-Find topic merging
 │   ├── topic_graph.py           # igraph construction, co-occurrence
-│   └── clustering.py            # Leiden algorithm wrapper
+│   ├── clustering.py            # Leiden algorithm wrapper
+│   └── domains.py               # Domain (super-cluster) generation
 └── utils/
     ├── scrape_mapleread.py      # Basic iPad scraper
     ├── scrape_mapleread_full.py # Full scraper with tags
@@ -428,6 +459,17 @@ rebuild_vector_index(conn, force_recreate=True)
 
 ### Model caching
 First run downloads ~130MB model. Subsequent runs use local cache in `models/`.
+
+---
+
+## Safety Guidelines
+
+### Process Management
+- **NEVER use broad `pkill -f` patterns** - they can match system processes
+- When killing processes, use specific PIDs: `kill <PID>` instead of `pkill -f "pattern"`
+- If using `pkill`, be as specific as possible and verify the pattern first with `pgrep -f "pattern"`
+- Example of what NOT to do: `pkill -f "libtrails"` (too broad, matches system processes)
+- Example of safe approach: `pgrep -f "libtrails dedupe" | xargs kill` (verify then kill)
 
 ---
 

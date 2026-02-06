@@ -2,2077 +2,1713 @@
   {
     "domain_id": 0,
     "label": "Literary Worlds",
-    "cluster_count": 101,
+    "cluster_count": 128,
     "original_super_ids": [
-      8
+      24,
+      9
     ],
     "leiden_cluster_ids": [
-      99,
-      115,
-      140,
+      63,
+      70,
+      121,
+      123,
+      127,
+      147,
       170,
+      172,
+      198,
+      199,
+      203,
+      225,
+      228,
+      230,
+      231,
+      233,
+      236,
+      248,
+      259,
+      262,
       263,
-      240,
-      254,
-      243,
-      281,
-      324,
-      321,
-      338,
+      284,
+      285,
+      294,
+      298,
+      304,
+      314,
       317,
-      341,
-      360,
-      339,
-      433,
-      364,
+      329,
+      347,
       363,
-      403,
-      451,
-      427,
-      428,
-      435,
-      454,
+      379,
+      382,
+      393,
+      398,
+      399,
+      402,
+      404,
+      405,
+      406,
+      407,
+      408,
+      409,
+      416,
+      420,
+      429,
+      432,
+      433,
+      434,
+      438,
+      443,
+      448,
       449,
-      486,
-      488,
-      497,
+      450,
+      454,
+      461,
+      466,
+      471,
+      475,
+      476,
+      495,
+      498,
       509,
-      516,
-      514,
+      512,
+      526,
+      528,
+      534,
+      535,
+      541,
       548,
-      564,
+      550,
+      552,
+      571,
       573,
-      574,
-      579,
-      590,
-      577,
+      585,
       586,
+      587,
       591,
-      609,
-      628,
-      641,
-      647,
-      661,
-      668,
-      646,
-      652,
-      648,
-      671,
-      667,
-      674,
-      675,
-      685,
-      678,
-      682,
-      687,
-      700,
-      704,
-      707,
-      713,
-      718,
-      721,
-      740,
-      728,
-      753,
-      744,
-      729,
-      732,
-      733,
-      743,
-      750,
-      755,
-      757,
-      769,
-      787,
-      772,
-      773,
-      780,
-      792,
-      795,
-      791,
-      794,
-      800,
-      805,
-      806,
-      812,
-      808,
-      809,
-      813,
-      816,
-      817,
-      818,
-      819,
-      828,
-      831,
-      833,
-      835,
-      837,
-      838
+      598,
+      599,
+      610,
+      612,
+      626,
+      627,
+      633,
+      637,
+      643,
+      645,
+      650,
+      654,
+      655,
+      658,
+      13,
+      88,
+      92,
+      97,
+      99,
+      102,
+      103,
+      113,
+      161,
+      189,
+      234,
+      246,
+      249,
+      283,
+      289,
+      327,
+      333,
+      335,
+      361,
+      372,
+      384,
+      426,
+      437,
+      446,
+      462,
+      501,
+      522,
+      533,
+      551,
+      581,
+      589,
+      590,
+      600,
+      619,
+      660,
+      667
     ],
     "top_topics": [
       {
         "label": "harry potter",
-        "count": 1372
-      },
-      {
-        "label": "oscar wilde",
-        "count": 539
+        "count": 1369
       },
       {
         "label": "hogwarts",
-        "count": 388
-      },
-      {
-        "label": "ernest hemingway",
-        "count": 383
-      },
-      {
-        "label": "abraham lincoln",
-        "count": 379
+        "count": 362
       },
       {
         "label": "voldemort",
-        "count": 353
+        "count": 319
       },
       {
-        "label": "royal court",
-        "count": 349
+        "label": "allomancy",
+        "count": 309
       },
       {
-        "label": "race",
-        "count": 324
+        "label": "winterfell",
+        "count": 178
       },
       {
-        "label": "alexander hamilton",
-        "count": 278
+        "label": "aes sedai",
+        "count": 147
       },
       {
-        "label": "hamilton",
-        "count": 199
+        "label": "night's watch",
+        "count": 126
+      },
+      {
+        "label": "maze",
+        "count": 116
+      },
+      {
+        "label": "fremen",
+        "count": 114
+      },
+      {
+        "label": "orogeny",
+        "count": 104
       }
     ]
   },
   {
     "domain_id": 1,
-    "label": "Everyday Life",
+    "label": "Human Condition",
     "cluster_count": 64,
     "original_super_ids": [
-      15
+      21,
+      10
     ],
     "leiden_cluster_ids": [
+      37,
+      39,
+      48,
+      69,
       96,
-      86,
-      92,
-      128,
-      145,
-      178,
-      185,
-      204,
-      201,
-      230,
-      241,
-      216,
-      268,
-      276,
-      277,
-      298,
-      299,
-      291,
-      379,
-      380,
-      388,
-      383,
-      406,
-      416,
-      450,
-      445,
-      452,
-      476,
-      467,
-      477,
-      490,
+      100,
+      107,
+      129,
+      148,
+      177,
+      192,
+      195,
+      232,
+      238,
+      261,
+      275,
+      286,
+      300,
+      307,
+      325,
+      330,
+      348,
+      400,
+      403,
+      444,
+      464,
+      472,
+      486,
+      493,
+      505,
+      508,
       511,
-      487,
-      523,
-      546,
-      555,
-      567,
-      629,
-      618,
+      574,
+      594,
       613,
-      631,
-      643,
-      654,
-      658,
-      684,
-      656,
-      660,
-      644,
-      688,
-      683,
-      686,
-      727,
-      749,
-      751,
-      752,
-      761,
-      764,
-      786,
-      798,
-      804,
-      815,
-      821,
-      834,
-      840
+      651,
+      661,
+      666,
+      32,
+      33,
+      35,
+      38,
+      43,
+      68,
+      75,
+      77,
+      83,
+      111,
+      112,
+      180,
+      216,
+      239,
+      323,
+      415,
+      452,
+      457,
+      469,
+      521,
+      568,
+      569,
+      576,
+      577,
+      628,
+      640
     ],
     "top_topics": [
       {
-        "label": "weather",
-        "count": 1354
+        "label": "language and communication",
+        "count": 63
       },
       {
-        "label": "domestic life",
-        "count": 918
+        "label": "scholarship",
+        "count": 49
       },
       {
-        "label": "architecture",
-        "count": 844
+        "label": "philosophers",
+        "count": 41
       },
       {
-        "label": "setting",
-        "count": 779
+        "label": "human identity",
+        "count": 40
       },
       {
-        "label": "transportation",
-        "count": 712
+        "label": "ethical considerations",
+        "count": 36
       },
       {
-        "label": "power",
-        "count": 485
+        "label": "artists",
+        "count": 35
       },
       {
-        "label": "domesticity",
-        "count": 476
+        "label": "ideals",
+        "count": 33
       },
       {
-        "label": "fire",
-        "count": 446
+        "label": "conventions",
+        "count": 33
       },
       {
-        "label": "hunting",
-        "count": 399
+        "label": "moral values",
+        "count": 30
       },
       {
-        "label": "new york city",
-        "count": 336
+        "label": "autonomy",
+        "count": 30
       }
     ]
   },
   {
     "domain_id": 2,
-    "label": "Human Condition",
-    "cluster_count": 52,
+    "label": "Wild Earth",
+    "cluster_count": 55,
     "original_super_ids": [
-      9
+      14,
+      19
     ],
     "leiden_cluster_ids": [
-      1,
-      56,
-      134,
-      165,
-      133,
-      156,
-      150,
-      167,
-      190,
-      223,
-      237,
-      258,
-      273,
-      286,
-      287,
-      340,
-      354,
-      381,
-      418,
-      422,
-      436,
-      447,
-      473,
-      444,
-      474,
-      502,
-      512,
-      513,
-      519,
+      44,
+      51,
+      79,
+      90,
+      106,
+      126,
+      141,
+      146,
+      193,
+      235,
+      243,
+      337,
+      345,
+      356,
+      362,
+      371,
+      386,
+      411,
+      455,
+      482,
+      484,
+      504,
+      515,
       536,
-      568,
-      571,
-      572,
-      627,
-      633,
-      657,
-      666,
-      679,
-      693,
-      680,
-      711,
-      712,
-      706,
-      717,
-      746,
-      766,
-      775,
-      783,
-      782,
-      801,
-      811,
-      824
+      538,
+      543,
+      545,
+      547,
+      549,
+      588,
+      602,
+      634,
+      14,
+      17,
+      71,
+      142,
+      151,
+      176,
+      194,
+      215,
+      223,
+      279,
+      309,
+      316,
+      339,
+      360,
+      401,
+      431,
+      445,
+      460,
+      513,
+      516,
+      605,
+      611,
+      639
     ],
     "top_topics": [
       {
-        "label": "characters",
-        "count": 3198
+        "label": "surfing",
+        "count": 251
       },
       {
-        "label": "conversation",
-        "count": 2002
+        "label": "paleontology",
+        "count": 217
       },
       {
-        "label": "philosophy",
-        "count": 1929
+        "label": "plate tectonics",
+        "count": 158
       },
       {
-        "label": "fantasy",
-        "count": 1394
+        "label": "orchids",
+        "count": 105
       },
       {
-        "label": "love",
-        "count": 1332
+        "label": "geological history",
+        "count": 62
       },
       {
-        "label": "character interaction",
-        "count": 1249
+        "label": "pottery",
+        "count": 49
       },
       {
-        "label": "character description",
-        "count": 1013
+        "label": "knife",
+        "count": 41
       },
       {
-        "label": "existentialism",
-        "count": 965
+        "label": "hawaii",
+        "count": 40
       },
       {
-        "label": "stoicism",
-        "count": 903
+        "label": "lake",
+        "count": 34
       },
       {
-        "label": "social commentary",
-        "count": 874
+        "label": "cleaning",
+        "count": 33
       }
     ]
   },
   {
     "domain_id": 3,
-    "label": "Wild Earth",
-    "cluster_count": 50,
+    "label": "Games & Strategy",
+    "cluster_count": 46,
     "original_super_ids": [
-      7
+      2
     ],
     "leiden_cluster_ids": [
-      3,
-      12,
-      14,
-      32,
-      67,
-      75,
-      73,
-      108,
-      168,
-      196,
-      197,
-      225,
-      235,
-      222,
-      245,
-      275,
-      244,
-      319,
-      367,
-      366,
-      351,
-      375,
-      385,
-      404,
-      396,
-      411,
-      461,
-      423,
-      460,
-      440,
-      439,
-      520,
-      499,
-      484,
-      526,
-      500,
-      518,
-      560,
-      542,
-      539,
-      545,
-      558,
-      606,
-      632,
-      620,
-      664,
-      703,
-      676,
-      691,
-      735
+      11,
+      53,
+      58,
+      74,
+      76,
+      109,
+      132,
+      186,
+      204,
+      210,
+      212,
+      252,
+      254,
+      266,
+      274,
+      287,
+      296,
+      302,
+      364,
+      369,
+      380,
+      388,
+      395,
+      414,
+      417,
+      422,
+      441,
+      453,
+      473,
+      488,
+      494,
+      502,
+      531,
+      561,
+      595,
+      601,
+      603,
+      604,
+      607,
+      616,
+      621,
+      624,
+      631,
+      638,
+      649,
+      653
     ],
     "top_topics": [
       {
-        "label": "survival",
-        "count": 2183
+        "label": "chess strategy",
+        "count": 385
       },
       {
-        "label": "rural life",
-        "count": 2064
+        "label": "pawn structure",
+        "count": 217
       },
       {
-        "label": "nature",
-        "count": 1387
+        "label": "chess",
+        "count": 174
       },
       {
-        "label": "animals",
-        "count": 617
+        "label": "game development",
+        "count": 124
       },
       {
-        "label": "geology",
-        "count": 596
+        "label": "card games",
+        "count": 89
       },
       {
-        "label": "landscape",
-        "count": 519
+        "label": "pygame",
+        "count": 63
       },
       {
-        "label": "evolution",
-        "count": 437
+        "label": "sherlock holmes",
+        "count": 59
       },
       {
-        "label": "climate change",
-        "count": 435
+        "label": "game",
+        "count": 54
       },
       {
-        "label": "geography",
-        "count": 420
+        "label": "animation",
+        "count": 49
       },
       {
-        "label": "animal behavior",
-        "count": 417
+        "label": "hive",
+        "count": 46
       }
     ]
   },
   {
     "domain_id": 4,
-    "label": "Digital Futures",
-    "cluster_count": 50,
+    "label": "Organizational Dynamics",
+    "cluster_count": 44,
     "original_super_ids": [
-      14
+      20
     ],
     "leiden_cluster_ids": [
-      46,
-      60,
-      94,
-      136,
-      137,
-      131,
-      141,
-      154,
-      234,
-      221,
-      253,
-      256,
-      329,
-      295,
-      289,
-      316,
-      311,
-      334,
-      376,
-      369,
-      392,
-      459,
-      463,
-      478,
-      446,
-      466,
-      495,
-      505,
-      494,
-      510,
-      517,
-      522,
-      540,
-      537,
-      581,
-      594,
-      604,
-      655,
-      621,
-      640,
-      715,
-      697,
-      708,
-      777,
-      778,
-      774,
-      796,
-      799,
-      797,
-      826
+      5,
+      9,
+      15,
+      40,
+      72,
+      80,
+      89,
+      114,
+      118,
+      140,
+      145,
+      149,
+      163,
+      171,
+      185,
+      200,
+      219,
+      237,
+      272,
+      299,
+      310,
+      312,
+      321,
+      328,
+      332,
+      336,
+      338,
+      341,
+      343,
+      344,
+      359,
+      383,
+      465,
+      477,
+      490,
+      499,
+      518,
+      519,
+      523,
+      572,
+      580,
+      583,
+      622,
+      664
     ],
     "top_topics": [
       {
-        "label": "technology",
-        "count": 2375
+        "label": "natural selection",
+        "count": 236
       },
       {
-        "label": "surveillance",
-        "count": 1518
+        "label": "product development",
+        "count": 200
       },
       {
-        "label": "engineering",
-        "count": 527
+        "label": "business models",
+        "count": 182
       },
       {
-        "label": "virtual reality",
-        "count": 344
+        "label": "evolutionary biology",
+        "count": 180
       },
       {
-        "label": "performance",
-        "count": 338
+        "label": "botany",
+        "count": 143
       },
       {
-        "label": "time management",
-        "count": 324
+        "label": "marketing strategy",
+        "count": 119
       },
       {
-        "label": "simulation",
-        "count": 315
+        "label": "web development",
+        "count": 57
       },
       {
-        "label": "steve jobs",
-        "count": 275
+        "label": "molecular biology",
+        "count": 52
       },
       {
-        "label": "python programming",
-        "count": 251
+        "label": "testing",
+        "count": 51
       },
       {
-        "label": "innovation",
-        "count": 242
+        "label": "classroom dynamics",
+        "count": 49
       }
     ]
   },
   {
     "domain_id": 5,
-    "label": "AI & Robotics",
-    "cluster_count": 46,
+    "label": "Warfare & Conflict",
+    "cluster_count": 40,
     "original_super_ids": [
-      23
+      11,
+      1
     ],
     "leiden_cluster_ids": [
-      9,
       19,
-      64,
-      68,
-      69,
-      116,
-      132,
-      153,
-      161,
-      174,
-      189,
-      218,
-      247,
-      236,
-      272,
-      293,
-      294,
-      302,
-      328,
-      318,
-      407,
-      377,
-      370,
-      412,
-      464,
-      483,
-      492,
-      515,
-      521,
-      538,
-      533,
+      30,
+      55,
+      61,
+      86,
+      93,
+      98,
+      133,
+      160,
+      164,
+      182,
+      202,
+      207,
+      226,
+      265,
+      282,
+      306,
+      320,
+      428,
+      440,
+      447,
+      517,
+      530,
+      553,
       575,
-      582,
-      617,
-      611,
-      596,
-      637,
-      642,
-      659,
-      695,
-      759,
-      765,
-      767,
-      820,
-      825,
-      843
+      618,
+      662,
+      34,
+      47,
+      52,
+      143,
+      222,
+      241,
+      270,
+      351,
+      353,
+      392,
+      565,
+      584,
+      597
     ],
     "top_topics": [
       {
-        "label": "artificial intelligence",
-        "count": 2721
+        "label": "isis",
+        "count": 133
       },
       {
-        "label": "time",
-        "count": 1591
+        "label": "northern ireland conflict",
+        "count": 106
       },
       {
-        "label": "robotics",
-        "count": 637
+        "label": "northern ireland troubles",
+        "count": 86
       },
       {
-        "label": "pytorch",
-        "count": 459
+        "label": "vladimir putin",
+        "count": 64
       },
       {
-        "label": "mathematics",
-        "count": 378
+        "label": "indian history",
+        "count": 41
       },
       {
-        "label": "problem solving",
-        "count": 350
+        "label": "syrian civil war",
+        "count": 40
       },
       {
-        "label": "chess strategy",
-        "count": 325
+        "label": "syrian kurds",
+        "count": 37
       },
       {
-        "label": "probability",
-        "count": 325
+        "label": "qing dynasty",
+        "count": 32
       },
       {
-        "label": "physics",
-        "count": 302
+        "label": "revolt",
+        "count": 32
       },
       {
-        "label": "data structures",
-        "count": 278
+        "label": "colony",
+        "count": 29
       }
     ]
   },
   {
     "domain_id": 6,
-    "label": "Global Narratives",
-    "cluster_count": 41,
+    "label": "Digital Futures",
+    "cluster_count": 37,
     "original_super_ids": [
-      17
+      12
     ],
     "leiden_cluster_ids": [
-      15,
-      20,
-      31,
-      37,
-      35,
-      47,
-      84,
-      103,
-      106,
-      120,
-      123,
-      129,
-      177,
-      211,
-      200,
-      183,
-      262,
-      261,
-      259,
-      288,
-      301,
-      303,
-      359,
+      12,
+      18,
+      22,
+      28,
+      117,
+      119,
+      134,
+      155,
+      162,
+      174,
+      175,
+      179,
+      181,
+      184,
+      187,
+      190,
+      191,
+      240,
+      244,
+      269,
+      295,
+      297,
+      319,
+      377,
+      378,
       394,
-      410,
-      420,
-      417,
-      468,
-      457,
-      472,
-      508,
-      504,
-      543,
-      541,
+      397,
+      421,
+      481,
+      483,
+      496,
+      503,
+      510,
+      520,
+      525,
       544,
-      570,
-      626,
-      665,
-      719,
-      770,
-      844
+      546
     ],
     "top_topics": [
       {
-        "label": "travel",
-        "count": 8649
+        "label": "renewable energy",
+        "count": 57
       },
       {
-        "label": "history",
-        "count": 1091
+        "label": "gate",
+        "count": 51
       },
       {
-        "label": "culture",
-        "count": 1023
+        "label": "oil and gas industry",
+        "count": 45
       },
       {
-        "label": "shakespeare",
-        "count": 770
+        "label": "station",
+        "count": 45
       },
       {
-        "label": "slavery",
-        "count": 718
+        "label": "repair",
+        "count": 45
       },
       {
-        "label": "family history",
-        "count": 640
+        "label": "seals",
+        "count": 45
       },
       {
-        "label": "american history",
-        "count": 591
+        "label": "distance",
+        "count": 44
       },
       {
-        "label": "cultural differences",
-        "count": 580
+        "label": "radchaai",
+        "count": 43
       },
       {
-        "label": "immigration",
-        "count": 496
+        "label": "underground",
+        "count": 40
       },
       {
-        "label": "archaeology",
-        "count": 495
+        "label": "time measurement",
+        "count": 37
       }
     ]
   },
   {
     "domain_id": 7,
-    "label": "Organizational Dynamics",
+    "label": "Family Wellbeing",
     "cluster_count": 37,
     "original_super_ids": [
-      22
+      17,
+      16
     ],
     "leiden_cluster_ids": [
-      55,
-      121,
-      208,
-      193,
-      195,
-      212,
-      246,
-      252,
-      285,
-      270,
-      282,
-      284,
-      307,
+      116,
+      124,
+      130,
+      139,
+      156,
+      167,
+      227,
+      264,
+      267,
+      277,
+      318,
       326,
-      306,
-      336,
-      352,
-      342,
-      371,
-      346,
-      409,
-      425,
-      430,
-      465,
-      529,
-      569,
-      557,
-      597,
-      610,
-      593,
-      625,
-      653,
-      670,
-      692,
-      723,
-      756,
-      807
+      331,
+      374,
+      391,
+      451,
+      458,
+      474,
+      524,
+      527,
+      567,
+      617,
+      632,
+      635,
+      642,
+      656,
+      659,
+      10,
+      50,
+      166,
+      218,
+      221,
+      251,
+      260,
+      427,
+      560,
+      570
     ],
     "top_topics": [
       {
-        "label": "communication",
-        "count": 3445
+        "label": "nutrition",
+        "count": 168
       },
       {
-        "label": "social class",
-        "count": 1934
+        "label": "alzheimer's disease",
+        "count": 61
       },
       {
-        "label": "leadership",
-        "count": 1520
+        "label": "diabetes",
+        "count": 43
       },
       {
-        "label": "conflict resolution",
-        "count": 1428
+        "label": "family tradition",
+        "count": 38
       },
       {
-        "label": "business",
-        "count": 827
+        "label": "rural communities",
+        "count": 38
       },
       {
-        "label": "decision making",
-        "count": 702
+        "label": "cancer treatment",
+        "count": 38
       },
       {
-        "label": "social hierarchy",
-        "count": 640
+        "label": "military camps",
+        "count": 36
       },
       {
-        "label": "negotiation",
-        "count": 632
+        "label": "customs",
+        "count": 36
       },
       {
-        "label": "poverty",
-        "count": 481
+        "label": "manhattan",
+        "count": 35
       },
       {
-        "label": "entrepreneurship",
-        "count": 424
+        "label": "family travel",
+        "count": 33
       }
     ]
   },
   {
     "domain_id": 8,
-    "label": "Financial Strategy",
-    "cluster_count": 35,
+    "label": "Sports & Athletics",
+    "cluster_count": 36,
     "original_super_ids": [
-      1
+      18
     ],
     "leiden_cluster_ids": [
-      0,
-      18,
-      27,
-      34,
-      38,
-      41,
-      54,
-      87,
-      157,
-      142,
-      159,
-      203,
-      202,
-      266,
-      323,
-      348,
-      357,
-      373,
-      372,
-      362,
-      395,
-      397,
-      453,
-      432,
-      482,
-      528,
-      530,
-      566,
-      607,
-      612,
-      595,
-      630,
-      705,
-      790,
-      823
+      46,
+      65,
+      81,
+      91,
+      94,
+      115,
+      154,
+      158,
+      208,
+      229,
+      256,
+      257,
+      276,
+      311,
+      324,
+      355,
+      381,
+      387,
+      396,
+      435,
+      467,
+      478,
+      480,
+      487,
+      529,
+      532,
+      542,
+      563,
+      578,
+      579,
+      582,
+      596,
+      609,
+      625,
+      641,
+      652
     ],
     "top_topics": [
       {
-        "label": "risk management",
-        "count": 877
+        "label": "cycling",
+        "count": 157
       },
       {
-        "label": "finance",
-        "count": 589
+        "label": "doping",
+        "count": 73
       },
       {
-        "label": "risk assessment",
-        "count": 585
+        "label": "golf",
+        "count": 62
       },
       {
-        "label": "money",
-        "count": 574
+        "label": "bias",
+        "count": 54
       },
       {
-        "label": "wealth",
-        "count": 538
+        "label": "yoga",
+        "count": 51
       },
       {
-        "label": "real estate",
-        "count": 536
+        "label": "balance",
+        "count": 49
       },
       {
-        "label": "financial markets",
-        "count": 510
+        "label": "interdependency",
+        "count": 43
       },
       {
-        "label": "economics",
-        "count": 506
+        "label": "lance armstrong",
+        "count": 38
       },
       {
-        "label": "investment strategies",
-        "count": 474
+        "label": "sleep deprivation",
+        "count": 38
       },
       {
-        "label": "stock market",
-        "count": 410
+        "label": "strength",
+        "count": 36
       }
     ]
   },
   {
     "domain_id": 9,
-    "label": "Dark Secrets",
-    "cluster_count": 34,
-    "original_super_ids": [
-      4
-    ],
-    "leiden_cluster_ids": [
-      29,
-      65,
-      78,
-      74,
-      77,
-      83,
-      89,
-      111,
-      101,
-      104,
-      105,
-      127,
-      144,
-      180,
-      181,
-      209,
-      206,
-      264,
-      269,
-      308,
-      322,
-      405,
-      442,
-      421,
-      438,
-      448,
-      470,
-      585,
-      580,
-      589,
-      709,
-      737,
-      760,
-      789
-    ],
-    "top_topics": [
-      {
-        "label": "crime",
-        "count": 7726
-      },
-      {
-        "label": "suspense",
-        "count": 5267
-      },
-      {
-        "label": "violence",
-        "count": 4464
-      },
-      {
-        "label": "investigation",
-        "count": 3779
-      },
-      {
-        "label": "mystery",
-        "count": 3565
-      },
-      {
-        "label": "suspicion",
-        "count": 3432
-      },
-      {
-        "label": "fear",
-        "count": 2970
-      },
-      {
-        "label": "political intrigue",
-        "count": 2351
-      },
-      {
-        "label": "loss",
-        "count": 1759
-      },
-      {
-        "label": "espionage",
-        "count": 1606
-      }
-    ]
-  },
-  {
-    "domain_id": 10,
-    "label": "Warfare & Conflict",
-    "cluster_count": 34,
-    "original_super_ids": [
-      11,
-      16
-    ],
-    "leiden_cluster_ids": [
-      45,
-      51,
-      66,
-      162,
-      147,
-      166,
-      232,
-      320,
-      401,
-      399,
-      408,
-      605,
-      615,
-      634,
-      677,
-      748,
-      776,
-      52,
-      61,
-      53,
-      176,
-      198,
-      214,
-      226,
-      271,
-      347,
-      501,
-      600,
-      608,
-      592,
-      698,
-      741,
-      762,
-      785
-    ],
-    "top_topics": [
-      {
-        "label": "conflict",
-        "count": 10271
-      },
-      {
-        "label": "combat",
-        "count": 2042
-      },
-      {
-        "label": "military",
-        "count": 2011
-      },
-      {
-        "label": "military operations",
-        "count": 1491
-      },
-      {
-        "label": "american revolution",
-        "count": 1488
-      },
-      {
-        "label": "military strategy",
-        "count": 1329
-      },
-      {
-        "label": "interrogation",
-        "count": 913
-      },
-      {
-        "label": "world war ii",
-        "count": 900
-      },
-      {
-        "label": "international relations",
-        "count": 797
-      },
-      {
-        "label": "diplomacy",
-        "count": 695
-      }
-    ]
-  },
-  {
-    "domain_id": 11,
-    "label": "Machine Learning",
-    "cluster_count": 33,
-    "original_super_ids": [
-      19
-    ],
-    "leiden_cluster_ids": [
-      5,
-      39,
-      57,
-      93,
-      112,
-      117,
-      118,
-      143,
-      182,
-      257,
-      250,
-      283,
-      312,
-      355,
-      345,
-      361,
-      419,
-      393,
-      437,
-      415,
-      469,
-      493,
-      565,
-      588,
-      576,
-      614,
-      622,
-      672,
-      669,
-      734,
-      829,
-      830,
-      839
-    ],
-    "top_topics": [
-      {
-        "label": "machine learning",
-        "count": 1742
-      },
-      {
-        "label": "neural networks",
-        "count": 1473
-      },
-      {
-        "label": "deep learning",
-        "count": 1119
-      },
-      {
-        "label": "data analysis",
-        "count": 705
-      },
-      {
-        "label": "model training",
-        "count": 379
-      },
-      {
-        "label": "gradient descent",
-        "count": 316
-      },
-      {
-        "label": "natural language processing",
-        "count": 252
-      },
-      {
-        "label": "cognitive bias",
-        "count": 246
-      },
-      {
-        "label": "convolutional neural networks",
-        "count": 195
-      },
-      {
-        "label": "image processing",
-        "count": 181
-      }
-    ]
-  },
-  {
-    "domain_id": 12,
-    "label": "Sacred Narratives",
-    "cluster_count": 33,
-    "original_super_ids": [
-      24
-    ],
-    "leiden_cluster_ids": [
-      59,
-      71,
-      72,
-      90,
-      107,
-      113,
-      146,
-      186,
-      249,
-      224,
-      248,
-      220,
-      279,
-      343,
-      331,
-      332,
-      358,
-      382,
-      426,
-      471,
-      507,
-      506,
-      563,
-      602,
-      598,
-      587,
-      599,
-      662,
-      714,
-      745,
-      779,
-      788,
-      810
-    ],
-    "top_topics": [
-      {
-        "label": "religion",
-        "count": 2552
-      },
-      {
-        "label": "magic",
-        "count": 2033
-      },
-      {
-        "label": "mythology",
-        "count": 1480
-      },
-      {
-        "label": "faith",
-        "count": 744
-      },
-      {
-        "label": "historical figures",
-        "count": 594
-      },
-      {
-        "label": "religious beliefs",
-        "count": 580
-      },
-      {
-        "label": "religious figures",
-        "count": 526
-      },
-      {
-        "label": "prophecy",
-        "count": 316
-      },
-      {
-        "label": "ritual",
-        "count": 316
-      },
-      {
-        "label": "fate",
-        "count": 292
-      }
-    ]
-  },
-  {
-    "domain_id": 13,
-    "label": "Inner Landscapes",
-    "cluster_count": 32,
-    "original_super_ids": [
-      18
-    ],
-    "leiden_cluster_ids": [
-      7,
-      23,
-      28,
-      42,
-      48,
-      50,
-      63,
-      81,
-      119,
-      110,
-      126,
-      139,
-      152,
-      188,
-      175,
-      219,
-      233,
-      267,
-      300,
-      292,
-      313,
-      387,
-      413,
-      434,
-      429,
-      455,
-      549,
-      554,
-      699,
-      702,
-      726,
-      827
-    ],
-    "top_topics": [
-      {
-        "label": "memory",
-        "count": 5132
-      },
-      {
-        "label": "death",
-        "count": 3409
-      },
-      {
-        "label": "dreams",
-        "count": 1727
-      },
-      {
-        "label": "isolation",
-        "count": 1451
-      },
-      {
-        "label": "grief",
-        "count": 1391
-      },
-      {
-        "label": "trauma",
-        "count": 1385
-      },
-      {
-        "label": "mental state",
-        "count": 1176
-      },
-      {
-        "label": "despair",
-        "count": 1158
-      },
-      {
-        "label": "psychology",
-        "count": 961
-      },
-      {
-        "label": "illness",
-        "count": 769
-      }
-    ]
-  },
-  {
-    "domain_id": 14,
-    "label": "Family Wellbeing",
-    "cluster_count": 31,
-    "original_super_ids": [
-      21
-    ],
-    "leiden_cluster_ids": [
-      13,
-      16,
-      40,
-      91,
-      102,
-      151,
-      164,
-      158,
-      217,
-      238,
-      255,
-      227,
-      274,
-      304,
-      402,
-      481,
-      491,
-      535,
-      562,
-      601,
-      624,
-      635,
-      649,
-      645,
-      663,
-      722,
-      720,
-      716,
-      724,
-      747,
-      802
-    ],
-    "top_topics": [
-      {
-        "label": "relationships",
-        "count": 22812
-      },
-      {
-        "label": "family relationships",
-        "count": 7855
-      },
-      {
-        "label": "family",
-        "count": 7048
-      },
-      {
-        "label": "family dynamics",
-        "count": 3651
-      },
-      {
-        "label": "mental health",
-        "count": 3551
-      },
-      {
-        "label": "observation",
-        "count": 2680
-      },
-      {
-        "label": "family conflict",
-        "count": 2357
-      },
-      {
-        "label": "social interactions",
-        "count": 2086
-      },
-      {
-        "label": "education",
-        "count": 2072
-      },
-      {
-        "label": "childhood",
-        "count": 2019
-      }
-    ]
-  },
-  {
-    "domain_id": 15,
-    "label": "Global Affairs",
-    "cluster_count": 30,
-    "original_super_ids": [
-      2
-    ],
-    "leiden_cluster_ids": [
-      4,
-      21,
-      22,
-      36,
-      49,
-      95,
-      122,
-      199,
-      179,
-      173,
-      184,
-      192,
-      229,
-      314,
-      297,
-      310,
-      344,
-      353,
-      391,
-      398,
-      443,
-      456,
-      524,
-      551,
-      623,
-      696,
-      754,
-      793,
-      814,
-      822
-    ],
-    "top_topics": [
-      {
-        "label": "politics",
-        "count": 2593
-      },
-      {
-        "label": "race relations",
-        "count": 1085
-      },
-      {
-        "label": "government",
-        "count": 455
-      },
-      {
-        "label": "political conflict",
-        "count": 454
-      },
-      {
-        "label": "terrorism",
-        "count": 383
-      },
-      {
-        "label": "revolution",
-        "count": 345
-      },
-      {
-        "label": "cold war",
-        "count": 335
-      },
-      {
-        "label": "social justice",
-        "count": 326
-      },
-      {
-        "label": "thomas jefferson",
-        "count": 276
-      },
-      {
-        "label": "geopolitics",
-        "count": 273
-      }
-    ]
-  },
-  {
-    "domain_id": 16,
-    "label": "Space & Beyond",
+    "label": "Financial Strategy",
     "cluster_count": 29,
     "original_super_ids": [
       3
     ],
     "leiden_cluster_ids": [
-      8,
-      79,
-      97,
-      114,
-      138,
-      155,
-      194,
-      325,
-      378,
-      356,
-      424,
-      496,
-      498,
-      525,
-      531,
-      559,
-      561,
-      619,
-      583,
-      603,
-      650,
-      673,
-      681,
-      689,
-      731,
-      736,
-      763,
-      781,
-      842
+      3,
+      6,
+      31,
+      59,
+      84,
+      104,
+      136,
+      153,
+      183,
+      188,
+      206,
+      213,
+      255,
+      301,
+      308,
+      352,
+      357,
+      358,
+      367,
+      423,
+      497,
+      500,
+      554,
+      556,
+      566,
+      615,
+      646,
+      663,
+      668
     ],
     "top_topics": [
       {
-        "label": "space exploration",
-        "count": 3333
+        "label": "investment strategies",
+        "count": 1437
       },
       {
-        "label": "space travel",
-        "count": 1140
+        "label": "risk management",
+        "count": 1221
       },
       {
-        "label": "military conflict",
-        "count": 816
+        "label": "financial markets",
+        "count": 609
       },
       {
-        "label": "spacecraft",
-        "count": 330
+        "label": "banking",
+        "count": 429
       },
       {
-        "label": "astronomy",
-        "count": 292
+        "label": "financial crisis",
+        "count": 340
       },
       {
-        "label": "cosmology",
-        "count": 275
+        "label": "inflation",
+        "count": 205
       },
       {
-        "label": "pregnancy",
-        "count": 242
+        "label": "intellectual property",
+        "count": 73
       },
       {
-        "label": "space",
-        "count": 232
+        "label": "income tax",
+        "count": 63
       },
       {
-        "label": "arctic exploration",
-        "count": 218
+        "label": "rivalry",
+        "count": 60
       },
       {
-        "label": "mars",
-        "count": 198
+        "label": "regulation",
+        "count": 48
       }
     ]
   },
   {
-    "domain_id": 17,
-    "label": "Culinary Arts",
+    "domain_id": 10,
+    "label": "Global Narratives",
     "cluster_count": 27,
     "original_super_ids": [
       5
     ],
     "leiden_cluster_ids": [
-      6,
-      10,
-      11,
-      30,
-      43,
+      20,
+      42,
+      62,
+      66,
+      73,
       82,
-      80,
-      100,
-      160,
-      187,
-      231,
-      205,
-      239,
-      251,
+      120,
+      128,
+      201,
+      220,
+      273,
+      280,
+      288,
+      291,
+      293,
       305,
-      350,
-      337,
-      349,
-      414,
-      475,
-      527,
-      547,
-      553,
-      550,
-      584,
-      639,
-      730
+      315,
+      354,
+      410,
+      459,
+      463,
+      514,
+      562,
+      592,
+      593,
+      614,
+      647
+    ],
+    "top_topics": [
+      {
+        "label": "mediterranean trade",
+        "count": 76
+      },
+      {
+        "label": "ancient mesopotamia",
+        "count": 48
+      },
+      {
+        "label": "19th century society",
+        "count": 37
+      },
+      {
+        "label": "cultural preservation",
+        "count": 32
+      },
+      {
+        "label": "mexican culture",
+        "count": 30
+      },
+      {
+        "label": "prince",
+        "count": 30
+      },
+      {
+        "label": "historical references",
+        "count": 29
+      },
+      {
+        "label": "etruscans",
+        "count": 29
+      },
+      {
+        "label": "fugger family",
+        "count": 29
+      },
+      {
+        "label": "spanish conquest",
+        "count": 28
+      }
+    ]
+  },
+  {
+    "domain_id": 11,
+    "label": "Personal Journeys",
+    "cluster_count": 23,
+    "original_super_ids": [
+      15
+    ],
+    "leiden_cluster_ids": [
+      0,
+      21,
+      24,
+      27,
+      41,
+      45,
+      122,
+      135,
+      152,
+      196,
+      217,
+      242,
+      253,
+      268,
+      366,
+      412,
+      418,
+      419,
+      470,
+      485,
+      489,
+      539,
+      644
+    ],
+    "top_topics": [
+      {
+        "label": "relationships",
+        "count": 35458
+      },
+      {
+        "label": "conflict",
+        "count": 18118
+      },
+      {
+        "label": "travel",
+        "count": 13589
+      },
+      {
+        "label": "guilt and remorse",
+        "count": 37
+      },
+      {
+        "label": "street crime",
+        "count": 30
+      },
+      {
+        "label": "cremation",
+        "count": 30
+      },
+      {
+        "label": "chance encounters",
+        "count": 30
+      },
+      {
+        "label": "power and corruption",
+        "count": 29
+      },
+      {
+        "label": "death and resurrection",
+        "count": 25
+      },
+      {
+        "label": "illegal activities",
+        "count": 24
+      }
+    ]
+  },
+  {
+    "domain_id": 12,
+    "label": "Machine Learning",
+    "cluster_count": 20,
+    "original_super_ids": [
+      23
+    ],
+    "leiden_cluster_ids": [
+      2,
+      4,
+      7,
+      8,
+      25,
+      26,
+      29,
+      54,
+      105,
+      173,
+      205,
+      292,
+      340,
+      376,
+      413,
+      430,
+      507,
+      608,
+      629,
+      665
+    ],
+    "top_topics": [
+      {
+        "label": "glyphs",
+        "count": 2201
+      },
+      {
+        "label": "symbols",
+        "count": 2043
+      },
+      {
+        "label": "machine learning",
+        "count": 1910
+      },
+      {
+        "label": "fonts",
+        "count": 1882
+      },
+      {
+        "label": "neural networks",
+        "count": 1549
+      },
+      {
+        "label": "deep learning",
+        "count": 1058
+      },
+      {
+        "label": "data structures",
+        "count": 1019
+      },
+      {
+        "label": "algorithms",
+        "count": 651
+      },
+      {
+        "label": "python programming",
+        "count": 351
+      },
+      {
+        "label": "sentence structure",
+        "count": 272
+      }
+    ]
+  },
+  {
+    "domain_id": 13,
+    "label": "Culinary Arts",
+    "cluster_count": 16,
+    "original_super_ids": [
+      22
+    ],
+    "leiden_cluster_ids": [
+      1,
+      78,
+      209,
+      247,
+      258,
+      370,
+      389,
+      424,
+      439,
+      468,
+      479,
+      555,
+      558,
+      630,
+      636,
+      657
     ],
     "top_topics": [
       {
         "label": "cooking techniques",
-        "count": 654
-      },
-      {
-        "label": "food",
-        "count": 552
+        "count": 1746
       },
       {
         "label": "baking",
-        "count": 519
-      },
-      {
-        "label": "italian cuisine",
-        "count": 421
+        "count": 1193
       },
       {
         "label": "cooking",
-        "count": 300
+        "count": 490
       },
       {
-        "label": "alcohol",
-        "count": 275
+        "label": "coffee industry",
+        "count": 91
       },
       {
-        "label": "food preparation",
-        "count": 235
+        "label": "coffee production",
+        "count": 74
       },
       {
-        "label": "food and drink",
-        "count": 221
+        "label": "coffee history",
+        "count": 40
       },
       {
-        "label": "pasta",
-        "count": 213
+        "label": "chickens",
+        "count": 12
       },
       {
-        "label": "pressure cooking",
-        "count": 203
+        "label": "pickles",
+        "count": 12
+      },
+      {
+        "label": "salt production",
+        "count": 11
+      },
+      {
+        "label": "plant cultivation",
+        "count": 11
+      }
+    ]
+  },
+  {
+    "domain_id": 14,
+    "label": "Sacred Narratives",
+    "cluster_count": 16,
+    "original_super_ids": [
+      8
+    ],
+    "leiden_cluster_ids": [
+      64,
+      95,
+      108,
+      110,
+      131,
+      165,
+      169,
+      178,
+      245,
+      278,
+      313,
+      350,
+      365,
+      375,
+      436,
+      492
+    ],
+    "top_topics": [
+      {
+        "label": "cultural rituals",
+        "count": 44
+      },
+      {
+        "label": "religious prophecy",
+        "count": 35
+      },
+      {
+        "label": "jews",
+        "count": 32
+      },
+      {
+        "label": "religion and politics",
+        "count": 30
+      },
+      {
+        "label": "religious narrative",
+        "count": 30
+      },
+      {
+        "label": "imagery and symbolism",
+        "count": 28
+      },
+      {
+        "label": "art and symbolism",
+        "count": 27
+      },
+      {
+        "label": "religious zeal",
+        "count": 24
+      },
+      {
+        "label": "clergy",
+        "count": 23
+      },
+      {
+        "label": "faith and prayer",
+        "count": 22
+      }
+    ]
+  },
+  {
+    "domain_id": 15,
+    "label": "Dark Secrets",
+    "cluster_count": 15,
+    "original_super_ids": [
+      4
+    ],
+    "leiden_cluster_ids": [
+      60,
+      138,
+      159,
+      168,
+      197,
+      214,
+      224,
+      271,
+      334,
+      373,
+      456,
+      491,
+      506,
+      559,
+      648
+    ],
+    "top_topics": [
+      {
+        "label": "restoration",
+        "count": 47
+      },
+      {
+        "label": "job loss",
+        "count": 38
+      },
+      {
+        "label": "human survival",
+        "count": 36
+      },
+      {
+        "label": "personal resilience",
+        "count": 29
+      },
+      {
+        "label": "risk and danger",
+        "count": 27
+      },
+      {
+        "label": "trouble",
+        "count": 26
+      },
+      {
+        "label": "disruption",
+        "count": 26
+      },
+      {
+        "label": "abandoned buildings",
+        "count": 25
+      },
+      {
+        "label": "social breakdown",
+        "count": 24
+      },
+      {
+        "label": "material culture",
+        "count": 22
+      }
+    ]
+  },
+  {
+    "domain_id": 16,
+    "label": "Global Affairs",
+    "cluster_count": 12,
+    "original_super_ids": [
+      7
+    ],
+    "leiden_cluster_ids": [
+      16,
+      85,
+      101,
+      125,
+      150,
+      342,
+      368,
+      385,
+      540,
+      557,
+      564,
+      606
+    ],
+    "top_topics": [
+      {
+        "label": "political events",
+        "count": 40
+      },
+      {
+        "label": "political governance",
+        "count": 23
+      },
+      {
+        "label": "personal interests",
+        "count": 23
+      },
+      {
+        "label": "economic interests",
+        "count": 21
+      },
+      {
+        "label": "cabinet",
+        "count": 20
+      },
+      {
+        "label": "enclosure",
+        "count": 19
+      },
+      {
+        "label": "political landscape",
+        "count": 18
+      },
+      {
+        "label": "political operations",
+        "count": 18
+      },
+      {
+        "label": "liberty and freedom",
+        "count": 18
+      },
+      {
+        "label": "legislative power",
+        "count": 18
+      }
+    ]
+  },
+  {
+    "domain_id": 17,
+    "label": "Arts & Perception",
+    "cluster_count": 11,
+    "original_super_ids": [
+      0
+    ],
+    "leiden_cluster_ids": [
+      36,
+      56,
+      87,
+      144,
+      211,
+      250,
+      303,
+      425,
+      442,
+      537,
+      620
+    ],
+    "top_topics": [
+      {
+        "label": "cinema",
+        "count": 44
+      },
+      {
+        "label": "perception and reality",
+        "count": 43
+      },
+      {
+        "label": "museum exhibits",
+        "count": 38
+      },
+      {
+        "label": "voyeurism",
+        "count": 35
+      },
+      {
+        "label": "mirror",
+        "count": 29
+      },
+      {
+        "label": "lighting",
+        "count": 27
+      },
+      {
+        "label": "photography techniques",
+        "count": 25
+      },
+      {
+        "label": "perfume",
+        "count": 24
+      },
+      {
+        "label": "image editing",
+        "count": 22
+      },
+      {
+        "label": "scent",
+        "count": 21
       }
     ]
   },
   {
     "domain_id": 18,
-    "label": "Arts & Perception",
-    "cluster_count": 23,
+    "label": "Inner Landscapes",
+    "cluster_count": 9,
     "original_super_ids": [
-      10
+      13
     ],
     "leiden_cluster_ids": [
-      24,
-      25,
-      58,
-      62,
-      88,
-      109,
-      148,
-      135,
-      215,
-      242,
-      260,
-      278,
-      333,
-      315,
-      374,
-      390,
-      534,
-      578,
-      616,
-      638,
-      738,
-      832,
-      841
+      49,
+      57,
+      67,
+      137,
+      157,
+      281,
+      322,
+      349,
+      623
     ],
     "top_topics": [
       {
-        "label": "music",
-        "count": 1697
+        "label": "human consciousness",
+        "count": 35
       },
       {
-        "label": "appearance",
-        "count": 1064
+        "label": "dreams and imagination",
+        "count": 34
       },
       {
-        "label": "perception",
-        "count": 633
+        "label": "sleep and dreams",
+        "count": 31
       },
       {
-        "label": "biography",
-        "count": 391
+        "label": "fear and courage",
+        "count": 27
       },
       {
-        "label": "photography",
-        "count": 377
+        "label": "stress and anxiety",
+        "count": 27
       },
       {
-        "label": "fashion",
-        "count": 373
+        "label": "suspicion and deception",
+        "count": 26
       },
       {
-        "label": "art history",
-        "count": 348
+        "label": "fantasy and imagination",
+        "count": 23
       },
       {
-        "label": "clothing",
-        "count": 313
+        "label": "animal instincts",
+        "count": 22
       },
       {
-        "label": "creativity",
-        "count": 307
+        "label": "cognitive illusions",
+        "count": 20
       },
       {
-        "label": "objects",
-        "count": 239
+        "label": "fear/anxiety",
+        "count": 20
       }
     ]
   },
   {
     "domain_id": 19,
-    "label": "Creative Writing",
-    "cluster_count": 20,
+    "label": "Identity Formation",
+    "cluster_count": 4,
     "original_super_ids": [
       6
     ],
     "leiden_cluster_ids": [
-      2,
-      17,
-      26,
-      33,
-      76,
-      98,
-      172,
-      265,
-      296,
-      330,
-      335,
-      368,
-      386,
-      431,
-      480,
-      489,
-      552,
-      758,
-      771,
-      784
-    ],
-    "top_topics": [
-      {
-        "label": "literature",
-        "count": 2171
-      },
-      {
-        "label": "poetry",
-        "count": 1320
-      },
-      {
-        "label": "writing",
-        "count": 1057
-      },
-      {
-        "label": "creative writing",
-        "count": 943
-      },
-      {
-        "label": "character development",
-        "count": 891
-      },
-      {
-        "label": "publishing",
-        "count": 693
-      },
-      {
-        "label": "literary analysis",
-        "count": 677
-      },
-      {
-        "label": "science fiction",
-        "count": 623
-      },
-      {
-        "label": "storytelling",
-        "count": 579
-      },
-      {
-        "label": "writing process",
-        "count": 549
-      }
-    ]
-  },
-  {
-    "domain_id": 20,
-    "label": "Emergency Response",
-    "cluster_count": 19,
-    "original_super_ids": [
-      12
-    ],
-    "leiden_cluster_ids": [
-      124,
-      130,
-      149,
-      210,
-      169,
-      280,
+      23,
       290,
-      309,
-      400,
-      532,
-      690,
-      701,
-      694,
-      710,
-      725,
-      739,
-      742,
-      768,
-      803
+      346,
+      390
     ],
     "top_topics": [
       {
-        "label": "rescue",
-        "count": 2159
+        "label": "sexual relationships",
+        "count": 33
       },
       {
-        "label": "security",
-        "count": 981
+        "label": "misconceptions",
+        "count": 28
       },
       {
-        "label": "medical emergency",
-        "count": 440
+        "label": "personal desire",
+        "count": 26
       },
       {
-        "label": "healthcare",
-        "count": 323
+        "label": "marriage customs",
+        "count": 24
       },
       {
-        "label": "medical procedures",
-        "count": 267
+        "label": "marriage and relationships",
+        "count": 24
       },
       {
-        "label": "disease",
-        "count": 244
+        "label": "friendships",
+        "count": 20
       },
       {
-        "label": "hospital",
-        "count": 232
+        "label": "relationships and friendship",
+        "count": 20
       },
       {
-        "label": "medical examination",
-        "count": 208
+        "label": "marriage and family",
+        "count": 17
       },
       {
-        "label": "emergency",
-        "count": 159
+        "label": "affection",
+        "count": 15
       },
       {
-        "label": "medical",
-        "count": 143
-      }
-    ]
-  },
-  {
-    "domain_id": 21,
-    "label": "Maritime Adventures",
-    "cluster_count": 15,
-    "original_super_ids": [
-      20
-    ],
-    "leiden_cluster_ids": [
-      44,
-      70,
-      85,
-      125,
-      171,
-      191,
-      207,
-      327,
-      389,
-      365,
-      441,
-      458,
-      636,
-      651,
-      836
-    ],
-    "top_topics": [
-      {
-        "label": "adventure",
-        "count": 1218
-      },
-      {
-        "label": "exploration",
-        "count": 850
-      },
-      {
-        "label": "navigation",
-        "count": 577
-      },
-      {
-        "label": "disaster",
-        "count": 456
-      },
-      {
-        "label": "shipboard life",
-        "count": 282
-      },
-      {
-        "label": "ship design",
-        "count": 281
-      },
-      {
-        "label": "surfing",
-        "count": 243
-      },
-      {
-        "label": "urban exploration",
-        "count": 231
-      },
-      {
-        "label": "river",
-        "count": 204
-      },
-      {
-        "label": "sailing",
-        "count": 194
-      }
-    ]
-  },
-  {
-    "domain_id": 22,
-    "label": "Personal Journeys",
-    "cluster_count": 7,
-    "original_super_ids": [
-      13
-    ],
-    "leiden_cluster_ids": [
-      163,
-      213,
-      228,
-      462,
-      479,
-      503,
-      556
-    ],
-    "top_topics": [
-      {
-        "label": "personal reflection",
-        "count": 1373
-      },
-      {
-        "label": "time travel",
-        "count": 725
-      },
-      {
-        "label": "self-reflection",
-        "count": 667
-      },
-      {
-        "label": "reflection",
-        "count": 299
-      },
-      {
-        "label": "childhood memories",
-        "count": 276
-      },
-      {
-        "label": "self-perception",
-        "count": 259
-      },
-      {
-        "label": "happiness",
-        "count": 259
-      },
-      {
-        "label": "personal history",
-        "count": 248
-      },
-      {
-        "label": "personality",
-        "count": 245
-      },
-      {
-        "label": "self-improvement",
-        "count": 231
-      }
-    ]
-  },
-  {
-    "domain_id": 23,
-    "label": "Identity Formation",
-    "cluster_count": 2,
-    "original_super_ids": [
-      0
-    ],
-    "leiden_cluster_ids": [
-      384,
-      485
-    ],
-    "top_topics": [
-      {
-        "label": "identity",
-        "count": 3715
-      },
-      {
-        "label": "personal identity",
-        "count": 290
-      },
-      {
-        "label": "identity crisis",
-        "count": 88
-      },
-      {
-        "label": "names",
-        "count": 51
-      },
-      {
-        "label": "recognition",
-        "count": 22
-      },
-      {
-        "label": "names and identity",
+        "label": "love and affection",
         "count": 15
       }
     ]

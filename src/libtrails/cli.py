@@ -1538,6 +1538,81 @@ def load_domains(json_file: str):
     console.print(table)
 
 
+@main.command("regenerate-domains")
+@click.option(
+    "--n-domains",
+    "-n",
+    default=25,
+    type=int,
+    help="Number of super-clusters to generate",
+)
+@click.option(
+    "--output",
+    "-o",
+    default="experiments/super_clusters_new.json",
+    help="Output JSON file path",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Show super-clusters without saving",
+)
+def regenerate_domains(n_domains: int, output: str, dry_run: bool):
+    """
+    Regenerate domains (super-clusters) from current Leiden clusters.
+
+    This uses K-means on cluster centroids to group similar clusters.
+    After reviewing the auto-generated labels, update REFINED_LABELS
+    in experiments/domain_labels_final.py and run load-domains.
+
+    Example workflow:
+      1. uv run libtrails regenerate-domains  # generates super_clusters_new.json
+      2. Review output and update REFINED_LABELS mapping
+      3. uv run python experiments/domain_labels_final.py
+      4. uv run libtrails load-domains
+    """
+    from pathlib import Path
+
+    from .domains import generate_super_clusters
+
+    console.print(f"[bold]Generating {n_domains} super-clusters...[/bold]")
+
+    super_clusters = generate_super_clusters(n_domains=n_domains)
+
+    console.print(f"\n[bold]=== {len(super_clusters)} Super-Clusters ===[/bold]\n")
+
+    table = Table(title="Super-Clusters (Auto-labeled)")
+    table.add_column("ID", style="dim", width=4)
+    table.add_column("Clusters", justify="right", width=8)
+    table.add_column("Auto Label", style="cyan")
+
+    for sc in super_clusters:
+        table.add_row(
+            str(sc["super_cluster_id"]),
+            str(len(sc["leiden_clusters"])),
+            sc["auto_label"][:50] + "..." if len(sc["auto_label"]) > 50 else sc["auto_label"]
+        )
+
+    console.print(table)
+
+    total = sum(len(sc["leiden_clusters"]) for sc in super_clusters)
+    console.print(f"\nTotal clusters mapped: {total}")
+
+    if dry_run:
+        console.print("\n[bold yellow]DRY RUN - not saving to file[/bold yellow]")
+    else:
+        output_path = Path(output)
+        # Convert to format expected by domain_labels_final.py
+        import json
+        with open(output_path, "w") as f:
+            json.dump(super_clusters, f, indent=2)
+        console.print(f"\n[green]Saved to {output}[/green]")
+        console.print("\nNext steps:")
+        console.print("  1. Review auto-labels and update REFINED_LABELS in experiments/domain_labels_final.py")
+        console.print("  2. Run: [cyan]uv run python experiments/domain_labels_final.py[/cyan]")
+        console.print("  3. Run: [cyan]uv run libtrails load-domains[/cyan]")
+
+
 @main.command()
 @click.option("--host", default="127.0.0.1", help="Host to bind to")
 @click.option("--port", default=8000, type=int, help="Port to bind to")
