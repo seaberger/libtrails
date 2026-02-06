@@ -47,3 +47,27 @@ export interface SearchResult {
   score: number;
   match_type: "keyword" | "semantic";
 }
+
+export interface ClusterInfo {
+  cluster_id: number;
+  label: string;
+  size: number;
+  book_count?: number;
+}
+
+export interface DomainSummary {
+  domain_id: number;
+  label: string;
+  cluster_count: number;
+  book_count: number;
+  sample_books: BookSummary[];
+  top_clusters: ClusterInfo[];
+}
+
+export interface DomainDetail {
+  domain_id: number;
+  label: string;
+  cluster_count: number;
+  clusters: ClusterInfo[];
+  books: BookSummary[];
+}

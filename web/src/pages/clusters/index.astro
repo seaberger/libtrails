@@ -1,0 +1,28 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import ThemeCard from '../../components/ThemeCard.astro';
+import ThemeSearch from '../../components/ThemeSearch.astro';
+import { getThemes } from '../../lib/api';
+
+// Fetch clusters at build time (SSR) or request time
+const clusters = await getThemes(200, 3);
+---
+
+<BaseLayout title="Clusters" description="Browse all topic clusters from your library">
+  <header class="mb-6">
+    <h1 class="text-2xl font-medium text-[var(--color-text)] mb-2">
+      Clusters
+    </h1>
+    <p class="text-[var(--color-text-muted)]">
+      Explore {clusters.length} topic clusters discovered in your library
+    </p>
+  </header>
+
+  <ThemeSearch />
+
+  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4" data-themes-grid>
+    {clusters.map(theme => (
+      <ThemeCard theme={theme} />
+    ))}
+  </div>
+</BaseLayout>

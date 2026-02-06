@@ -1,0 +1,137 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { getDomains, getCoverUrl } from '../../lib/api';
+
+const domains = await getDomains();
+---
+
+<BaseLayout title="Themes" description="Browse your library by broad themes">
+  <header class="mb-6">
+    <h1 class="text-2xl font-medium text-[var(--color-text)] mb-2">
+      Themes
+    </h1>
+    <p class="text-[var(--color-text-muted)]">
+      Explore {domains.length} broad themes across your library
+    </p>
+  </header>
+
+  <div class="flex gap-6" id="domain-browser">
+    <!-- Left panel: Domain list -->
+    <div class="w-64 flex-shrink-0">
+      <div class="sticky top-24 space-y-1">
+        {domains.map((domain, index) => (
+          <button
+            class="domain-item w-full text-left px-4 py-3 rounded-lg transition-all duration-200 hover:bg-[var(--color-surface)] border border-transparent data-[selected]:bg-[var(--color-surface)] data-[selected]:border-[var(--color-accent)]"
+            data-domain-id={domain.domain_id}
+            data-selected={index === 0 ? "true" : undefined}
+          >
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-medium text-[var(--color-text)]">
+                {domain.label}
+              </span>
+              <span class="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg)] px-2 py-0.5 rounded-full">
+                {domain.cluster_count}
+              </span>
+            </div>
+          </button>
+        ))}
+      </div>
+    </div>
+
+    <!-- Right panel: Domain detail -->
+    <div class="flex-1 min-w-0">
+      {domains.map((domain, index) => (
+        <div
+          class="domain-detail"
+          data-domain-id={domain.domain_id}
+          style={index === 0 ? "" : "display: none;"}
+        >
+          <div class="bg-[var(--color-surface)] rounded-lg p-6 border border-[var(--color-border)]">
+            <h2 class="text-xl font-semibold text-[var(--color-text)] mb-2">
+              {domain.label}
+            </h2>
+            <p class="text-sm text-[var(--color-text-muted)] mb-6">
+              {domain.cluster_count} clusters · {domain.book_count} books
+            </p>
+
+            <!-- Top clusters -->
+            <div class="mb-6">
+              <h3 class="text-sm font-medium text-[var(--color-text)] mb-3">Top Clusters</h3>
+              <div class="flex flex-wrap gap-2">
+                {domain.top_clusters.slice(0, 8).map((cluster: any) => (
+                  <a
+                    href={`/clusters/${cluster.cluster_id}`}
+                    class="px-3 py-1.5 bg-[var(--color-bg)] text-sm text-[var(--color-text)] rounded-full hover:bg-[var(--color-accent)] hover:text-white transition-colors"
+                  >
+                    {cluster.label}
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            <!-- Sample books -->
+            <div>
+              <h3 class="text-sm font-medium text-[var(--color-text)] mb-3">Featured Books</h3>
+              <div class="grid grid-cols-5 gap-3">
+                {domain.sample_books.slice(0, 5).map((book: any) => (
+                  <a href={`/books/${book.id}`} class="group">
+                    <div class="aspect-[2/3] bg-[var(--color-bg)] rounded overflow-hidden mb-2">
+                      <img
+                        src={getCoverUrl(book.calibre_id)}
+                        alt={book.title}
+                        class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                        loading="lazy"
+                      />
+                    </div>
+                    <p class="text-xs text-[var(--color-text)] line-clamp-2 group-hover:text-[var(--color-accent)] transition-colors">
+                      {book.title}
+                    </p>
+                  </a>
+                ))}
+              </div>
+            </div>
+
+            <!-- View all clusters link -->
+            <div class="mt-6 pt-4 border-t border-[var(--color-border)]">
+              <a
+                href={`/clusters?domain=${domain.domain_id}`}
+                class="text-sm text-[var(--color-accent)] hover:underline"
+              >
+                View all {domain.cluster_count} clusters in {domain.label} →
+              </a>
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+</BaseLayout>
+
+<script>
+  function initDomainBrowser() {
+    const items = document.querySelectorAll('.domain-item');
+    const details = document.querySelectorAll('.domain-detail');
+
+    items.forEach(item => {
+      item.addEventListener('click', () => {
+        const domainId = item.getAttribute('data-domain-id');
+
+        // Update selected state
+        items.forEach(i => i.removeAttribute('data-selected'));
+        item.setAttribute('data-selected', 'true');
+
+        // Show corresponding detail
+        details.forEach(d => {
+          if (d.getAttribute('data-domain-id') === domainId) {
+            (d as HTMLElement).style.display = '';
+          } else {
+            (d as HTMLElement).style.display = 'none';
+          }
+        });
+      });
+    });
+  }
+
+  initDomainBrowser();
+  document.addEventListener('astro:page-load', initDomainBrowser);
+</script>
