@@ -295,3 +295,124 @@ def regenerate_domains(
         save_domains_json(domains, output_path)
 
     return domains
+
+
+def split_catchall_superclusters(
+    super_clusters: list[dict],
+    catchall_splits: dict[int, int],
+    db_path: Path | None = None,
+) -> list[dict]:
+    """
+    Sub-cluster specific super-clusters that are catch-alls.
+    
+    Args:
+        super_clusters: Output from generate_super_clusters()
+        catchall_splits: Dict mapping super_cluster_id -> number of sub-clusters
+                        e.g., {24: 4, 29: 3} to split cluster 24 into 4 and 29 into 3
+        db_path: Path to database (defaults to IPAD_DB_PATH)
+    
+    Returns:
+        Updated list of super-clusters with catch-alls replaced by sub-clusters
+    """
+    db_path = db_path or IPAD_DB_PATH
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+    
+    # Find the next available super-cluster ID
+    max_id = max(sc["super_cluster_id"] for sc in super_clusters)
+    next_id = max_id + 1
+    
+    new_super_clusters = []
+    
+    for sc in super_clusters:
+        sc_id = sc["super_cluster_id"]
+        
+        if sc_id not in catchall_splits:
+            # Keep this super-cluster as-is
+            new_super_clusters.append(sc)
+            continue
+        
+        # This is a catch-all - split it
+        n_splits = catchall_splits[sc_id]
+        leiden_clusters = sc["leiden_clusters"]
+        
+        if len(leiden_clusters) < n_splits:
+            # Not enough clusters to split
+            new_super_clusters.append(sc)
+            continue
+        
+        print(f"Splitting super-cluster {sc_id} ({len(leiden_clusters)} clusters) into {n_splits} sub-groups...")
+        
+        # Get centroids for each Leiden cluster
+        centroids = []
+        valid_clusters = []
+        
+        for lc in leiden_clusters:
+            cluster_id = lc["cluster_id"]
+            topics = get_cluster_topics(cursor, cluster_id)
+            centroid = compute_robust_centroid(topics)
+            
+            if centroid is not None:
+                centroids.append(centroid)
+                valid_clusters.append(lc)
+        
+        if len(centroids) < n_splits:
+            print(f"  Warning: Only {len(centroids)} valid centroids, keeping original")
+            new_super_clusters.append(sc)
+            continue
+        
+        # K-means sub-clustering
+        X = np.array(centroids)
+        kmeans = KMeans(n_clusters=n_splits, random_state=42, n_init=10)
+        sub_labels = kmeans.fit_predict(X)
+        
+        # Group clusters by sub-label
+        sub_groups = {}
+        for lc, sub_label in zip(valid_clusters, sub_labels):
+            sub_label = int(sub_label)
+            if sub_label not in sub_groups:
+                sub_groups[sub_label] = []
+            sub_groups[sub_label].append(lc)
+        
+        # Create new super-clusters for each sub-group
+        for sub_label, group_clusters in sub_groups.items():
+            new_sc_id = next_id
+            next_id += 1
+            
+            # Aggregate top topics
+            all_topics = {}
+            for lc in group_clusters:
+                for t in lc["top_topics"]:
+                    label = t["label"]
+                    count = t["count"]
+                    if label not in all_topics:
+                        all_topics[label] = 0
+                    all_topics[label] += count
+            
+            # Filter and sort topics
+            filtered = [(k, v) for k, v in all_topics.items() if len(k) >= 4]
+            sorted_topics = sorted(filtered, key=lambda x: x[1], reverse=True)[:10]
+            
+            # Auto-label from top 3
+            if sorted_topics:
+                auto_label = " / ".join([t[0] for t in sorted_topics[:3]])
+            else:
+                auto_label = f"Sub-domain {new_sc_id}"
+            
+            new_super_clusters.append({
+                "super_cluster_id": new_sc_id,
+                "leiden_clusters": group_clusters,
+                "top_topics": [{"label": t[0], "total_count": t[1]} for t in sorted_topics],
+                "auto_label": auto_label,
+                "split_from": sc_id,
+            })
+            
+            print(f"  → Sub-cluster {new_sc_id}: {len(group_clusters)} clusters - {auto_label[:50]}")
+    
+    conn.close()
+    
+    # Sort by number of clusters (descending)
+    new_super_clusters.sort(key=lambda x: len(x["leiden_clusters"]), reverse=True)
+    
+    return new_super_clusters

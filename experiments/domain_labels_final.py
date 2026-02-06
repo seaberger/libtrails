@@ -8,34 +8,52 @@ from pathlib import Path
 SUPER_CLUSTERS_PATH = Path(__file__).parent / "super_clusters_robust.json"
 OUTPUT_PATH = Path(__file__).parent / "domain_labels_final.json"
 
-# Human-refined labels based on new super-cluster content (Feb 2026)
+# Human-refined labels based on split super-clusters (Feb 2026)
 # Maps super_cluster_id -> final label
+# 34 super-clusters → ~25 domains via strategic merges
 REFINED_LABELS = {
-    24: "Literary Worlds",          # allomancy, aes sedai, maze (Mistborn, WoT fantasy)
-    9: "Literary Worlds",           # harry potter, hogwarts, voldemort (merge fantasy fiction)
-    2: "Games & Strategy",          # chess strategy, pawn structure (new domain)
-    20: "Organizational Dynamics",  # natural selection, product development, business models
-    21: "Human Condition",          # human identity, ethical considerations, ideals
-    12: "Digital Futures",          # renewable energy, gate, oil and gas industry (tech/energy)
-    18: "Sports & Athletics",       # cycling, doping, golf (new domain)
-    14: "Wild Earth",               # orchids, pottery, knife (crafts/nature)
-    3: "Financial Strategy",        # investment strategies, risk management, financial markets
-    11: "Warfare & Conflict",       # isis, northern ireland conflict/troubles
-    5: "Global Narratives",         # mediterranean trade, ancient mesopotamia, 19th century
-    17: "Family Wellbeing",         # family tradition, rural communities, military camps
-    10: "Human Condition",          # language and communication, scholarship, philosophers (merge)
-    15: "Personal Journeys",        # relationships, conflict, travel
-    19: "Wild Earth",               # surfing, paleontology, plate tectonics (merge nature/science)
-    23: "Machine Learning",         # glyphs, symbols, machine learning
-    22: "Culinary Arts",            # cooking techniques, baking, cooking
-    8: "Sacred Narratives",         # cultural rituals, religious prophecy, jews
-    4: "Dark Secrets",              # restoration, job loss, human survival (struggle/survival)
-    1: "Warfare & Conflict",        # military regiments, raiding, veterans (merge)
-    7: "Global Affairs",            # political events, political governance, personal interests
-    0: "Arts & Perception",         # cinema, perception and reality, museum exhibits
-    16: "Family Wellbeing",         # nutrition, alzheimer's disease, diabetes (merge health)
-    13: "Inner Landscapes",         # human consciousness, dreams and imagination, sleep
-    6: "Identity Formation",        # sexual relationships, misconceptions, personal desire
+    # === Core domains (no merge) ===
+    0: "History & Archaeology",       # history, religious beliefs, archaeology
+    1: "Logic & Mathematics",         # logic, risk assessment, mathematics
+    2: "Politics & Power",            # politics, power, government
+    3: "Inner Landscapes",            # memory, observation, personal reflection
+    4: "Religion & Philosophy",       # religion, philosophy, human nature
+    5: "AI & Machine Learning",       # artificial intelligence, ML, neural networks
+    6: "Nature & Agriculture",        # animals, economics, agriculture
+    7: "Leadership & Strategy",       # communication, leadership, decision making
+    8: "Financial Strategy",          # investment strategies, risk management, wealth
+    9: "Space & Science",             # space exploration, space travel, science
+    10: "Architecture & Design",      # architecture, urban life, domesticity
+    11: "Crime & Suspense",           # crime, suspense, violence
+    12: "Family & Relationships",     # relationships, family, family dynamics
+    15: "Identity & Dreams",          # identity, dreams, deception
+    16: "Conflict & Emotion",         # conflict, fear, betrayal
+    17: "Nature & Travel",            # travel, nature, weather
+    18: "Historical Drama",           # shakespeare, royal court, american history
+    19: "Technology & Data",          # technology, text, data structures
+    21: "Arts & Society",             # music, marriage, social status
+    22: "World Cultures",             # india, japanese cuisine, japanese culture
+    23: "Survival & Mortality",       # death, rescue, survival
+    25: "Literature & Poetry",        # literature, poetry, symbols
+    26: "Espionage & Security",       # espionage, surveillance, security
+    27: "Education & Class",          # social interactions, education, social class
+    35: "Time & Communication",       # time, human interaction, typography
+    36: "Engineering & Robotics",     # robotics, engineering, construction (+ holograms)
+
+    # === Merged domains ===
+    # Culinary Arts (merge 13 + 34)
+    13: "Culinary Arts",              # cooking techniques, baking, food
+    34: "Culinary Arts",              # fire, grilling → merge with cooking
+
+    # Warfare & Military (merge 14 + 28)
+    14: "Warfare & Military",         # american revolution, military strategy, WWII
+    28: "Warfare & Military",         # combat, military, warfare
+
+    # Fantasy & Speculative Fiction (merge 20 + 30 + 31 + 32)
+    20: "Fantasy & Speculative",      # characters, political intrigue, magic
+    30: "Fantasy & Speculative",      # glyphs, allomancy, nietzsche (Mistborn + philosophy)
+    31: "Fantasy & Speculative",      # warriors, hell, home (dark fantasy)
+    32: "Fantasy & Speculative",      # aes sedai, oasis, data collection (Wheel of Time)
 }
 
 def main():
