@@ -197,6 +197,22 @@ def init_chunks_table():
                 label TEXT NOT NULL,
                 generated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+
+            -- Domains (super-clusters) - high-level groupings of Leiden clusters
+            CREATE TABLE IF NOT EXISTS domains (
+                id INTEGER PRIMARY KEY,
+                label TEXT NOT NULL UNIQUE,
+                cluster_count INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            -- Mapping of Leiden clusters to domains
+            CREATE TABLE IF NOT EXISTS cluster_domains (
+                cluster_id INTEGER PRIMARY KEY,
+                domain_id INTEGER NOT NULL REFERENCES domains(id)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_cluster_domains_domain ON cluster_domains(domain_id);
         """)
 
         # Migration: add topics_json column if it doesn't exist
@@ -464,6 +480,91 @@ def migrate_raw_topics_to_normalized():
 
         conn.commit()
         return migrated
+
+
+def load_domains_from_json(json_path: Path):
+    """
+    Load domains from the final labels JSON file into the database.
+
+    This clears existing domain data and reloads from the JSON.
+    """
+    import json
+
+    with open(json_path) as f:
+        domains = json.load(f)
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        # Clear existing data
+        cursor.execute("DELETE FROM cluster_domains")
+        cursor.execute("DELETE FROM domains")
+
+        # Insert domains
+        for d in domains:
+            cursor.execute(
+                "INSERT INTO domains (id, label, cluster_count) VALUES (?, ?, ?)",
+                (d["domain_id"], d["label"], d["cluster_count"])
+            )
+
+            # Insert cluster mappings
+            for cluster_id in d["leiden_cluster_ids"]:
+                cursor.execute(
+                    "INSERT OR REPLACE INTO cluster_domains (cluster_id, domain_id) VALUES (?, ?)",
+                    (cluster_id, d["domain_id"])
+                )
+
+        conn.commit()
+
+    return len(domains)
+
+
+def get_all_domains() -> list[dict]:
+    """Get all domains with their metadata."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT d.id, d.label, d.cluster_count,
+                   COUNT(DISTINCT cd.cluster_id) as actual_clusters
+            FROM domains d
+            LEFT JOIN cluster_domains cd ON cd.domain_id = d.id
+            GROUP BY d.id
+            ORDER BY d.cluster_count DESC
+        """)
+        return [dict(row) for row in cursor.fetchall()]
+
+
+def get_domain(domain_id: int) -> Optional[dict]:
+    """Get a single domain by ID."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM domains WHERE id = ?", (domain_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+
+
+def get_clusters_for_domain(domain_id: int) -> list[int]:
+    """Get all Leiden cluster IDs belonging to a domain."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT cluster_id FROM cluster_domains WHERE domain_id = ?",
+            (domain_id,)
+        )
+        return [row[0] for row in cursor.fetchall()]
+
+
+def get_domain_for_cluster(cluster_id: int) -> Optional[dict]:
+    """Get the domain for a given Leiden cluster."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT d.* FROM domains d
+            JOIN cluster_domains cd ON cd.domain_id = d.id
+            WHERE cd.cluster_id = ?
+        """, (cluster_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
 
 
 def get_topic_stats() -> dict:

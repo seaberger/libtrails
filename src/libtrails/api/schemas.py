@@ -73,3 +73,33 @@ class PaginatedResponse(BaseModel):
     page: int
     page_size: int
     total_pages: int
+
+
+class ClusterInfo(BaseModel):
+    """Brief cluster info for domain listings."""
+
+    cluster_id: int
+    label: str
+    size: int
+    book_count: int | None = None
+
+
+class DomainSummary(BaseModel):
+    """Brief domain (super-cluster) info for lists."""
+
+    domain_id: int
+    label: str
+    cluster_count: int
+    book_count: int
+    sample_books: list[BookSummary] = []
+    top_clusters: list[dict] = []
+
+
+class DomainDetail(BaseModel):
+    """Full domain info with all clusters and books."""
+
+    domain_id: int
+    label: str
+    cluster_count: int
+    clusters: list[dict] = []
+    books: list[BookSummary] = []

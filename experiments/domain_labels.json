@@ -1,0 +1,448 @@
+[
+  {
+    "domain_id": 8,
+    "cluster_count": 101,
+    "auto_label": "harry potter / oscar wilde / hogwarts",
+    "llm_label": "Literary & Historical Figures",
+    "top_topics": [
+      "harry potter",
+      "oscar wilde",
+      "hogwarts",
+      "ernest hemingway",
+      "abraham lincoln",
+      "voldemort",
+      "royal court",
+      "race",
+      "alexander hamilton",
+      "hamilton"
+    ]
+  },
+  {
+    "domain_id": 15,
+    "cluster_count": 64,
+    "auto_label": "weather / domestic life / architecture",
+    "llm_label": "Urban Landscapes",
+    "top_topics": [
+      "weather",
+      "domestic life",
+      "architecture",
+      "setting",
+      "transportation",
+      "power",
+      "domesticity",
+      "fire",
+      "hunting",
+      "new york city"
+    ]
+  },
+  {
+    "domain_id": 9,
+    "cluster_count": 52,
+    "auto_label": "characters / conversation / philosophy",
+    "llm_label": "Human Condition",
+    "top_topics": [
+      "characters",
+      "conversation",
+      "philosophy",
+      "fantasy",
+      "love",
+      "character interaction",
+      "character description",
+      "existentialism",
+      "stoicism",
+      "social commentary"
+    ]
+  },
+  {
+    "domain_id": 7,
+    "cluster_count": 50,
+    "auto_label": "survival / rural life / nature",
+    "llm_label": "Wild Earth",
+    "top_topics": [
+      "survival",
+      "rural life",
+      "nature",
+      "animals",
+      "geology",
+      "landscape",
+      "evolution",
+      "climate change",
+      "geography",
+      "animal behavior"
+    ]
+  },
+  {
+    "domain_id": 14,
+    "cluster_count": 50,
+    "auto_label": "technology / surveillance / engineering",
+    "llm_label": "Digital Futures",
+    "top_topics": [
+      "technology",
+      "surveillance",
+      "engineering",
+      "virtual reality",
+      "performance",
+      "time management",
+      "simulation",
+      "steve jobs",
+      "python programming",
+      "innovation"
+    ]
+  },
+  {
+    "domain_id": 23,
+    "cluster_count": 46,
+    "auto_label": "artificial intelligence / time / robotics",
+    "llm_label": "Computational Intelligence",
+    "top_topics": [
+      "artificial intelligence",
+      "time",
+      "robotics",
+      "pytorch",
+      "mathematics",
+      "problem solving",
+      "chess strategy",
+      "probability",
+      "physics",
+      "data structures"
+    ]
+  },
+  {
+    "domain_id": 17,
+    "cluster_count": 41,
+    "auto_label": "travel / history / culture",
+    "llm_label": "Global Narratives",
+    "top_topics": [
+      "travel",
+      "history",
+      "culture",
+      "shakespeare",
+      "slavery",
+      "family history",
+      "american history",
+      "cultural differences",
+      "immigration",
+      "archaeology"
+    ]
+  },
+  {
+    "domain_id": 22,
+    "cluster_count": 37,
+    "auto_label": "communication / social class / leadership",
+    "llm_label": "Organizational Dynamics",
+    "top_topics": [
+      "communication",
+      "social class",
+      "leadership",
+      "conflict resolution",
+      "business",
+      "decision making",
+      "social hierarchy",
+      "negotiation",
+      "poverty",
+      "entrepreneurship"
+    ]
+  },
+  {
+    "domain_id": 1,
+    "cluster_count": 35,
+    "auto_label": "risk management / finance / risk assessment",
+    "llm_label": "Financial Strategy",
+    "top_topics": [
+      "risk management",
+      "finance",
+      "risk assessment",
+      "money",
+      "wealth",
+      "real estate",
+      "financial markets",
+      "economics",
+      "investment strategies",
+      "stock market"
+    ]
+  },
+  {
+    "domain_id": 4,
+    "cluster_count": 34,
+    "auto_label": "crime / suspense / violence",
+    "llm_label": "Dark Secrets",
+    "top_topics": [
+      "crime",
+      "suspense",
+      "violence",
+      "investigation",
+      "mystery",
+      "suspicion",
+      "fear",
+      "political intrigue",
+      "loss",
+      "espionage"
+    ]
+  },
+  {
+    "domain_id": 19,
+    "cluster_count": 33,
+    "auto_label": "machine learning / neural networks / deep learning",
+    "llm_label": "Artificial Intelligence",
+    "top_topics": [
+      "machine learning",
+      "neural networks",
+      "deep learning",
+      "data analysis",
+      "model training",
+      "gradient descent",
+      "natural language processing",
+      "cognitive bias",
+      "convolutional neural networks",
+      "image processing"
+    ]
+  },
+  {
+    "domain_id": 24,
+    "cluster_count": 33,
+    "auto_label": "religion / magic / mythology",
+    "llm_label": "Sacred Narratives",
+    "top_topics": [
+      "religion",
+      "magic",
+      "mythology",
+      "faith",
+      "historical figures",
+      "religious beliefs",
+      "religious figures",
+      "prophecy",
+      "ritual",
+      "fate"
+    ]
+  },
+  {
+    "domain_id": 18,
+    "cluster_count": 32,
+    "auto_label": "memory / death / dreams",
+    "llm_label": "Inner Landscapes",
+    "top_topics": [
+      "memory",
+      "death",
+      "dreams",
+      "isolation",
+      "grief",
+      "trauma",
+      "mental state",
+      "despair",
+      "psychology",
+      "illness"
+    ]
+  },
+  {
+    "domain_id": 21,
+    "cluster_count": 31,
+    "auto_label": "relationships / family relationships / family",
+    "llm_label": "Family Wellbeing",
+    "top_topics": [
+      "relationships",
+      "family relationships",
+      "family",
+      "family dynamics",
+      "mental health",
+      "observation",
+      "family conflict",
+      "social interactions",
+      "education",
+      "childhood"
+    ]
+  },
+  {
+    "domain_id": 2,
+    "cluster_count": 30,
+    "auto_label": "politics / race relations / government",
+    "llm_label": "Global Affairs",
+    "top_topics": [
+      "politics",
+      "race relations",
+      "government",
+      "political conflict",
+      "terrorism",
+      "revolution",
+      "cold war",
+      "social justice",
+      "thomas jefferson",
+      "geopolitics"
+    ]
+  },
+  {
+    "domain_id": 3,
+    "cluster_count": 29,
+    "auto_label": "space exploration / space travel / military conflict",
+    "llm_label": "Space & Beyond",
+    "top_topics": [
+      "space exploration",
+      "space travel",
+      "military conflict",
+      "spacecraft",
+      "astronomy",
+      "cosmology",
+      "pregnancy",
+      "space",
+      "arctic exploration",
+      "mars"
+    ]
+  },
+  {
+    "domain_id": 5,
+    "cluster_count": 27,
+    "auto_label": "cooking techniques / food / baking",
+    "llm_label": "Culinary Arts",
+    "top_topics": [
+      "cooking techniques",
+      "food",
+      "baking",
+      "italian cuisine",
+      "cooking",
+      "alcohol",
+      "food preparation",
+      "food and drink",
+      "pasta",
+      "pressure cooking"
+    ]
+  },
+  {
+    "domain_id": 10,
+    "cluster_count": 23,
+    "auto_label": "music / appearance / perception",
+    "llm_label": "Visual Culture",
+    "top_topics": [
+      "music",
+      "appearance",
+      "perception",
+      "biography",
+      "photography",
+      "fashion",
+      "art history",
+      "clothing",
+      "creativity",
+      "objects"
+    ]
+  },
+  {
+    "domain_id": 6,
+    "cluster_count": 20,
+    "auto_label": "literature / poetry / writing",
+    "llm_label": "Creative Writing",
+    "top_topics": [
+      "literature",
+      "poetry",
+      "writing",
+      "creative writing",
+      "character development",
+      "publishing",
+      "literary analysis",
+      "science fiction",
+      "storytelling",
+      "writing process"
+    ]
+  },
+  {
+    "domain_id": 12,
+    "cluster_count": 19,
+    "auto_label": "rescue / security / medical emergency",
+    "llm_label": "Medical Response",
+    "top_topics": [
+      "rescue",
+      "security",
+      "medical emergency",
+      "healthcare",
+      "medical procedures",
+      "disease",
+      "hospital",
+      "medical examination",
+      "emergency",
+      "medical"
+    ]
+  },
+  {
+    "domain_id": 11,
+    "cluster_count": 17,
+    "auto_label": "conflict / combat / military operations",
+    "llm_label": "War & Revolution",
+    "top_topics": [
+      "conflict",
+      "combat",
+      "military operations",
+      "american revolution",
+      "world war ii",
+      "diplomacy",
+      "civil war",
+      "george washington",
+      "rebellion",
+      "vietnam war"
+    ]
+  },
+  {
+    "domain_id": 16,
+    "cluster_count": 17,
+    "auto_label": "military / military strategy / interrogation",
+    "llm_label": "Military Operations",
+    "top_topics": [
+      "military",
+      "military strategy",
+      "interrogation",
+      "international relations",
+      "military tactics",
+      "weapons",
+      "continental army",
+      "shooting",
+      "military technology",
+      "military leadership"
+    ]
+  },
+  {
+    "domain_id": 20,
+    "cluster_count": 15,
+    "auto_label": "adventure / exploration / navigation",
+    "llm_label": "Maritime Adventures",
+    "top_topics": [
+      "adventure",
+      "exploration",
+      "navigation",
+      "disaster",
+      "shipboard life",
+      "ship design",
+      "surfing",
+      "urban exploration",
+      "river",
+      "sailing"
+    ]
+  },
+  {
+    "domain_id": 13,
+    "cluster_count": 7,
+    "auto_label": "personal reflection / time travel / self-reflection",
+    "llm_label": "Personal Journeys",
+    "top_topics": [
+      "personal reflection",
+      "time travel",
+      "self-reflection",
+      "reflection",
+      "childhood memories",
+      "self-perception",
+      "happiness",
+      "personal history",
+      "personality",
+      "self-improvement"
+    ]
+  },
+  {
+    "domain_id": 0,
+    "cluster_count": 2,
+    "auto_label": "identity / personal identity / identity crisis",
+    "llm_label": "Identity Formation",
+    "top_topics": [
+      "identity",
+      "personal identity",
+      "identity crisis",
+      "names",
+      "recognition",
+      "names and identity"
+    ]
+  }
+]

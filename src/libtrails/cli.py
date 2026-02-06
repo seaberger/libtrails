@@ -1333,6 +1333,39 @@ def cluster(mode, partition_type, min_cooccur, resolution, knn_k, skip_cooccur, 
         console.print(f"  [red]Error: {cluster_result['error']}[/red]")
 
 
+@main.command("load-domains")
+@click.option("--json-file", "-f", default="experiments/domain_labels_final.json",
+              help="Path to domain labels JSON file")
+def load_domains(json_file: str):
+    """Load domain (super-cluster) labels into the database."""
+    from pathlib import Path
+    from .database import init_chunks_table, load_domains_from_json, get_all_domains
+
+    json_path = Path(json_file)
+    if not json_path.exists():
+        console.print(f"[red]Error: File not found: {json_file}[/red]")
+        console.print("Generate domain labels first with: [cyan]uv run python experiments/domain_labels_final.py[/cyan]")
+        return
+
+    # Ensure tables exist
+    init_chunks_table()
+
+    console.print(f"Loading domains from [cyan]{json_file}[/cyan]...")
+    count = load_domains_from_json(json_path)
+    console.print(f"[green]Loaded {count} domains[/green]")
+
+    # Show summary
+    table = Table(title="Domains")
+    table.add_column("ID", style="dim", width=4)
+    table.add_column("Clusters", justify="right", width=8)
+    table.add_column("Label", style="cyan")
+
+    for d in get_all_domains():
+        table.add_row(str(d['id']), str(d['cluster_count']), d['label'])
+
+    console.print(table)
+
+
 @main.command()
 @click.option("--host", default="127.0.0.1", help="Host to bind to")
 @click.option("--port", default=8000, type=int, help="Port to bind to")
