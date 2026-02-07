@@ -119,7 +119,7 @@ def generate_semantic_colors(
         saturation = 0.70
         lightness = 0.60
         r, g, b = colorsys.hls_to_rgb(hue / 360, lightness, saturation)
-        colors[did] = f"#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}"
+        colors[did] = f"#{int(r * 255):02x}{int(g * 255):02x}{int(b * 255):02x}"
 
     return colors
 
@@ -227,9 +227,7 @@ def generate_universe_data(
     for cd, centroid in zip(cluster_data, centroids):
         did = cd["domain_id"]
         domain_centroids.setdefault(did, []).append(centroid)
-    domain_embeddings = {
-        did: np.mean(vecs, axis=0) for did, vecs in domain_centroids.items()
-    }
+    domain_embeddings = {did: np.mean(vecs, axis=0) for did, vecs in domain_centroids.items()}
 
     # Build domains list with semantic colors, sorted alphabetically by label
     domain_ids = sorted(set(cd["domain_id"] for cd in cluster_data))
