@@ -1,0 +1,96 @@
+---
+import '../styles/global.css';
+
+interface Props {
+  title: string;
+}
+
+const { title } = Astro.props;
+---
+
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Galaxy map of your book library" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
+    <title>{title} | LibTrails</title>
+    <style>
+      html, body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        overflow: hidden;
+        background: radial-gradient(ellipse at center, #1a1a2e 0%, #0f0f1a 100%);
+        color: #e0e0e0;
+      }
+      .galaxy-nav {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 50;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem 1.5rem;
+        background: rgba(15, 15, 26, 0.7);
+        backdrop-filter: blur(8px);
+        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      }
+      .galaxy-nav a {
+        text-decoration: none;
+        transition: color 0.15s ease;
+      }
+      .galaxy-nav .brand {
+        font-size: 1.15rem;
+        font-weight: 500;
+        color: #e0e0e0;
+      }
+      .galaxy-nav .brand:hover {
+        color: #a0a0ff;
+      }
+      .galaxy-nav .links {
+        display: flex;
+        align-items: center;
+        gap: 1.5rem;
+      }
+      .galaxy-nav .links a {
+        font-size: 0.875rem;
+        color: rgba(224, 224, 224, 0.6);
+      }
+      .galaxy-nav .links a:hover {
+        color: #e0e0e0;
+      }
+      .galaxy-nav .links a.active {
+        color: #a0a0ff;
+      }
+      .galaxy-content {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="galaxy-nav">
+      <a href="/" class="brand">LibTrails</a>
+      <div class="links">
+        <a href="/" class="active">Universe</a>
+        <a href="/themes">Themes</a>
+        <a href="/clusters">Clusters</a>
+        <a href="/books">Books</a>
+      </div>
+    </nav>
+
+    <div class="galaxy-content">
+      <slot />
+    </div>
+  </body>
+</html>

@@ -71,3 +71,27 @@ export interface DomainDetail {
   clusters: ClusterInfo[];
   books: BookSummary[];
 }
+
+export interface UniverseCluster {
+  cluster_id: number;
+  label: string;
+  size: number;
+  book_count: number;
+  domain_id: number;
+  domain_label: string;
+  x: number;
+  y: number;
+  z: number;
+  top_topics: string[];
+}
+
+export interface UniverseDomain {
+  domain_id: number;
+  label: string;
+  color: string;
+}
+
+export interface UniverseData {
+  clusters: UniverseCluster[];
+  domains: UniverseDomain[];
+}
