@@ -6,7 +6,7 @@ Inspired by [Pieter Maes' "Reading Across Books" project](https://pieterma.es/sy
 
 ## What is this?
 
-libtrails helps you discover conceptual connections across your book collection. It extracts topics from your EPUBs using a local LLM, generates semantic embeddings, and builds a hierarchical topic graph—all stored locally in SQLite.
+libtrails helps you discover conceptual connections across your book collection. It extracts topics from your EPUBs using a local LLM, generates semantic embeddings, and builds a hierarchical topic graph — all stored locally in SQLite.
 
 **Use cases:**
 - Find books that discuss similar themes
@@ -17,7 +17,7 @@ libtrails helps you discover conceptual connections across your book collection.
 ## Screenshots
 
 ### Galaxy Universe
-Interactive 3D visualization of your entire library. Each sphere is a topic cluster—sized by book count, colored by domain. Rotate, zoom, and click to explore.
+Interactive 3D visualization of your entire library. Each sphere is a topic cluster — sized by book count, colored by domain. Semantically similar domains share similar hues. Rotate, zoom, and click to explore.
 
 ![Galaxy Universe](docs/screenshots/universe.png)
 
@@ -27,40 +27,177 @@ Explore topic clusters with semantic search. Each card shows stacked book covers
 ![Clusters Page](docs/screenshots/clusters.png)
 
 ### Themes Browser
-Browse 28 broad themes (super-clusters) with a two-panel interface. Click a theme to see its top clusters and featured books.
+Browse 29 broad themes (super-clusters) with a two-panel interface. Click a theme to see its top clusters and featured books.
 
 ![Themes Page](docs/images/themes-page.png)
 
-## How it works
+---
 
-```
-EPUB → Chunks (500 words) → Topic Extraction (Ollama) → Normalize → Embed → Deduplicate → Cluster
-                                                                      ↓
-                                                               sqlite-vec
-                                                                      ↓
-                                                            Semantic Search
+## Architecture Overview
+
+```mermaid
+graph LR
+    subgraph Sources
+        EPUB[EPUB files]
+        PDF[PDF files]
+        CAL[(Calibre metadata.db)]
+    end
+
+    subgraph "Indexing Pipeline"
+        PARSE[Parse & Extract Text]
+        CHUNK[Chunk ~500 words]
+        LLM[Topic Extraction<br/>Ollama gemma3:27b]
+    end
+
+    subgraph "Post-Processing Pipeline"
+        EMB[Embed Topics<br/>BGE-small-en-v1.5]
+        DEDUP[Deduplicate<br/>cosine > 0.85]
+        GRAPH[Build KNN Graph<br/>co-occurrence + embeddings]
+        CLUSTER[Leiden Clustering<br/>CPM partition]
+        DOMAIN[Super-Clusters<br/>K-means on centroids]
+        LABEL[Domain Labeling<br/>LLM + human refinement]
+    end
+
+    subgraph "Visualization Pipeline"
+        UMAP[UMAP 3D Projection<br/>cosine metric]
+        PCA[Semantic Colors<br/>PCA → hue mapping]
+        JSON[universe_coords.json]
+    end
+
+    subgraph "Web Interface"
+        API[FastAPI :8000]
+        WEB[Astro + React :4321]
+        THREE[Three.js Galaxy]
+    end
+
+    EPUB --> PARSE
+    PDF --> PARSE
+    CAL --> PARSE
+    PARSE --> CHUNK --> LLM
+
+    LLM --> EMB --> DEDUP --> GRAPH --> CLUSTER --> DOMAIN --> LABEL
+
+    CLUSTER --> UMAP --> JSON
+    LABEL --> PCA --> JSON
+
+    JSON --> API --> WEB --> THREE
 ```
 
-1. **Parse**: Extract text from EPUB files
-2. **Chunk**: Split into ~500 word segments
-3. **Extract**: Use local LLM to identify 5 topics per chunk
-4. **Embed**: Generate semantic embeddings with BGE-small-en-v1.5
-5. **Deduplicate**: Merge similar topics (cosine similarity > 0.85)
-6. **Cluster**: Group related topics using Leiden algorithm
-7. **Super-cluster**: K-means on cluster centroids creates 29 broad themes
-8. **Search**: Query topics semantically with sqlite-vec
+---
+
+## Pipelines in Detail
+
+### 1. Indexing Pipeline
+
+Converts raw books into chunked text with extracted topics.
+
+```mermaid
+flowchart TD
+    A[EPUB / PDF file] --> B{Format?}
+    B -->|EPUB| C[selectolax HTML parser<br/>Extract XHTML in reading order]
+    B -->|PDF| D[docling layout-aware parser<br/>Export as markdown]
+    C --> E[Plain text]
+    D --> E
+
+    E --> F[Sentence-boundary chunking<br/>~500 words per chunk<br/>min 100 words]
+    F --> G["Ollama topic extraction<br/>5 topics per chunk (4 parallel workers)"]
+    G --> H[(SQLite: chunks + chunk_topics)]
+
+    style A fill:#2d3748,stroke:#4a5568,color:#e2e8f0
+    style H fill:#1a365d,stroke:#2b6cb0,color:#e2e8f0
+```
+
+**CLI:**
+```bash
+uv run libtrails index --title "Siddhartha"   # Single book
+uv run libtrails index --all                   # All 927 books
+```
+
+### 2. Post-Processing Pipeline
+
+Transforms raw topics into a clustered, searchable topic graph.
+
+```mermaid
+flowchart TD
+    A[(Raw topics<br/>~187k)] --> B[Normalize<br/>lowercase, strip, collapse spaces]
+    B --> C[Generate embeddings<br/>BGE-small-en-v1.5, 384 dims]
+    C --> D[(sqlite-vec index<br/>cosine distance)]
+
+    C --> E[Deduplicate<br/>Union-Find, cosine > 0.85]
+    E --> F[(Normalized topics<br/>~153k)]
+
+    F --> G[Build KNN graph<br/>co-occurrence edges + PMI weighting<br/>+ top-10 embedding neighbors]
+    G --> H[Hub removal<br/>95th percentile degree nodes]
+    H --> I[Leiden clustering<br/>CPM partition, resolution=0.001]
+    I --> J[(~1,284 Leiden clusters)]
+
+    J --> K[K-means on cluster centroids<br/>→ 29 super-clusters]
+    K --> L[LLM auto-labeling +<br/>human-refined domain names]
+    L --> M[(domains + cluster_domains)]
+
+    style A fill:#2d3748,stroke:#4a5568,color:#e2e8f0
+    style D fill:#1a365d,stroke:#2b6cb0,color:#e2e8f0
+    style F fill:#1a365d,stroke:#2b6cb0,color:#e2e8f0
+    style J fill:#1a365d,stroke:#2b6cb0,color:#e2e8f0
+    style M fill:#1a365d,stroke:#2b6cb0,color:#e2e8f0
+```
+
+**CLI:**
+```bash
+uv run libtrails process                       # Full pipeline: embed → dedupe → cluster
+uv run libtrails embed [--force]               # Generate/regenerate embeddings
+uv run libtrails dedupe [--dry-run]            # Merge similar topics
+uv run libtrails cluster                       # Run Leiden clustering
+uv run libtrails regenerate-domains            # Generate super-clusters
+uv run libtrails load-domains                  # Load refined domain labels
+```
+
+### 3. Visualization Pipeline
+
+Projects clusters into 3D space and assigns semantically meaningful colors.
+
+```mermaid
+flowchart TD
+    A[(1,284 Leiden clusters)] --> B[Compute robust centroid per cluster<br/>weighted avg of top-15 topic embeddings]
+    B --> C[UMAP 3D projection<br/>n_neighbors=15, min_dist=0.3<br/>cosine metric]
+    C --> D["Normalize coords to [-1, 1]"]
+
+    B --> E[Average centroids per domain<br/>→ 29 domain embeddings]
+    E --> F[PCA → 1D semantic axis]
+    F --> G["Map position to hue [0°–330°]<br/>avoids red wrap-back"]
+
+    D --> H[universe_coords.json]
+    G --> H
+
+    H --> I[FastAPI serves JSON]
+    I --> J[React Three Fiber<br/>InstancedMesh rendering<br/>OrbitControls navigation]
+
+    style A fill:#2d3748,stroke:#4a5568,color:#e2e8f0
+    style H fill:#1a365d,stroke:#2b6cb0,color:#e2e8f0
+```
+
+**Semantic colors** ensure that similar domains get similar hues. For example, "Nature & Agriculture" and "Nature & Travel" both appear as green, while "History & Archaeology" is red. This is achieved by projecting domain centroid embeddings onto a single PCA axis, then mapping each domain's position to a hue value.
+
+**CLI:**
+```bash
+uv run libtrails generate-universe             # Generate 3D coordinates + colors
+```
+
+---
 
 ## Features
 
-- **3D Galaxy Visualization**: Interactive Three.js universe showing all clusters as spheres, colored by domain
-- **100% Local**: All processing happens on your machine (Ollama + local embeddings)
+- **3D Galaxy Visualization**: Interactive Three.js universe with semantic domain colors (PCA on embeddings → hue mapping)
+- **100% Local**: All processing on your machine (Ollama + local embeddings)
 - **Calibre Integration**: Reads metadata from your Calibre library
-- **Semantic Search**: Find topics by meaning, not just keywords
-- **Topic Clustering**: Automatic hierarchical organization with Leiden algorithm
-- **Super-clusters**: 28 broad themes generated via LLM labeling
+- **Semantic Search**: Find topics by meaning, not just keywords (sqlite-vec cosine)
+- **Topic Clustering**: Leiden algorithm with hub removal for clean communities
+- **29 Domains**: Super-clusters with LLM-generated + human-refined labels
 - **Web Interface**: Astro + React Three Fiber + FastAPI
-- **Co-occurrence Analysis**: Discover topics that appear together
+- **Co-occurrence Analysis**: Discover topics that appear together (PMI-weighted)
 - **SQLite Storage**: Everything in one portable database file
+
+---
 
 ## Installation
 
@@ -78,7 +215,7 @@ uv pip install -e .
 
 # Install Ollama for topic extraction
 # See: https://ollama.ai
-ollama pull gemma3:4b
+ollama pull gemma3:27b
 ```
 
 ### Configuration
@@ -124,9 +261,11 @@ cd web && npm install && npm run dev
 
 **Navigation:**
 - **Universe** (`/`): 3D galaxy visualization of all clusters
-- **Themes** (`/themes`): Browse 28 broad themes with two-panel domain browser
+- **Themes** (`/themes`): Browse 29 domains with two-panel browser
 - **Clusters** (`/clusters`): Explore topic clusters with semantic search
 - **Books** (`/books`): Browse all indexed books
+
+---
 
 ## CLI Reference
 
@@ -152,7 +291,8 @@ cd web && npm install && npm run dev
 | `libtrails dedupe` | Deduplicate similar topics |
 | `libtrails dedupe --dry-run` | Preview without making changes |
 | `libtrails cluster` | Cluster topics using Leiden algorithm |
-| `libtrails load-domains` | Load super-cluster domain labels |
+| `libtrails regenerate-domains` | Generate super-clusters from cluster centroids |
+| `libtrails load-domains` | Load refined domain labels into database |
 
 ### Discovery
 
@@ -166,12 +306,15 @@ cd web && npm install && npm run dev
 | `libtrails cooccur <topic>` | Topics that co-occur in chunks |
 | `libtrails book-clusters <id>` | Show clusters a book belongs to |
 
-### Server
+### Visualization & Server
 
 | Command | Description |
 |---------|-------------|
+| `libtrails generate-universe` | Generate 3D UMAP coordinates + semantic colors |
 | `libtrails serve` | Start FastAPI server (default: localhost:8000) |
 | `libtrails serve --reload` | Start with auto-reload for development |
+
+---
 
 ## API Endpoints
 
@@ -190,6 +333,117 @@ cd web && npm install && npm run dev
 | `GET /api/v1/search/semantic?q=...` | Semantic search for books/topics |
 | `GET /api/v1/covers/{calibre_id}` | Book cover image |
 | `GET /api/v1/covers/book/{book_id}` | Book cover by internal ID |
+
+---
+
+## Database Schema
+
+```mermaid
+erDiagram
+    books ||--o{ chunks : contains
+    chunks ||--o{ chunk_topics : "raw topics"
+    chunks ||--o{ chunk_topic_links : has
+    topics ||--o{ chunk_topic_links : has
+    topics ||--o{ topic_cooccurrences : participates
+    topics ||--o{ topic_cluster_memberships : "hub membership"
+    domains ||--o{ cluster_domains : groups
+    cluster_domains }o--|| topics : "via cluster_id"
+
+    books {
+        int id PK
+        text title
+        text author
+        int calibre_id FK
+        text description
+    }
+    chunks {
+        int id PK
+        int book_id FK
+        int chunk_index
+        text text
+        int word_count
+    }
+    chunk_topics {
+        int chunk_id FK
+        text topic
+    }
+    topics {
+        int id PK
+        text label UK
+        blob embedding "384-dim float32"
+        int cluster_id
+        int parent_topic_id
+        int occurrence_count
+    }
+    chunk_topic_links {
+        int chunk_id FK
+        int topic_id FK
+    }
+    topic_cooccurrences {
+        int topic1_id FK
+        int topic2_id FK
+        int count
+        real pmi
+    }
+    topic_cluster_memberships {
+        int topic_id FK
+        int cluster_id
+        real strength
+        bool is_primary
+    }
+    domains {
+        int id PK
+        text label UK
+        int cluster_count
+    }
+    cluster_domains {
+        int cluster_id
+        int domain_id FK
+    }
+```
+
+The `topic_vectors` virtual table (sqlite-vec) mirrors `topics.embedding` for fast cosine search:
+```sql
+CREATE VIRTUAL TABLE topic_vectors USING vec0(
+    topic_id INTEGER PRIMARY KEY,
+    embedding FLOAT[384] distance_metric=cosine
+);
+```
+
+---
+
+## Key Dependencies
+
+| Package | Purpose |
+|---------|---------|
+| `selectolax` | Fast EPUB/HTML parsing |
+| `docling` | Layout-aware PDF extraction |
+| `sentence-transformers` | BGE-small-en-v1.5 embeddings (384 dims) |
+| `sqlite-vec` | Vector similarity search in SQLite |
+| `python-igraph` | Graph construction |
+| `leidenalg` | Leiden community detection |
+| `scikit-learn` | K-means (domains), PCA (semantic colors) |
+| `umap-learn` | 3D dimensionality reduction |
+| `click` + `rich` | CLI interface |
+| `fastapi` + `uvicorn` | REST API server |
+| `astro` | Frontend framework (SSG) |
+| `@react-three/fiber` + `drei` | 3D galaxy visualization |
+
+---
+
+## Current Stats
+
+| Metric | Value |
+|--------|-------|
+| Indexed books | 927 |
+| Text chunks | 301,661 |
+| Normalized topics | 153,040 |
+| Leiden clusters | 1,284 |
+| Domains (super-clusters) | 29 |
+| Embedding model | BGE-small-en-v1.5 (384 dims) |
+| Clustering | Leiden CPM, resolution=0.001 |
+
+---
 
 ## Example Output
 
@@ -215,68 +469,23 @@ Books with matching topics:
 └────────────┴────────────────┴───────────┘
 ```
 
-## Architecture
-
-### Database Schema
-
-```sql
-books              -- Book metadata (matched to Calibre)
-chunks             -- Text chunks (~500 words each)
-chunk_topics       -- Raw extracted topics per chunk
-topics             -- Normalized topics with embeddings
-chunk_topic_links  -- Many-to-many: chunks ↔ topics
-topic_cooccurrences -- Co-occurrence counts with PMI scores
-topic_vectors      -- sqlite-vec virtual table for vector search
-domains            -- Super-cluster labels (24 broad themes)
-cluster_domains    -- Mapping: Leiden cluster → domain
-```
-
-### Key Dependencies
-
-| Package | Purpose |
-|---------|---------|
-| `selectolax` | Fast EPUB/HTML parsing |
-| `sentence-transformers` | BGE embeddings |
-| `sqlite-vec` | Vector similarity search |
-| `python-igraph` | Graph construction |
-| `leidenalg` | Community detection |
-| `click` + `rich` | CLI interface |
-| `fastapi` + `uvicorn` | API server |
-| `astro` | Frontend framework |
-| `@react-three/fiber` + `drei` | 3D galaxy visualization |
-| `three` | WebGL rendering |
-
-### Embedding Model
-
-Uses [BGE-small-en-v1.5](https://huggingface.co/BAAI/bge-small-en-v1.5):
-- 384 dimensions
-- Optimized for semantic textual similarity
-- Cached locally in `models/` directory (first run downloads ~130MB)
-- Cosine similarity for distance metric
-
-## Current Stats
-
-| Metric | Value |
-|--------|-------|
-| Indexed books | 927 |
-| Topics | 153,040 |
-| Leiden clusters | 1,284 |
-| Super-clusters (domains) | 29 |
+---
 
 ## Roadmap
 
 ### Completed
-- [x] EPUB parsing and chunking
-- [x] Topic extraction via Ollama
-- [x] Semantic embeddings with BGE
-- [x] Topic deduplication
+- [x] EPUB + PDF parsing and chunking
+- [x] Topic extraction via Ollama (gemma3:27b)
+- [x] Semantic embeddings with BGE-small-en-v1.5
+- [x] Topic deduplication (Union-Find, cosine > 0.85)
 - [x] Leiden clustering with hub removal
 - [x] Super-cluster generation (K-means on centroids)
-- [x] LLM-generated domain labels
+- [x] LLM-generated + human-refined domain labels
 - [x] Web interface (Astro + FastAPI)
 - [x] Two-panel theme browser
 - [x] Semantic search in UI
-- [x] 3D Galaxy/Universe visualization (Three.js + UMAP projection)
+- [x] 3D Galaxy visualization (Three.js + UMAP projection)
+- [x] Semantic domain colors (PCA-based hue assignment)
 
 ### Future
 - [ ] Cross-book trail generation
@@ -285,9 +494,7 @@ Uses [BGE-small-en-v1.5](https://huggingface.co/BAAI/bge-small-en-v1.5):
 - [ ] Deploy to cloud (AWS Lightsail)
 - [ ] Calibre plugin integration
 
-## Contributing
-
-Contributions welcome! Please open an issue to discuss major changes.
+---
 
 ## Acknowledgments
 

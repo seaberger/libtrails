@@ -11,6 +11,7 @@ import sqlite3
 from pathlib import Path
 
 import numpy as np
+from sklearn.decomposition import PCA
 
 from .config import IPAD_DB_PATH, UNIVERSE_JSON_PATH
 from .domains import compute_robust_centroid, get_cluster_topics
@@ -84,16 +85,42 @@ def load_domain_assignments_from_db(cursor: sqlite3.Cursor) -> dict[int, dict]:
     return assignments
 
 
-def generate_domain_colors(n: int) -> list[str]:
-    """Generate n visually distinct hex colors suited for dark backgrounds."""
-    colors = []
-    for i in range(n):
-        hue = (i * 360 / n) % 360
-        # Vary saturation and lightness for visual distinction
-        saturation = 0.6 + 0.2 * ((i % 3) / 2)  # 0.6–0.8
-        lightness = 0.55 + 0.15 * ((i % 4) / 3)  # 0.55–0.70
+def generate_semantic_colors(
+    domain_ids: list[int], domain_embeddings: dict[int, np.ndarray]
+) -> dict[int, str]:
+    """Map domains to hues based on semantic similarity via PCA.
+
+    Projects domain centroid embeddings onto a single axis with PCA,
+    then maps each domain's position to a hue in [0, 330] degrees
+    (avoiding wrap-back to red).
+
+    Returns a dict mapping domain_id → hex color string.
+    """
+    ordered_ids = [did for did in domain_ids if did in domain_embeddings]
+    if not ordered_ids:
+        return {}
+
+    matrix = np.array([domain_embeddings[did] for did in ordered_ids])
+
+    if len(ordered_ids) == 1:
+        positions = np.array([0.5])
+    else:
+        pca = PCA(n_components=1, random_state=RANDOM_STATE)
+        projected = pca.fit_transform(matrix).ravel()
+        lo, hi = projected.min(), projected.max()
+        if hi > lo:
+            positions = (projected - lo) / (hi - lo)
+        else:
+            positions = np.full(len(ordered_ids), 0.5)
+
+    colors: dict[int, str] = {}
+    for did, pos in zip(ordered_ids, positions):
+        hue = pos * 330  # 0-330° avoids red↔red wrap
+        saturation = 0.70
+        lightness = 0.60
         r, g, b = colorsys.hls_to_rgb(hue / 360, lightness, saturation)
-        colors.append(f"#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}")
+        colors[did] = f"#{int(r*255):02x}{int(g*255):02x}{int(b*255):02x}"
+
     return colors
 
 
@@ -195,12 +222,21 @@ def generate_universe_data(
         cd["y"] = float(coords_3d[i, 1])
         cd["z"] = float(coords_3d[i, 2])
 
-    # Build domains list with colors
+    # Compute domain centroid embeddings (average of cluster centroids per domain)
+    domain_centroids: dict[int, list[np.ndarray]] = {}
+    for cd, centroid in zip(cluster_data, centroids):
+        did = cd["domain_id"]
+        domain_centroids.setdefault(did, []).append(centroid)
+    domain_embeddings = {
+        did: np.mean(vecs, axis=0) for did, vecs in domain_centroids.items()
+    }
+
+    # Build domains list with semantic colors, sorted alphabetically by label
     domain_ids = sorted(set(cd["domain_id"] for cd in cluster_data))
-    colors = generate_domain_colors(len(domain_ids))
+    colors = generate_semantic_colors(domain_ids, domain_embeddings)
     domains = []
 
-    for i, domain_id in enumerate(domain_ids):
+    for domain_id in domain_ids:
         domain_label = next(
             (cd["domain_label"] for cd in cluster_data if cd["domain_id"] == domain_id),
             f"Domain {domain_id}",
@@ -209,9 +245,11 @@ def generate_universe_data(
             {
                 "domain_id": domain_id,
                 "label": domain_label,
-                "color": colors[i],
+                "color": colors.get(domain_id, "#888888"),
             }
         )
+
+    domains.sort(key=lambda d: d["label"])
 
     result = {"clusters": cluster_data, "domains": domains}
 

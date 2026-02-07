@@ -205,11 +205,11 @@ export default function GalaxyView() {
           fontFamily: "Inter, sans-serif", fontSize: "0.8rem",
           color: "#e0e0e0", backdropFilter: "blur(4px)",
         }}>
-          <div style={{ fontWeight: 600, fontSize: "0.9rem", marginBottom: "4px" }}>
-            {tooltip.cluster.label}
-          </div>
-          <div style={{ color: tooltip.domain?.color, fontSize: "0.75rem", marginBottom: "6px" }}>
+          <div style={{ color: tooltip.domain?.color, fontSize: "0.75rem", marginBottom: "4px" }}>
             {tooltip.domain?.label || "Unknown domain"}
+          </div>
+          <div style={{ fontWeight: 600, fontSize: "0.9rem", marginBottom: "6px" }}>
+            {tooltip.cluster.label}
           </div>
           <div style={{ color: "#aaa", fontSize: "0.75rem", marginBottom: "4px" }}>
             {tooltip.cluster.book_count} books &middot; {tooltip.cluster.size} topics
