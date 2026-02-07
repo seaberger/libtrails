@@ -51,3 +51,6 @@ htmlcov/
 # Build
 *.log
 .playwright-mcp/
+
+# Serena (AI coding assistant)
+.serena/
