@@ -25,29 +25,34 @@ DEFAULT_MIN_LABEL_LENGTH = 4
 
 def get_cluster_topics(cursor: sqlite3.Cursor, cluster_id: int) -> list[dict]:
     """Get topics for a cluster with their embeddings and occurrence counts."""
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT id, label, embedding, occurrence_count
         FROM topics
         WHERE cluster_id = ? AND embedding IS NOT NULL
         ORDER BY occurrence_count DESC
-    """, (cluster_id,))
+    """,
+        (cluster_id,),
+    )
 
     topics = []
     for row in cursor.fetchall():
         if row["embedding"]:
-            topics.append({
-                "id": row["id"],
-                "label": row["label"],
-                "embedding": np.frombuffer(row["embedding"], dtype=np.float32),
-                "occurrence_count": row["occurrence_count"] or 1
-            })
+            topics.append(
+                {
+                    "id": row["id"],
+                    "label": row["label"],
+                    "embedding": np.frombuffer(row["embedding"], dtype=np.float32),
+                    "occurrence_count": row["occurrence_count"] or 1,
+                }
+            )
     return topics
 
 
 def compute_robust_centroid(
     topics: list[dict],
     top_n: int = DEFAULT_TOP_N_TOPICS,
-    min_label_length: int = DEFAULT_MIN_LABEL_LENGTH
+    min_label_length: int = DEFAULT_MIN_LABEL_LENGTH,
 ) -> np.ndarray | None:
     """
     Compute a robust centroid for a cluster.
@@ -58,17 +63,17 @@ def compute_robust_centroid(
     - Weight by log1p(occurrence_count) for stable centroids
     """
     # Filter short labels
-    topics = [t for t in topics if len(t['label']) >= min_label_length]
+    topics = [t for t in topics if len(t["label"]) >= min_label_length]
 
     # Take top N by occurrence
-    topics = sorted(topics, key=lambda t: t['occurrence_count'], reverse=True)[:top_n]
+    topics = sorted(topics, key=lambda t: t["occurrence_count"], reverse=True)[:top_n]
 
     # Need minimum topics for a meaningful centroid
     if len(topics) < 3:
         return None
 
-    embeddings = np.array([t['embedding'] for t in topics])
-    weights = np.array([np.log1p(t['occurrence_count']) for t in topics])
+    embeddings = np.array([t["embedding"] for t in topics])
+    weights = np.array([np.log1p(t["occurrence_count"]) for t in topics])
     weights = weights / weights.sum()  # Normalize
 
     return np.average(embeddings, axis=0, weights=weights)
@@ -138,23 +143,25 @@ def generate_super_clusters(
             super_clusters[super_id] = {
                 "super_cluster_id": super_id,
                 "leiden_clusters": [],
-                "top_topics": []
+                "top_topics": [],
             }
 
         # Get top topics for this Leiden cluster
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT label, occurrence_count
             FROM topics
             WHERE cluster_id = ?
             ORDER BY occurrence_count DESC
             LIMIT 3
-        """, (cluster_id,))
+        """,
+            (cluster_id,),
+        )
         top = [{"label": r["label"], "count": r["occurrence_count"]} for r in cursor.fetchall()]
 
-        super_clusters[super_id]["leiden_clusters"].append({
-            "cluster_id": cluster_id,
-            "top_topics": top
-        })
+        super_clusters[super_id]["leiden_clusters"].append(
+            {"cluster_id": cluster_id, "top_topics": top}
+        )
 
     # Generate auto-labels for each super-cluster
     for super_id, data in super_clusters.items():
@@ -184,10 +191,7 @@ def generate_super_clusters(
     return sorted(super_clusters.values(), key=lambda x: len(x["leiden_clusters"]), reverse=True)
 
 
-def apply_domain_labels(
-    super_clusters: list[dict],
-    label_mapping: dict[int, str]
-) -> list[dict]:
+def apply_domain_labels(super_clusters: list[dict], label_mapping: dict[int, str]) -> list[dict]:
     """
     Apply human-refined labels to super-clusters, creating final domains.
 
@@ -229,22 +233,22 @@ def apply_domain_labels(
 
     # Convert to list and assign new sequential IDs
     result = []
-    for i, (label, data) in enumerate(sorted(
-        domains.items(),
-        key=lambda x: len(x[1]["leiden_clusters"]),
-        reverse=True
-    )):
+    for i, (label, data) in enumerate(
+        sorted(domains.items(), key=lambda x: len(x[1]["leiden_clusters"]), reverse=True)
+    ):
         # Sort topics by count and take top 10
         sorted_topics = sorted(data["top_topics"].items(), key=lambda x: x[1], reverse=True)[:10]
 
-        result.append({
-            "domain_id": i,
-            "label": label,
-            "cluster_count": len(data["leiden_clusters"]),
-            "original_super_ids": data["original_ids"],
-            "leiden_cluster_ids": [lc["cluster_id"] for lc in data["leiden_clusters"]],
-            "top_topics": [{"label": t[0], "count": t[1]} for t in sorted_topics],
-        })
+        result.append(
+            {
+                "domain_id": i,
+                "label": label,
+                "cluster_count": len(data["leiden_clusters"]),
+                "original_super_ids": data["original_ids"],
+                "leiden_cluster_ids": [lc["cluster_id"] for lc in data["leiden_clusters"]],
+                "top_topics": [{"label": t[0], "count": t[1]} for t in sorted_topics],
+            }
+        )
 
     return result
 
@@ -281,14 +285,16 @@ def regenerate_domains(
         # Use auto-labels as domains
         domains = []
         for i, sc in enumerate(super_clusters):
-            domains.append({
-                "domain_id": i,
-                "label": sc["auto_label"],
-                "cluster_count": len(sc["leiden_clusters"]),
-                "original_super_ids": [sc["super_cluster_id"]],
-                "leiden_cluster_ids": [lc["cluster_id"] for lc in sc["leiden_clusters"]],
-                "top_topics": sc["top_topics"],
-            })
+            domains.append(
+                {
+                    "domain_id": i,
+                    "label": sc["auto_label"],
+                    "cluster_count": len(sc["leiden_clusters"]),
+                    "original_super_ids": [sc["super_cluster_id"]],
+                    "leiden_cluster_ids": [lc["cluster_id"] for lc in sc["leiden_clusters"]],
+                    "top_topics": sc["top_topics"],
+                }
+            )
 
     # Step 3: Save if output path provided
     if output_path:
@@ -342,7 +348,9 @@ def split_catchall_superclusters(
             new_super_clusters.append(sc)
             continue
 
-        print(f"Splitting super-cluster {sc_id} ({len(leiden_clusters)} clusters) into {n_splits} sub-groups...")
+        print(
+            f"Splitting super-cluster {sc_id} ({len(leiden_clusters)} clusters) into {n_splits} sub-groups..."
+        )
 
         # Get centroids for each Leiden cluster
         centroids = []
@@ -400,15 +408,19 @@ def split_catchall_superclusters(
             else:
                 auto_label = f"Sub-domain {new_sc_id}"
 
-            new_super_clusters.append({
-                "super_cluster_id": new_sc_id,
-                "leiden_clusters": group_clusters,
-                "top_topics": [{"label": t[0], "total_count": t[1]} for t in sorted_topics],
-                "auto_label": auto_label,
-                "split_from": sc_id,
-            })
+            new_super_clusters.append(
+                {
+                    "super_cluster_id": new_sc_id,
+                    "leiden_clusters": group_clusters,
+                    "top_topics": [{"label": t[0], "total_count": t[1]} for t in sorted_topics],
+                    "auto_label": auto_label,
+                    "split_from": sc_id,
+                }
+            )
 
-            print(f"  → Sub-cluster {new_sc_id}: {len(group_clusters)} clusters - {auto_label[:50]}")
+            print(
+                f"  → Sub-cluster {new_sc_id}: {len(group_clusters)} clusters - {auto_label[:50]}"
+            )
 
     conn.close()
 

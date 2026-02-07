@@ -80,15 +80,13 @@ class TestParseTopics:
 class TestExtractTopics:
     """Tests for topic extraction with mocked Ollama."""
 
-    @patch('libtrails.topic_extractor._get_client')
+    @patch("libtrails.topic_extractor._get_client")
     def test_extract_topics_success(self, mock_get_client):
         """Test successful topic extraction."""
         # Mock the HTTP response
         mock_client = MagicMock()
         mock_response = MagicMock()
-        mock_response.json.return_value = {
-            'response': '["Philosophy", "Ethics", "Morality"]'
-        }
+        mock_response.json.return_value = {"response": '["Philosophy", "Ethics", "Morality"]'}
         mock_response.raise_for_status = MagicMock()
         mock_client.post.return_value = mock_response
         mock_get_client.return_value = mock_client
@@ -100,7 +98,7 @@ class TestExtractTopics:
         assert "Philosophy" in topics
         assert "Ethics" in topics
 
-    @patch('libtrails.topic_extractor._get_client')
+    @patch("libtrails.topic_extractor._get_client")
     def test_extract_topics_timeout(self, mock_get_client):
         """Test handling of timeout."""
         import httpx
@@ -113,7 +111,7 @@ class TestExtractTopics:
 
         assert topics == []
 
-    @patch('libtrails.topic_extractor._get_client')
+    @patch("libtrails.topic_extractor._get_client")
     def test_extract_topics_error(self, mock_get_client):
         """Test handling of HTTP errors."""
         mock_client = MagicMock()
@@ -128,7 +126,7 @@ class TestExtractTopics:
 class TestExtractTopicsBatch:
     """Tests for batch topic extraction."""
 
-    @patch('libtrails.topic_extractor.extract_topics')
+    @patch("libtrails.topic_extractor.extract_topics")
     def test_batch_extraction(self, mock_extract):
         """Test batch extraction calls extract_topics for each chunk."""
         mock_extract.return_value = ["Topic A", "Topic B"]
@@ -139,7 +137,7 @@ class TestExtractTopicsBatch:
         assert len(results) == 3
         assert mock_extract.call_count == 3
 
-    @patch('libtrails.topic_extractor.extract_topics')
+    @patch("libtrails.topic_extractor.extract_topics")
     def test_batch_preserves_order(self, mock_extract):
         """Test that batch results are in correct order."""
         # Return different topics for each chunk
@@ -156,7 +154,7 @@ class TestExtractTopicsBatch:
         assert results[1] == ["Topic 2"]
         assert results[2] == ["Topic 3"]
 
-    @patch('libtrails.topic_extractor.extract_topics')
+    @patch("libtrails.topic_extractor.extract_topics")
     def test_batch_progress_callback(self, mock_extract):
         """Test that progress callback is called."""
         mock_extract.return_value = ["Topic"]
@@ -172,7 +170,7 @@ class TestExtractTopicsBatch:
         assert len(progress_calls) == 2
         assert progress_calls[-1] == (2, 2)
 
-    @patch('libtrails.topic_extractor.extract_topics')
+    @patch("libtrails.topic_extractor.extract_topics")
     def test_batch_handles_failures(self, mock_extract):
         """Test that batch handles individual failures gracefully."""
         # Second chunk fails

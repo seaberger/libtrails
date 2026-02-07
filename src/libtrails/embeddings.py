@@ -68,10 +68,7 @@ def embed_texts(texts: list[str], batch_size: int = 32) -> np.ndarray:
     """
     model = get_model()
     return model.encode(
-        texts,
-        normalize_embeddings=True,
-        batch_size=batch_size,
-        show_progress_bar=len(texts) > 100
+        texts, normalize_embeddings=True, batch_size=batch_size, show_progress_bar=len(texts) > 100
     )
 
 
@@ -106,9 +103,7 @@ def cosine_similarity_matrix(embeddings: np.ndarray) -> np.ndarray:
 
 
 def find_similar(
-    query_embedding: np.ndarray,
-    embeddings: np.ndarray,
-    top_k: int = 10
+    query_embedding: np.ndarray, embeddings: np.ndarray, top_k: int = 10
 ) -> list[tuple[int, float]]:
     """
     Find the most similar embeddings to a query.

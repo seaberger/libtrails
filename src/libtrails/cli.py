@@ -849,7 +849,9 @@ def search_semantic(query: str, limit: int):
 
 
 @main.command()
-@click.option("--threshold", "-t", default=0.94, help="Similarity threshold (0.0-1.0). Higher=stricter")
+@click.option(
+    "--threshold", "-t", default=0.94, help="Similarity threshold (0.0-1.0). Higher=stricter"
+)
 @click.option("--dry-run", is_flag=True, help="Preview without making changes")
 @click.option(
     "--sample-size",
@@ -1590,7 +1592,7 @@ def regenerate_domains(n_domains: int, output: str, dry_run: bool):
         table.add_row(
             str(sc["super_cluster_id"]),
             str(len(sc["leiden_clusters"])),
-            sc["auto_label"][:50] + "..." if len(sc["auto_label"]) > 50 else sc["auto_label"]
+            sc["auto_label"][:50] + "..." if len(sc["auto_label"]) > 50 else sc["auto_label"],
         )
 
     console.print(table)
@@ -1604,11 +1606,14 @@ def regenerate_domains(n_domains: int, output: str, dry_run: bool):
         output_path = Path(output)
         # Convert to format expected by domain_labels_final.py
         import json
+
         with open(output_path, "w") as f:
             json.dump(super_clusters, f, indent=2)
         console.print(f"\n[green]Saved to {output}[/green]")
         console.print("\nNext steps:")
-        console.print("  1. Review auto-labels and update REFINED_LABELS in experiments/domain_labels_final.py")
+        console.print(
+            "  1. Review auto-labels and update REFINED_LABELS in experiments/domain_labels_final.py"
+        )
         console.print("  2. Run: [cyan]uv run python experiments/domain_labels_final.py[/cyan]")
         console.print("  3. Run: [cyan]uv run libtrails load-domains[/cyan]")
 

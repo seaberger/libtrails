@@ -91,6 +91,7 @@ def find_duplicate_groups_numpy(
     # Sample if requested
     if sample_size and sample_size < total_topics:
         import random
+
         random.seed(42)
         all_topics = random.sample(list(all_topics), sample_size)
         print(f"Sampled {sample_size:,} topics from {total_topics:,}", flush=True)
@@ -175,7 +176,7 @@ def find_duplicate_groups_numpy(
                 write_progress(batch_end, pairs_found)
 
     elapsed = time.time() - start_time
-    print(f"Complete: {n:,} topics in {elapsed:.1f}s ({n/elapsed:.0f}/sec)", flush=True)
+    print(f"Complete: {n:,} topics in {elapsed:.1f}s ({n / elapsed:.0f}/sec)", flush=True)
     print(f"Found {pairs_found:,} similar pairs", flush=True)
 
     # Build duplicate groups
@@ -199,11 +200,13 @@ def find_duplicate_groups_numpy(
             )
             row = cursor.fetchone()
             if row:
-                group_topics.append({
-                    "id": row[0],
-                    "label": row[1],
-                    "occurrence_count": row[2],
-                })
+                group_topics.append(
+                    {
+                        "id": row[0],
+                        "label": row[1],
+                        "occurrence_count": row[2],
+                    }
+                )
 
         # Sort by occurrence count (most frequent = canonical)
         group_topics.sort(key=lambda x: x["occurrence_count"], reverse=True)
@@ -442,14 +445,17 @@ def merge_groups_batch(groups: list[list[dict]], commit_every: int = 100) -> dic
     # Clean up vectors using vec_db connection (has vec0 extension)
     if deleted_topic_ids:
         from .vector_search import get_vec_db
+
         vec_conn = get_vec_db()
         vec_cursor = vec_conn.cursor()
         # Delete in batches to avoid SQL limits
         batch_size = 500
         for i in range(0, len(deleted_topic_ids), batch_size):
-            batch = deleted_topic_ids[i:i + batch_size]
+            batch = deleted_topic_ids[i : i + batch_size]
             placeholders = ",".join("?" * len(batch))
-            vec_cursor.execute(f"DELETE FROM topic_vectors WHERE topic_id IN ({placeholders})", batch)
+            vec_cursor.execute(
+                f"DELETE FROM topic_vectors WHERE topic_id IN ({placeholders})", batch
+            )
         vec_conn.commit()
         vec_conn.close()
 

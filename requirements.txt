@@ -44,7 +44,7 @@ pydantic>=2.0.0
 # ============================================
 # Visualization (Galaxy View)
 # ============================================
-umap-learn>=0.5.4        # UMAP dimensionality reduction
+umap-learn>=0.5.7        # UMAP dimensionality reduction (0.5.7+ for Python 3.12)
 
 # ============================================
 # Development/Testing (optional)

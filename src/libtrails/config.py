@@ -20,6 +20,7 @@ def get_user_config() -> dict:
 
     try:
         import yaml
+
         with open(USER_CONFIG_FILE) as f:
             return yaml.safe_load(f) or {}
     except Exception:
@@ -31,23 +32,24 @@ def save_user_config(config: dict):
     import yaml
 
     USER_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    with open(USER_CONFIG_FILE, 'w') as f:
+    with open(USER_CONFIG_FILE, "w") as f:
         yaml.dump(config, f, default_flow_style=False)
 
 
 def get_ipad_url() -> Optional[str]:
     """Get default iPad URL from user config."""
     config = get_user_config()
-    return config.get('ipad', {}).get('default_url')
+    return config.get("ipad", {}).get("default_url")
 
 
 def set_ipad_url(url: str):
     """Save iPad URL to user config."""
     config = get_user_config()
-    if 'ipad' not in config:
-        config['ipad'] = {}
-    config['ipad']['default_url'] = url
+    if "ipad" not in config:
+        config["ipad"] = {}
+    config["ipad"]["default_url"] = url
     save_user_config(config)
+
 
 # Calibre library (read-only)
 CALIBRE_LIBRARY_PATH = Path.home() / "Calibre_Main_Library"
@@ -73,11 +75,11 @@ DEDUP_SIMILARITY_THRESHOLD = 0.85
 
 # Graph/clustering settings
 EMBEDDING_EDGE_THRESHOLD = 0.7  # For full mode only
-COOCCURRENCE_MIN_COUNT = 2      # Lowered for better connectivity
+COOCCURRENCE_MIN_COUNT = 2  # Lowered for better connectivity
 PMI_MIN_THRESHOLD = 0.0
 
 # Clustering defaults (optimized for ~300-400 coherent clusters)
-CLUSTER_MODE = "knn"            # "cooccurrence", "knn", or "full"
-CLUSTER_KNN_K = 10              # k neighbors for knn mode
+CLUSTER_MODE = "knn"  # "cooccurrence", "knn", or "full"
+CLUSTER_KNN_K = 10  # k neighbors for knn mode
 CLUSTER_PARTITION_TYPE = "cpm"  # "modularity", "surprise", or "cpm"
-CLUSTER_RESOLUTION = 0.001      # Resolution for CPM (lower = fewer clusters)
+CLUSTER_RESOLUTION = 0.001  # Resolution for CPM (lower = fewer clusters)

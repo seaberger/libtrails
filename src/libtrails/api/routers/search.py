@@ -20,43 +20,54 @@ def search_books(
     seen_ids = set()
 
     # 1. Title matches (highest priority)
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT id, title, author, calibre_id
         FROM books
         WHERE title LIKE ?
         ORDER BY title
         LIMIT ?
-    """, (f"%{q}%", limit))
+    """,
+        (f"%{q}%", limit),
+    )
 
     for row in cursor.fetchall():
         if row["id"] not in seen_ids:
-            results.append(SearchResult(
-                book=BookSummary(**dict(row)),
-                score=1.0,
-                match_type="keyword",
-            ))
+            results.append(
+                SearchResult(
+                    book=BookSummary(**dict(row)),
+                    score=1.0,
+                    match_type="keyword",
+                )
+            )
             seen_ids.add(row["id"])
 
     # 2. Author matches
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT id, title, author, calibre_id
         FROM books
         WHERE author LIKE ?
         ORDER BY title
         LIMIT ?
-    """, (f"%{q}%", limit))
+    """,
+        (f"%{q}%", limit),
+    )
 
     for row in cursor.fetchall():
         if row["id"] not in seen_ids:
-            results.append(SearchResult(
-                book=BookSummary(**dict(row)),
-                score=0.8,
-                match_type="keyword",
-            ))
+            results.append(
+                SearchResult(
+                    book=BookSummary(**dict(row)),
+                    score=0.8,
+                    match_type="keyword",
+                )
+            )
             seen_ids.add(row["id"])
 
     # 3. Topic matches - find books containing matching topics
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT DISTINCT b.id, b.title, b.author, b.calibre_id, t.label
         FROM books b
         JOIN chunks c ON c.book_id = b.id
@@ -65,20 +76,24 @@ def search_books(
         WHERE t.label LIKE ?
         ORDER BY b.title
         LIMIT ?
-    """, (f"%{q}%", limit))
+    """,
+        (f"%{q}%", limit),
+    )
 
     for row in cursor.fetchall():
         if row["id"] not in seen_ids:
-            results.append(SearchResult(
-                book=BookSummary(
-                    id=row["id"],
-                    title=row["title"],
-                    author=row["author"],
-                    calibre_id=row["calibre_id"],
-                ),
-                score=0.6,
-                match_type="keyword",
-            ))
+            results.append(
+                SearchResult(
+                    book=BookSummary(
+                        id=row["id"],
+                        title=row["title"],
+                        author=row["author"],
+                        calibre_id=row["calibre_id"],
+                    ),
+                    score=0.6,
+                    match_type="keyword",
+                )
+            )
             seen_ids.add(row["id"])
 
     # Sort by score descending, limit results
@@ -113,12 +128,15 @@ def semantic_search(
     query_embedding = embed_text(q)
 
     # Search using sqlite-vec
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT topic_id, distance
         FROM topic_vectors
         WHERE embedding MATCH ? AND k = ?
         ORDER BY distance
-    """, (query_embedding.tobytes(), limit * 3))
+    """,
+        (query_embedding.tobytes(), limit * 3),
+    )
 
     topic_results = cursor.fetchall()
     if not topic_results:
@@ -129,14 +147,17 @@ def semantic_search(
     topic_distances = {r["topic_id"]: r["distance"] for r in topic_results}
 
     placeholders = ",".join("?" * len(topic_ids))
-    cursor.execute(f"""
+    cursor.execute(
+        f"""
         SELECT DISTINCT b.id, b.title, b.author, b.calibre_id, t.id as topic_id
         FROM books b
         JOIN chunks c ON c.book_id = b.id
         JOIN chunk_topic_links ctl ON ctl.chunk_id = c.id
         JOIN topics t ON t.id = ctl.topic_id
         WHERE t.id IN ({placeholders})
-    """, topic_ids)
+    """,
+        topic_ids,
+    )
 
     seen_ids = set()
     results = []
@@ -146,16 +167,18 @@ def semantic_search(
             distance = topic_distances.get(row["topic_id"], 1.0)
             similarity = max(0, 1 - distance)  # Convert distance to similarity
 
-            results.append(SearchResult(
-                book=BookSummary(
-                    id=row["id"],
-                    title=row["title"],
-                    author=row["author"],
-                    calibre_id=row["calibre_id"],
-                ),
-                score=round(similarity, 3),
-                match_type="semantic",
-            ))
+            results.append(
+                SearchResult(
+                    book=BookSummary(
+                        id=row["id"],
+                        title=row["title"],
+                        author=row["author"],
+                        calibre_id=row["calibre_id"],
+                    ),
+                    score=round(similarity, 3),
+                    match_type="semantic",
+                )
+            )
             seen_ids.add(row["id"])
 
     results.sort(key=lambda x: x.score, reverse=True)

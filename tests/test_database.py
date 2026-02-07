@@ -96,6 +96,7 @@ def test_db(tmp_path):
 @pytest.fixture
 def mock_db(test_db):
     """Provide a mock get_db that uses the test database."""
+
     @contextmanager
     def _get_db(db_path=None):
         conn = sqlite3.connect(test_db)
@@ -120,18 +121,20 @@ class TestGetBook:
         conn.close()
 
         from libtrails import database
-        monkeypatch.setattr(database, 'get_db', mock_db)
+
+        monkeypatch.setattr(database, "get_db", mock_db)
 
         book = get_book(1)
 
         assert book is not None
-        assert book['title'] == 'Test Book'
-        assert book['author'] == 'Test Author'
+        assert book["title"] == "Test Book"
+        assert book["author"] == "Test Author"
 
     def test_get_book_not_found(self, test_db, mock_db, monkeypatch):
         """Test retrieving a non-existent book."""
         from libtrails import database
-        monkeypatch.setattr(database, 'get_db', mock_db)
+
+        monkeypatch.setattr(database, "get_db", mock_db)
 
         book = get_book(999)
 
@@ -149,27 +152,31 @@ class TestGetBookByTitle:
         conn.close()
 
         from libtrails import database
-        monkeypatch.setattr(database, 'get_db', mock_db)
 
-        book = get_book_by_title('Siddhartha')
+        monkeypatch.setattr(database, "get_db", mock_db)
+
+        book = get_book_by_title("Siddhartha")
 
         assert book is not None
-        assert book['author'] == 'Hermann Hesse'
+        assert book["author"] == "Hermann Hesse"
 
     def test_partial_match(self, test_db, mock_db, monkeypatch):
         """Test finding a book by partial title."""
         conn = sqlite3.connect(test_db)
-        conn.execute("INSERT INTO books (title, author) VALUES ('The Great Gatsby', 'F. Scott Fitzgerald')")
+        conn.execute(
+            "INSERT INTO books (title, author) VALUES ('The Great Gatsby', 'F. Scott Fitzgerald')"
+        )
         conn.commit()
         conn.close()
 
         from libtrails import database
-        monkeypatch.setattr(database, 'get_db', mock_db)
 
-        book = get_book_by_title('Gatsby')
+        monkeypatch.setattr(database, "get_db", mock_db)
+
+        book = get_book_by_title("Gatsby")
 
         assert book is not None
-        assert 'Gatsby' in book['title']
+        assert "Gatsby" in book["title"]
 
 
 class TestGetAllBooks:
@@ -179,13 +186,18 @@ class TestGetAllBooks:
         """Test retrieving all books."""
         conn = sqlite3.connect(test_db)
         # Note: get_all_books() defaults to with_calibre_match=True, which filters for calibre_id IS NOT NULL
-        conn.execute("INSERT INTO books (title, author, calibre_id) VALUES ('Book 1', 'Author 1', 100)")
-        conn.execute("INSERT INTO books (title, author, calibre_id) VALUES ('Book 2', 'Author 2', 200)")
+        conn.execute(
+            "INSERT INTO books (title, author, calibre_id) VALUES ('Book 1', 'Author 1', 100)"
+        )
+        conn.execute(
+            "INSERT INTO books (title, author, calibre_id) VALUES ('Book 2', 'Author 2', 200)"
+        )
         conn.commit()
         conn.close()
 
         from libtrails import database
-        monkeypatch.setattr(database, 'get_db', mock_db)
+
+        monkeypatch.setattr(database, "get_db", mock_db)
 
         books = get_all_books()
 
@@ -194,18 +206,23 @@ class TestGetAllBooks:
     def test_filter_with_calibre_match(self, test_db, mock_db, monkeypatch):
         """Test filtering books with Calibre match."""
         conn = sqlite3.connect(test_db)
-        conn.execute("INSERT INTO books (title, calibre_id, has_calibre_match) VALUES ('Book 1', 123, 1)")
-        conn.execute("INSERT INTO books (title, calibre_id, has_calibre_match) VALUES ('Book 2', NULL, 0)")
+        conn.execute(
+            "INSERT INTO books (title, calibre_id, has_calibre_match) VALUES ('Book 1', 123, 1)"
+        )
+        conn.execute(
+            "INSERT INTO books (title, calibre_id, has_calibre_match) VALUES ('Book 2', NULL, 0)"
+        )
         conn.commit()
         conn.close()
 
         from libtrails import database
-        monkeypatch.setattr(database, 'get_db', mock_db)
+
+        monkeypatch.setattr(database, "get_db", mock_db)
 
         books = get_all_books(with_calibre_match=True)
 
         assert len(books) == 1
-        assert books[0]['calibre_id'] == 123
+        assert books[0]["calibre_id"] == 123
 
 
 class TestSaveChunks:
@@ -219,7 +236,8 @@ class TestSaveChunks:
         conn.close()
 
         from libtrails import database
-        monkeypatch.setattr(database, 'get_db', mock_db)
+
+        monkeypatch.setattr(database, "get_db", mock_db)
 
         chunks = ["Chunk one text", "Chunk two text", "Chunk three text"]
         save_chunks(1, chunks)
@@ -245,7 +263,8 @@ class TestSaveChunkTopics:
         conn.close()
 
         from libtrails import database
-        monkeypatch.setattr(database, 'get_db', mock_db)
+
+        monkeypatch.setattr(database, "get_db", mock_db)
 
         topics = ["Philosophy", "Ethics", "Morality"]
         save_chunk_topics(1, topics)
@@ -265,13 +284,14 @@ class TestGetIndexingStatus:
     def test_empty_database(self, test_db, mock_db, monkeypatch):
         """Test status with empty database."""
         from libtrails import database
-        monkeypatch.setattr(database, 'get_db', mock_db)
+
+        monkeypatch.setattr(database, "get_db", mock_db)
 
         status = get_indexing_status()
 
-        assert status['total_books'] == 0
-        assert status['indexed_books'] == 0
-        assert status['total_chunks'] == 0
+        assert status["total_books"] == 0
+        assert status["indexed_books"] == 0
+        assert status["total_chunks"] == 0
 
     def test_with_data(self, test_db, mock_db, monkeypatch):
         """Test status with data in database."""
@@ -284,13 +304,14 @@ class TestGetIndexingStatus:
         conn.close()
 
         from libtrails import database
-        monkeypatch.setattr(database, 'get_db', mock_db)
+
+        monkeypatch.setattr(database, "get_db", mock_db)
 
         status = get_indexing_status()
 
-        assert status['total_books'] == 2
-        assert status['indexed_books'] == 1
-        assert status['total_chunks'] == 2
+        assert status["total_books"] == 2
+        assert status["indexed_books"] == 1
+        assert status["total_chunks"] == 2
 
 
 class TestTopicOperations:
@@ -306,14 +327,15 @@ class TestTopicOperations:
         conn.close()
 
         from libtrails import database
-        monkeypatch.setattr(database, 'get_db', mock_db)
+
+        monkeypatch.setattr(database, "get_db", mock_db)
 
         topics = get_topics_without_embeddings()
 
         assert len(topics) == 2
-        labels = [t['label'] for t in topics]
-        assert 'topic1' in labels
-        assert 'topic3' in labels
+        labels = [t["label"] for t in topics]
+        assert "topic1" in labels
+        assert "topic3" in labels
 
     def test_save_topic_embedding(self, test_db, mock_db, monkeypatch):
         """Test saving an embedding for a topic."""
@@ -323,9 +345,10 @@ class TestTopicOperations:
         conn.close()
 
         from libtrails import database
-        monkeypatch.setattr(database, 'get_db', mock_db)
 
-        embedding_bytes = b'\x00\x01\x02\x03'
+        monkeypatch.setattr(database, "get_db", mock_db)
+
+        embedding_bytes = b"\x00\x01\x02\x03"
         save_topic_embedding(1, embedding_bytes)
 
         # Verify embedding was saved

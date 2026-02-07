@@ -43,10 +43,7 @@ def get_book_by_title(title: str) -> Optional[dict]:
     """Get a book by title (partial match)."""
     with get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute(
-            "SELECT * FROM books WHERE title LIKE ? LIMIT 1",
-            (f"%{title}%",)
-        )
+        cursor.execute("SELECT * FROM books WHERE title LIKE ? LIMIT 1", (f"%{title}%",))
         row = cursor.fetchone()
         return dict(row) if row else None
 
@@ -71,7 +68,7 @@ def get_epub_path(calibre_id: int) -> Optional[Path]:
         if not row:
             return None
 
-        book_dir = CALIBRE_LIBRARY_PATH / row['path']
+        book_dir = CALIBRE_LIBRARY_PATH / row["path"]
 
         # Find EPUB file
         for epub in book_dir.glob("*.epub"):
@@ -94,7 +91,7 @@ def get_book_path(calibre_id: int) -> Optional[Path]:
         if not row:
             return None
 
-        book_dir = CALIBRE_LIBRARY_PATH / row['path']
+        book_dir = CALIBRE_LIBRARY_PATH / row["path"]
 
         # Prefer EPUB
         for epub in book_dir.glob("*.epub"):
@@ -111,7 +108,7 @@ def get_book_format(calibre_id: int) -> Optional[str]:
     """Get the format of the book file (epub or pdf)."""
     path = get_book_path(calibre_id)
     if path:
-        return path.suffix.lower().lstrip('.')
+        return path.suffix.lower().lstrip(".")
     return None
 
 
@@ -219,7 +216,7 @@ def init_chunks_table():
         cursor = conn.cursor()
         cursor.execute("PRAGMA table_info(chunks)")
         columns = [row[1] for row in cursor.fetchall()]
-        if 'topics_json' not in columns:
+        if "topics_json" not in columns:
             conn.execute("ALTER TABLE chunks ADD COLUMN topics_json TEXT")
 
         conn.commit()
@@ -231,14 +228,17 @@ def save_chunks(book_id: int, chunks: list[str]):
         cursor = conn.cursor()
 
         # Delete existing chunks for this book
-        cursor.execute("DELETE FROM chunk_topics WHERE chunk_id IN (SELECT id FROM chunks WHERE book_id = ?)", (book_id,))
+        cursor.execute(
+            "DELETE FROM chunk_topics WHERE chunk_id IN (SELECT id FROM chunks WHERE book_id = ?)",
+            (book_id,),
+        )
         cursor.execute("DELETE FROM chunks WHERE book_id = ?", (book_id,))
 
         # Insert new chunks
         for i, text in enumerate(chunks):
             cursor.execute(
                 "INSERT INTO chunks (book_id, chunk_index, text, word_count) VALUES (?, ?, ?, ?)",
-                (book_id, i, text, len(text.split()))
+                (book_id, i, text, len(text.split())),
             )
 
         conn.commit()
@@ -257,13 +257,12 @@ def save_chunk_topics(chunk_id: int, topics: list[str]):
         for topic in cleaned_topics:
             cursor.execute(
                 "INSERT OR IGNORE INTO chunk_topics (chunk_id, topic) VALUES (?, ?)",
-                (chunk_id, topic)
+                (chunk_id, topic),
             )
 
         # Save JSON to chunks table (denormalized for RAG)
         cursor.execute(
-            "UPDATE chunks SET topics_json = ? WHERE id = ?",
-            (json.dumps(cleaned_topics), chunk_id)
+            "UPDATE chunks SET topics_json = ? WHERE id = ?", (json.dumps(cleaned_topics), chunk_id)
         )
 
         conn.commit()
@@ -316,10 +315,7 @@ def get_or_create_topic(label: str) -> int:
         if row:
             return row[0]
 
-        cursor.execute(
-            "INSERT INTO topics (label, occurrence_count) VALUES (?, 1)",
-            (label,)
-        )
+        cursor.execute("INSERT INTO topics (label, occurrence_count) VALUES (?, 1)", (label,))
         conn.commit()
         return cursor.lastrowid
 
@@ -328,8 +324,7 @@ def increment_topic_count(topic_id: int):
     """Increment the occurrence count for a topic."""
     with get_db() as conn:
         conn.execute(
-            "UPDATE topics SET occurrence_count = occurrence_count + 1 WHERE id = ?",
-            (topic_id,)
+            "UPDATE topics SET occurrence_count = occurrence_count + 1 WHERE id = ?", (topic_id,)
         )
         conn.commit()
 
@@ -339,7 +334,7 @@ def link_chunk_to_topic(chunk_id: int, topic_id: int):
     with get_db() as conn:
         conn.execute(
             "INSERT OR IGNORE INTO chunk_topic_links (chunk_id, topic_id) VALUES (?, ?)",
-            (chunk_id, topic_id)
+            (chunk_id, topic_id),
         )
         conn.commit()
 
@@ -371,10 +366,7 @@ def get_topics_without_embeddings() -> list[dict]:
 def save_topic_embedding(topic_id: int, embedding: bytes):
     """Save an embedding for a topic."""
     with get_db() as conn:
-        conn.execute(
-            "UPDATE topics SET embedding = ? WHERE id = ?",
-            (embedding, topic_id)
-        )
+        conn.execute("UPDATE topics SET embedding = ? WHERE id = ?", (embedding, topic_id))
         conn.commit()
 
 
@@ -393,7 +385,7 @@ def update_topic_cluster(topic_id: int, cluster_id: int, parent_id: Optional[int
     with get_db() as conn:
         conn.execute(
             "UPDATE topics SET cluster_id = ?, parent_topic_id = ? WHERE id = ?",
-            (cluster_id, parent_id, topic_id)
+            (cluster_id, parent_id, topic_id),
         )
         conn.commit()
 
@@ -405,13 +397,16 @@ def save_cooccurrence(topic1_id: int, topic2_id: int, count: int, pmi: Optional[
         topic1_id, topic2_id = topic2_id, topic1_id
 
     with get_db() as conn:
-        conn.execute("""
+        conn.execute(
+            """
             INSERT INTO topic_cooccurrences (topic1_id, topic2_id, count, pmi)
             VALUES (?, ?, ?, ?)
             ON CONFLICT(topic1_id, topic2_id) DO UPDATE SET
                 count = excluded.count,
                 pmi = excluded.pmi
-        """, (topic1_id, topic2_id, count, pmi))
+        """,
+            (topic1_id, topic2_id, count, pmi),
+        )
         conn.commit()
 
 
@@ -458,17 +453,19 @@ def migrate_raw_topics_to_normalized():
                 topic_id = row[0]
             else:
                 cursor.execute(
-                    "INSERT INTO topics (label, occurrence_count) VALUES (?, 0)",
-                    (normalized,)
+                    "INSERT INTO topics (label, occurrence_count) VALUES (?, 0)", (normalized,)
                 )
                 topic_id = cursor.lastrowid
                 migrated += 1
 
             # Link chunks to the normalized topic (INSERT OR IGNORE is idempotent)
-            cursor.execute("""
+            cursor.execute(
+                """
                 INSERT OR IGNORE INTO chunk_topic_links (chunk_id, topic_id)
                 SELECT chunk_id, ? FROM chunk_topics WHERE topic = ?
-            """, (topic_id, topic))
+            """,
+                (topic_id, topic),
+            )
 
         # Recalculate all occurrence_counts from actual links (idempotent)
         cursor.execute("""
@@ -504,14 +501,14 @@ def load_domains_from_json(json_path: Path):
         for d in domains:
             cursor.execute(
                 "INSERT INTO domains (id, label, cluster_count) VALUES (?, ?, ?)",
-                (d["domain_id"], d["label"], d["cluster_count"])
+                (d["domain_id"], d["label"], d["cluster_count"]),
             )
 
             # Insert cluster mappings
             for cluster_id in d["leiden_cluster_ids"]:
                 cursor.execute(
                     "INSERT OR REPLACE INTO cluster_domains (cluster_id, domain_id) VALUES (?, ?)",
-                    (cluster_id, d["domain_id"])
+                    (cluster_id, d["domain_id"]),
                 )
 
         conn.commit()
@@ -547,10 +544,7 @@ def get_clusters_for_domain(domain_id: int) -> list[int]:
     """Get all Leiden cluster IDs belonging to a domain."""
     with get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute(
-            "SELECT cluster_id FROM cluster_domains WHERE domain_id = ?",
-            (domain_id,)
-        )
+        cursor.execute("SELECT cluster_id FROM cluster_domains WHERE domain_id = ?", (domain_id,))
         return [row[0] for row in cursor.fetchall()]
 
 
@@ -558,11 +552,14 @@ def get_domain_for_cluster(cluster_id: int) -> Optional[dict]:
     """Get the domain for a given Leiden cluster."""
     with get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT d.* FROM domains d
             JOIN cluster_domains cd ON cd.domain_id = d.id
             WHERE cd.cluster_id = ?
-        """, (cluster_id,))
+        """,
+            (cluster_id,),
+        )
         row = cursor.fetchone()
         return dict(row) if row else None
 

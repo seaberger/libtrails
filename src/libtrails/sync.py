@@ -23,16 +23,16 @@ BOOK_PATTERN = re.compile(
 
 def _parse_book_id(book_id: str) -> tuple[str, str]:
     """Parse book ID into (file_id, format)."""
-    if '.' in book_id:
-        return book_id.rsplit('.', 1)
-    return book_id, 'unknown'
+    if "." in book_id:
+        return book_id.rsplit(".", 1)
+    return book_id, "unknown"
 
 
 def _fetch_url(url: str, timeout: int = 10) -> Optional[str]:
     """Fetch URL and return HTML content, or None on error."""
     try:
         with urllib.request.urlopen(url, timeout=timeout) as response:
-            return response.read().decode('utf-8')
+            return response.read().decode("utf-8")
     except Exception:
         return None
 
@@ -58,7 +58,7 @@ def scrape_ipad_library(base_url: str, progress_callback: Optional[callable] = N
     Returns a list of book dicts with: id, title, author, format, tags
     """
     books_data = {}  # book_id -> {title, author, format}
-    book_tags = {}   # book_id -> list of tags
+    book_tags = {}  # book_id -> list of tags
 
     # First fetch all tags
     if progress_callback:
@@ -67,7 +67,7 @@ def scrape_ipad_library(base_url: str, progress_callback: Optional[callable] = N
     tags_url = f"{base_url}/tags?set=0"
     try:
         with urllib.request.urlopen(tags_url, timeout=30) as response:
-            html = response.read().decode('utf-8')
+            html = response.read().decode("utf-8")
     except Exception as e:
         raise ConnectionError(f"Could not connect to iPad at {base_url}: {e}")
 
@@ -81,7 +81,7 @@ def scrape_ipad_library(base_url: str, progress_callback: Optional[callable] = N
     # Fetch books by tag to build tag associations
     for i, (encoded_tag, tag_name, book_count) in enumerate(tag_matches):
         if progress_callback and i % 50 == 0:
-            progress_callback(f"Processing tag {i+1}/{len(tag_matches)}...")
+            progress_callback(f"Processing tag {i + 1}/{len(tag_matches)}...")
 
         tag_url = f"{base_url}/tags?set=0&tag={encoded_tag}"
         tag_html = _fetch_url(tag_url)
@@ -91,7 +91,7 @@ def scrape_ipad_library(base_url: str, progress_callback: Optional[callable] = N
         tag_clean = unescape(tag_name)
         for file_id, title, author, fmt in _extract_books_from_html(tag_html):
             if file_id not in books_data:
-                books_data[file_id] = {'title': title, 'author': author, 'format': fmt}
+                books_data[file_id] = {"title": title, "author": author, "format": fmt}
 
             if file_id not in book_tags:
                 book_tags[file_id] = []
@@ -112,22 +112,24 @@ def scrape_ipad_library(base_url: str, progress_callback: Optional[callable] = N
 
         for file_id, title, author, fmt in _extract_books_from_html(html):
             if file_id not in books_data:
-                books_data[file_id] = {'title': title, 'author': author, 'format': fmt}
+                books_data[file_id] = {"title": title, "author": author, "format": fmt}
             if file_id not in book_tags:
                 book_tags[file_id] = []
 
     # Combine into final structure
     books = []
     for book_id, data in books_data.items():
-        books.append({
-            'ipad_id': book_id,
-            'title': data['title'],
-            'author': data['author'],
-            'format': data['format'],
-            'ipad_tags': book_tags.get(book_id, [])
-        })
+        books.append(
+            {
+                "ipad_id": book_id,
+                "title": data["title"],
+                "author": data["author"],
+                "format": data["format"],
+                "ipad_tags": book_tags.get(book_id, []),
+            }
+        )
 
-    books.sort(key=lambda x: x['title'].lower())
+    books.sort(key=lambda x: x["title"].lower())
     return books
 
 
@@ -142,15 +144,15 @@ def get_existing_ipad_ids() -> set[str]:
 def find_new_books(scraped_books: list[dict]) -> list[dict]:
     """Find books from scrape that aren't in our database yet."""
     existing_ids = get_existing_ipad_ids()
-    return [b for b in scraped_books if b['ipad_id'] not in existing_ids]
+    return [b for b in scraped_books if b["ipad_id"] not in existing_ids]
 
 
 def normalize_for_matching(s: str) -> str:
     """Normalize string for title/author matching."""
     if not s:
         return ""
-    s = re.sub(r'[^\w\s]', '', s.lower())
-    s = re.sub(r'\s+', ' ', s).strip()
+    s = re.sub(r"[^\w\s]", "", s.lower())
+    s = re.sub(r"\s+", " ", s).strip()
     return s
 
 
@@ -194,17 +196,20 @@ def match_to_calibre(book: dict) -> Optional[dict]:
 
     Returns Calibre metadata dict if found, None otherwise.
     """
-    title_norm = normalize_for_matching(book['title'])
-    normalize_for_matching(book['author'])
+    title_norm = normalize_for_matching(book["title"])
+    normalize_for_matching(book["author"])
 
     with get_calibre_db() as conn:
         cursor = conn.cursor()
 
         # Search by normalized title
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT id, title, author_sort FROM books
             WHERE LOWER(REPLACE(REPLACE(title, '.', ''), ',', '')) LIKE ?
-        """, (f"%{title_norm}%",))
+        """,
+            (f"%{title_norm}%",),
+        )
 
         candidates = cursor.fetchall()
 
@@ -214,7 +219,7 @@ def match_to_calibre(book: dict) -> Optional[dict]:
         # Find best match by author
         match = None
         for c in candidates:
-            if authors_match(book['author'], c['author_sort']):
+            if authors_match(book["author"], c["author_sort"]):
                 match = c
                 break
 
@@ -222,7 +227,7 @@ def match_to_calibre(book: dict) -> Optional[dict]:
             match = candidates[0]
 
         # Get full metadata
-        return get_calibre_metadata(conn, match['id'])
+        return get_calibre_metadata(conn, match["id"])
 
 
 def get_calibre_metadata(conn, book_id: int) -> dict:
@@ -233,42 +238,51 @@ def get_calibre_metadata(conn, book_id: int) -> dict:
     book = dict(cursor.fetchone())
 
     # Get authors
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT a.name FROM authors a
         JOIN books_authors_link bal ON a.id = bal.author
         WHERE bal.book = ?
-    """, (book_id,))
-    book['authors'] = [r['name'] for r in cursor.fetchall()]
+    """,
+        (book_id,),
+    )
+    book["authors"] = [r["name"] for r in cursor.fetchall()]
 
     # Get tags
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT t.name FROM tags t
         JOIN books_tags_link btl ON t.id = btl.tag
         WHERE btl.book = ?
-    """, (book_id,))
-    book['calibre_tags'] = [r['name'] for r in cursor.fetchall()]
+    """,
+        (book_id,),
+    )
+    book["calibre_tags"] = [r["name"] for r in cursor.fetchall()]
 
     # Get series
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT s.name FROM series s
         JOIN books_series_link bsl ON s.id = bsl.series
         WHERE bsl.book = ?
-    """, (book_id,))
+    """,
+        (book_id,),
+    )
     series = cursor.fetchone()
-    book['series'] = series['name'] if series else None
+    book["series"] = series["name"] if series else None
 
     # Get description
     cursor.execute("SELECT text FROM comments WHERE book = ?", (book_id,))
     comment = cursor.fetchone()
-    book['description'] = comment['text'] if comment else None
+    book["description"] = comment["text"] if comment else None
 
     # Get identifiers
     cursor.execute("SELECT type, val FROM identifiers WHERE book = ?", (book_id,))
-    book['identifiers'] = {r['type']: r['val'] for r in cursor.fetchall()}
+    book["identifiers"] = {r["type"]: r["val"] for r in cursor.fetchall()}
 
     # Get formats
     cursor.execute("SELECT format FROM data WHERE book = ?", (book_id,))
-    book['formats'] = [r['format'] for r in cursor.fetchall()]
+    book["formats"] = [r["format"] for r in cursor.fetchall()]
 
     return book
 
@@ -282,25 +296,28 @@ def add_book_to_database(ipad_book: dict, calibre_meta: Optional[dict]) -> int:
     with get_db() as conn:
         cursor = conn.cursor()
 
-        cursor.execute("""
+        cursor.execute(
+            """
             INSERT INTO books (
                 ipad_id, title, author, format,
                 calibre_id, series, series_index,
                 publisher, pubdate, description, has_calibre_match
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        """, (
-            ipad_book['ipad_id'],
-            ipad_book['title'],
-            ipad_book['author'],
-            ipad_book.get('format'),
-            calibre_meta['id'] if calibre_meta else None,
-            calibre_meta.get('series') if calibre_meta else None,
-            calibre_meta.get('series_index') if calibre_meta else None,
-            calibre_meta.get('publisher') if calibre_meta else None,
-            str(calibre_meta.get('pubdate', '')) if calibre_meta else None,
-            calibre_meta.get('description') if calibre_meta else None,
-            1 if calibre_meta else 0,
-        ))
+        """,
+            (
+                ipad_book["ipad_id"],
+                ipad_book["title"],
+                ipad_book["author"],
+                ipad_book.get("format"),
+                calibre_meta["id"] if calibre_meta else None,
+                calibre_meta.get("series") if calibre_meta else None,
+                calibre_meta.get("series_index") if calibre_meta else None,
+                calibre_meta.get("publisher") if calibre_meta else None,
+                str(calibre_meta.get("pubdate", "")) if calibre_meta else None,
+                calibre_meta.get("description") if calibre_meta else None,
+                1 if calibre_meta else 0,
+            ),
+        )
 
         conn.commit()
         return cursor.lastrowid
@@ -311,7 +328,7 @@ def sync_ipad_library(
     dry_run: bool = False,
     skip_index: bool = False,
     model: str = DEFAULT_MODEL,
-    progress_callback: Optional[callable] = None
+    progress_callback: Optional[callable] = None,
 ) -> dict:
     """
     Main sync function - scrapes iPad, finds new books, adds to database.
@@ -341,7 +358,7 @@ def sync_ipad_library(
             "added_to_db": 0,
             "indexed": 0,
             "dry_run": True,
-            "new_book_titles": [b['title'] for b in new_books]
+            "new_book_titles": [b["title"] for b in new_books],
         }
 
     # Match and add new books
@@ -351,7 +368,7 @@ def sync_ipad_library(
 
     for i, book in enumerate(new_books):
         if progress_callback:
-            progress_callback(f"Processing {i+1}/{len(new_books)}: {book['title'][:50]}...")
+            progress_callback(f"Processing {i + 1}/{len(new_books)}: {book['title'][:50]}...")
 
         # Try to match to Calibre
         calibre_meta = match_to_calibre(book)
@@ -363,11 +380,9 @@ def sync_ipad_library(
         added += 1
 
         if calibre_meta and not skip_index:
-            books_to_index.append({
-                'id': book_id,
-                'calibre_id': calibre_meta['id'],
-                'title': book['title']
-            })
+            books_to_index.append(
+                {"id": book_id, "calibre_id": calibre_meta["id"], "title": book["title"]}
+            )
 
     # Index new books if requested
     indexed = 0
@@ -384,7 +399,7 @@ def sync_ipad_library(
                 status = "✓" if result.success else ("⊘" if result.skipped else "✗")
                 progress_callback(f"  [{current}/{total}] {status} {result.book_id}")
 
-        book_ids = [b['id'] for b in books_to_index]
+        book_ids = [b["id"] for b in books_to_index]
         batch_result = index_books_batch(
             book_ids,
             model=model,
@@ -392,8 +407,8 @@ def sync_ipad_library(
             book_callback=book_progress,
         )
 
-        indexed = batch_result['successful']
-        index_failed = batch_result.get('failed_details', [])
+        indexed = batch_result["successful"]
+        index_failed = batch_result.get("failed_details", [])
 
     # Run post-processing pipeline if any books were indexed
     post_processing_stats = {}
@@ -405,7 +420,7 @@ def sync_ipad_library(
         if progress_callback:
             progress_callback("  Normalizing topics...")
         migrated = migrate_raw_topics_to_normalized()
-        post_processing_stats['topics_normalized'] = migrated
+        post_processing_stats["topics_normalized"] = migrated
 
         # Step 8: Generate embeddings
         if progress_callback:
@@ -421,49 +436,53 @@ def sync_ipad_library(
 
             batch_size = 64
             for i in range(0, len(labels), batch_size):
-                batch_labels = labels[i:i + batch_size]
-                batch_ids = topic_ids[i:i + batch_size]
+                batch_labels = labels[i : i + batch_size]
+                batch_ids = topic_ids[i : i + batch_size]
                 embeddings = embed_texts(batch_labels)
                 for topic_id, embedding in zip(batch_ids, embeddings):
                     save_topic_embedding(topic_id, embedding_to_bytes(embedding))
 
-            post_processing_stats['topics_embedded'] = len(topics)
+            post_processing_stats["topics_embedded"] = len(topics)
 
             # Build vector index
             from .vector_search import get_vec_db, rebuild_vector_index
+
             conn = get_vec_db()
             vector_count = rebuild_vector_index(conn)
             conn.close()
-            post_processing_stats['vectors_indexed'] = vector_count
+            post_processing_stats["vectors_indexed"] = vector_count
         else:
-            post_processing_stats['topics_embedded'] = 0
+            post_processing_stats["topics_embedded"] = 0
 
         # Step 9: Deduplicate
         if progress_callback:
             progress_callback("  Deduplicating topics...")
 
         from .deduplication import deduplicate_topics
+
         dedupe_result = deduplicate_topics(threshold=0.85, dry_run=False)
-        post_processing_stats['topics_merged'] = dedupe_result.get('topics_merged', 0)
+        post_processing_stats["topics_merged"] = dedupe_result.get("topics_merged", 0)
 
         # Step 10-11: Compute co-occurrences and build graph
         if progress_callback:
             progress_callback("  Computing topic co-occurrences...")
 
         from .topic_graph import compute_cooccurrences
+
         cooccur_stats = compute_cooccurrences()
-        post_processing_stats['cooccurrence_pairs'] = cooccur_stats.get('cooccurrence_pairs', 0)
+        post_processing_stats["cooccurrence_pairs"] = cooccur_stats.get("cooccurrence_pairs", 0)
 
         # Step 12: Cluster topics
         if progress_callback:
             progress_callback("  Clustering topics...")
 
         from .clustering import cluster_topics
+
         cluster_result = cluster_topics()
         if "error" not in cluster_result:
-            post_processing_stats['num_clusters'] = cluster_result.get('num_clusters', 0)
+            post_processing_stats["num_clusters"] = cluster_result.get("num_clusters", 0)
         else:
-            post_processing_stats['cluster_error'] = cluster_result.get('error')
+            post_processing_stats["cluster_error"] = cluster_result.get("error")
 
     result = {
         "total_on_ipad": len(scraped_books),
@@ -474,7 +493,7 @@ def sync_ipad_library(
         "index_failed": len(index_failed),
         "dry_run": False,
         "books_to_index": books_to_index,
-        **post_processing_stats
+        **post_processing_stats,
     }
 
     return result

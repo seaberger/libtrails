@@ -39,7 +39,7 @@ SAMPLE_TITLE_SECTION_HTML = """
 @pytest.fixture
 def temp_db():
     """Create a temporary SQLite database with the books schema."""
-    with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as f:
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
         db_path = Path(f.name)
 
     conn = sqlite3.connect(db_path)
@@ -96,7 +96,7 @@ def temp_db():
 @pytest.fixture
 def temp_calibre_db():
     """Create a temporary mock Calibre database."""
-    with tempfile.NamedTemporaryFile(suffix='.db', delete=False) as f:
+    with tempfile.NamedTemporaryFile(suffix=".db", delete=False) as f:
         db_path = Path(f.name)
 
     conn = sqlite3.connect(db_path)
@@ -201,27 +201,29 @@ def temp_calibre_db():
 @pytest.fixture
 def mock_ipad_server(monkeypatch):
     """Mock urllib.request.urlopen to simulate iPad server responses."""
+
     def mock_urlopen(url, timeout=None):
         mock_response = MagicMock()
 
-        if '/tags?set=0' in url and 'tag=' not in url:
+        if "/tags?set=0" in url and "tag=" not in url:
             # Tags list page
-            mock_response.read.return_value = SAMPLE_TAGS_HTML.encode('utf-8')
-        elif '/tags?set=0&tag=' in url:
+            mock_response.read.return_value = SAMPLE_TAGS_HTML.encode("utf-8")
+        elif "/tags?set=0&tag=" in url:
             # Individual tag page
-            mock_response.read.return_value = SAMPLE_TAG_BOOKS_HTML.encode('utf-8')
-        elif '/?set=0&sort=title&sec=' in url:
+            mock_response.read.return_value = SAMPLE_TAG_BOOKS_HTML.encode("utf-8")
+        elif "/?set=0&sort=title&sec=" in url:
             # Title section page
-            mock_response.read.return_value = SAMPLE_TITLE_SECTION_HTML.encode('utf-8')
+            mock_response.read.return_value = SAMPLE_TITLE_SECTION_HTML.encode("utf-8")
         else:
-            mock_response.read.return_value = b'<html></html>'
+            mock_response.read.return_value = b"<html></html>"
 
         mock_response.__enter__ = lambda s: s
         mock_response.__exit__ = lambda s, *args: None
         return mock_response
 
     import urllib.request
-    monkeypatch.setattr(urllib.request, 'urlopen', mock_urlopen)
+
+    monkeypatch.setattr(urllib.request, "urlopen", mock_urlopen)
 
 
 @pytest.fixture
@@ -231,8 +233,8 @@ def temp_config_dir(tmp_path, monkeypatch):
     config_dir.mkdir()
 
     # Patch the config module to use temp directory
-    monkeypatch.setattr('libtrails.config.USER_CONFIG_DIR', config_dir)
-    monkeypatch.setattr('libtrails.config.USER_CONFIG_FILE', config_dir / "config.yaml")
+    monkeypatch.setattr("libtrails.config.USER_CONFIG_DIR", config_dir)
+    monkeypatch.setattr("libtrails.config.USER_CONFIG_FILE", config_dir / "config.yaml")
 
     return config_dir
 

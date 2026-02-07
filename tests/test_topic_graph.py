@@ -12,7 +12,7 @@ pytestmark = pytest.mark.slow
 class TestComputeCooccurrences:
     """Tests for computing topic co-occurrences."""
 
-    @patch('libtrails.topic_graph.get_db')
+    @patch("libtrails.topic_graph.get_db")
     def test_returns_stats(self, mock_db):
         """Test that co-occurrence computation returns statistics."""
         from libtrails.topic_graph import compute_cooccurrences
@@ -33,9 +33,9 @@ class TestComputeCooccurrences:
 
         result = compute_cooccurrences()
 
-        assert 'cooccurrence_pairs' in result
+        assert "cooccurrence_pairs" in result
 
-    @patch('libtrails.topic_graph.get_db')
+    @patch("libtrails.topic_graph.get_db")
     def test_handles_empty_data(self, mock_db):
         """Test handling when no chunk topics exist."""
         from libtrails.topic_graph import compute_cooccurrences
@@ -49,15 +49,15 @@ class TestComputeCooccurrences:
 
         result = compute_cooccurrences()
 
-        assert result['cooccurrence_pairs'] == 0
+        assert result["cooccurrence_pairs"] == 0
 
 
 class TestBuildTopicGraph:
     """Tests for building the topic graph."""
 
-    @patch('libtrails.topic_graph.get_topic_embeddings')
-    @patch('libtrails.topic_graph.get_all_topics')
-    @patch('libtrails.topic_graph.get_db')
+    @patch("libtrails.topic_graph.get_topic_embeddings")
+    @patch("libtrails.topic_graph.get_all_topics")
+    @patch("libtrails.topic_graph.get_db")
     def test_returns_igraph(self, mock_db, mock_get_topics, mock_get_embeddings):
         """Test that build returns an igraph Graph."""
         import igraph as ig
@@ -65,8 +65,8 @@ class TestBuildTopicGraph:
         from libtrails.topic_graph import build_topic_graph
 
         mock_get_topics.return_value = [
-            {'id': 1, 'label': 'topic1', 'occurrence_count': 10, 'cluster_id': None},
-            {'id': 2, 'label': 'topic2', 'occurrence_count': 5, 'cluster_id': None},
+            {"id": 1, "label": "topic1", "occurrence_count": 10, "cluster_id": None},
+            {"id": 2, "label": "topic2", "occurrence_count": 5, "cluster_id": None},
         ]
 
         mock_get_embeddings.return_value = [
@@ -86,16 +86,16 @@ class TestBuildTopicGraph:
         assert isinstance(graph, ig.Graph)
         assert graph.vcount() == 2
 
-    @patch('libtrails.topic_graph.get_topic_embeddings')
-    @patch('libtrails.topic_graph.get_all_topics')
-    @patch('libtrails.topic_graph.get_db')
+    @patch("libtrails.topic_graph.get_topic_embeddings")
+    @patch("libtrails.topic_graph.get_all_topics")
+    @patch("libtrails.topic_graph.get_db")
     def test_adds_similarity_edges(self, mock_db, mock_get_topics, mock_get_embeddings):
         """Test that similar topics get edges."""
         from libtrails.topic_graph import build_topic_graph
 
         mock_get_topics.return_value = [
-            {'id': 1, 'label': 'topic1', 'occurrence_count': 10, 'cluster_id': None},
-            {'id': 2, 'label': 'topic2', 'occurrence_count': 5, 'cluster_id': None},
+            {"id": 1, "label": "topic1", "occurrence_count": 10, "cluster_id": None},
+            {"id": 2, "label": "topic2", "occurrence_count": 5, "cluster_id": None},
         ]
 
         # Very similar embeddings (cosine similarity > 0.5)
@@ -121,7 +121,7 @@ class TestBuildTopicGraph:
 class TestGetRelatedTopics:
     """Tests for finding related topics."""
 
-    @patch('libtrails.topic_graph.build_topic_graph')
+    @patch("libtrails.topic_graph.build_topic_graph")
     def test_finds_neighbors(self, mock_build_graph):
         """Test finding topics related via graph."""
         import igraph as ig
@@ -143,10 +143,10 @@ class TestGetRelatedTopics:
         results = get_related_topics("philosophy", limit=5)
 
         assert len(results) >= 1
-        labels = [r['label'] for r in results]
-        assert 'ethics' in labels
+        labels = [r["label"] for r in results]
+        assert "ethics" in labels
 
-    @patch('libtrails.topic_graph.build_topic_graph')
+    @patch("libtrails.topic_graph.build_topic_graph")
     def test_not_found_returns_empty(self, mock_build_graph):
         """Test that nonexistent topic returns empty."""
         import igraph as ig
@@ -164,7 +164,7 @@ class TestGetRelatedTopics:
 
         assert results == []
 
-    @patch('libtrails.topic_graph.build_topic_graph')
+    @patch("libtrails.topic_graph.build_topic_graph")
     def test_partial_match(self, mock_build_graph):
         """Test partial matching of topic names."""
         import igraph as ig
@@ -208,10 +208,10 @@ class TestGetGraphStats:
         # Pass graph as argument
         stats = get_graph_stats(g)
 
-        assert 'nodes' in stats
-        assert 'edges' in stats
-        assert stats['nodes'] == 5
-        assert stats['edges'] == 3
+        assert "nodes" in stats
+        assert "edges" in stats
+        assert stats["nodes"] == 5
+        assert stats["edges"] == 3
 
     def test_empty_graph_stats(self):
         """Test stats for empty graph."""
@@ -224,15 +224,15 @@ class TestGetGraphStats:
         # Pass graph as argument
         stats = get_graph_stats(g)
 
-        assert stats['nodes'] == 0
-        assert stats['edges'] == 0
+        assert stats["nodes"] == 0
+        assert stats["edges"] == 0
 
 
 class TestBuildTopicGraphCooccurrenceOnly:
     """Tests for the fast co-occurrence-only graph builder."""
 
-    @patch('libtrails.topic_graph.get_all_topics')
-    @patch('libtrails.topic_graph.get_db')
+    @patch("libtrails.topic_graph.get_all_topics")
+    @patch("libtrails.topic_graph.get_db")
     def test_returns_igraph(self, mock_db, mock_get_topics):
         """Test that cooccurrence-only build returns an igraph Graph."""
         import igraph as ig
@@ -240,8 +240,8 @@ class TestBuildTopicGraphCooccurrenceOnly:
         from libtrails.topic_graph import build_topic_graph_cooccurrence_only
 
         mock_get_topics.return_value = [
-            {'id': 1, 'label': 'topic1', 'occurrence_count': 10, 'cluster_id': None},
-            {'id': 2, 'label': 'topic2', 'occurrence_count': 5, 'cluster_id': None},
+            {"id": 1, "label": "topic1", "occurrence_count": 10, "cluster_id": None},
+            {"id": 2, "label": "topic2", "occurrence_count": 5, "cluster_id": None},
         ]
 
         mock_conn = MagicMock()
@@ -256,16 +256,16 @@ class TestBuildTopicGraphCooccurrenceOnly:
         assert isinstance(graph, ig.Graph)
         assert graph.vcount() == 2
 
-    @patch('libtrails.topic_graph.get_all_topics')
-    @patch('libtrails.topic_graph.get_db')
+    @patch("libtrails.topic_graph.get_all_topics")
+    @patch("libtrails.topic_graph.get_db")
     def test_adds_cooccurrence_edges(self, mock_db, mock_get_topics):
         """Test that cooccurrence edges are added correctly."""
         from libtrails.topic_graph import build_topic_graph_cooccurrence_only
 
         mock_get_topics.return_value = [
-            {'id': 1, 'label': 'topic1', 'occurrence_count': 10, 'cluster_id': None},
-            {'id': 2, 'label': 'topic2', 'occurrence_count': 5, 'cluster_id': None},
-            {'id': 3, 'label': 'topic3', 'occurrence_count': 3, 'cluster_id': None},
+            {"id": 1, "label": "topic1", "occurrence_count": 10, "cluster_id": None},
+            {"id": 2, "label": "topic2", "occurrence_count": 5, "cluster_id": None},
+            {"id": 3, "label": "topic3", "occurrence_count": 3, "cluster_id": None},
         ]
 
         mock_conn = MagicMock()
@@ -284,15 +284,15 @@ class TestBuildTopicGraphCooccurrenceOnly:
         assert graph.ecount() == 2
         assert all(t == "cooccurrence" for t in graph.es["type"])
 
-    @patch('libtrails.topic_graph.get_all_topics')
-    @patch('libtrails.topic_graph.get_db')
+    @patch("libtrails.topic_graph.get_all_topics")
+    @patch("libtrails.topic_graph.get_db")
     def test_respects_min_count_threshold(self, mock_db, mock_get_topics):
         """Test that minimum count threshold is respected."""
         from libtrails.topic_graph import build_topic_graph_cooccurrence_only
 
         mock_get_topics.return_value = [
-            {'id': 1, 'label': 'topic1', 'occurrence_count': 10, 'cluster_id': None},
-            {'id': 2, 'label': 'topic2', 'occurrence_count': 5, 'cluster_id': None},
+            {"id": 1, "label": "topic1", "occurrence_count": 10, "cluster_id": None},
+            {"id": 2, "label": "topic2", "occurrence_count": 5, "cluster_id": None},
         ]
 
         mock_conn = MagicMock()
@@ -312,9 +312,9 @@ class TestBuildTopicGraphCooccurrenceOnly:
 class TestBuildTopicGraphKNN:
     """Tests for the k-NN embedding graph builder."""
 
-    @patch('libtrails.topic_graph.get_topic_embeddings')
-    @patch('libtrails.topic_graph.get_all_topics')
-    @patch('libtrails.topic_graph.get_db')
+    @patch("libtrails.topic_graph.get_topic_embeddings")
+    @patch("libtrails.topic_graph.get_all_topics")
+    @patch("libtrails.topic_graph.get_db")
     def test_returns_igraph(self, mock_db, mock_get_topics, mock_get_embeddings):
         """Test that k-NN build returns an igraph Graph."""
         import igraph as ig
@@ -322,9 +322,9 @@ class TestBuildTopicGraphKNN:
         from libtrails.topic_graph import build_topic_graph_knn
 
         mock_get_topics.return_value = [
-            {'id': 1, 'label': 'topic1', 'occurrence_count': 10, 'cluster_id': None},
-            {'id': 2, 'label': 'topic2', 'occurrence_count': 5, 'cluster_id': None},
-            {'id': 3, 'label': 'topic3', 'occurrence_count': 3, 'cluster_id': None},
+            {"id": 1, "label": "topic1", "occurrence_count": 10, "cluster_id": None},
+            {"id": 2, "label": "topic2", "occurrence_count": 5, "cluster_id": None},
+            {"id": 3, "label": "topic3", "occurrence_count": 3, "cluster_id": None},
         ]
 
         # Create normalized embeddings (unit vectors for cosine similarity)
@@ -351,17 +351,17 @@ class TestBuildTopicGraphKNN:
         assert isinstance(graph, ig.Graph)
         assert graph.vcount() == 3
 
-    @patch('libtrails.topic_graph.get_topic_embeddings')
-    @patch('libtrails.topic_graph.get_all_topics')
-    @patch('libtrails.topic_graph.get_db')
+    @patch("libtrails.topic_graph.get_topic_embeddings")
+    @patch("libtrails.topic_graph.get_all_topics")
+    @patch("libtrails.topic_graph.get_db")
     def test_adds_knn_edges(self, mock_db, mock_get_topics, mock_get_embeddings):
         """Test that k-NN edges are added."""
         from libtrails.topic_graph import build_topic_graph_knn
 
         mock_get_topics.return_value = [
-            {'id': 1, 'label': 'topic1', 'occurrence_count': 10, 'cluster_id': None},
-            {'id': 2, 'label': 'topic2', 'occurrence_count': 5, 'cluster_id': None},
-            {'id': 3, 'label': 'topic3', 'occurrence_count': 3, 'cluster_id': None},
+            {"id": 1, "label": "topic1", "occurrence_count": 10, "cluster_id": None},
+            {"id": 2, "label": "topic2", "occurrence_count": 5, "cluster_id": None},
+            {"id": 3, "label": "topic3", "occurrence_count": 3, "cluster_id": None},
         ]
 
         # Normalized embeddings
@@ -390,17 +390,17 @@ class TestBuildTopicGraphKNN:
         # All edges should be embedding_knn type (no cooccurrence data)
         assert all(t == "embedding_knn" for t in graph.es["type"])
 
-    @patch('libtrails.topic_graph.get_topic_embeddings')
-    @patch('libtrails.topic_graph.get_all_topics')
-    @patch('libtrails.topic_graph.get_db')
+    @patch("libtrails.topic_graph.get_topic_embeddings")
+    @patch("libtrails.topic_graph.get_all_topics")
+    @patch("libtrails.topic_graph.get_db")
     def test_combines_cooccurrence_and_knn(self, mock_db, mock_get_topics, mock_get_embeddings):
         """Test that both cooccurrence and k-NN edges are added."""
         from libtrails.topic_graph import build_topic_graph_knn
 
         mock_get_topics.return_value = [
-            {'id': 1, 'label': 'topic1', 'occurrence_count': 10, 'cluster_id': None},
-            {'id': 2, 'label': 'topic2', 'occurrence_count': 5, 'cluster_id': None},
-            {'id': 3, 'label': 'topic3', 'occurrence_count': 3, 'cluster_id': None},
+            {"id": 1, "label": "topic1", "occurrence_count": 10, "cluster_id": None},
+            {"id": 2, "label": "topic2", "occurrence_count": 5, "cluster_id": None},
+            {"id": 3, "label": "topic3", "occurrence_count": 3, "cluster_id": None},
         ]
 
         emb1 = np.array([1.0, 0.0, 0.0], dtype=np.float32)

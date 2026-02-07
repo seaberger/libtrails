@@ -21,21 +21,27 @@ def list_books(
 
     if indexed_only:
         # Only books that have been indexed (have chunks)
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT DISTINCT b.id, b.title, b.author, b.calibre_id
             FROM books b
             JOIN chunks c ON c.book_id = b.id
             ORDER BY b.title
             LIMIT ? OFFSET ?
-        """, (page_size, offset))
+        """,
+            (page_size, offset),
+        )
     else:
-        cursor.execute("""
+        cursor.execute(
+            """
             SELECT id, title, author, calibre_id
             FROM books
             WHERE calibre_id IS NOT NULL
             ORDER BY title
             LIMIT ? OFFSET ?
-        """, (page_size, offset))
+        """,
+            (page_size, offset),
+        )
 
     return [BookSummary(**dict(row)) for row in cursor.fetchall()]
 
@@ -46,11 +52,14 @@ def get_book(db: DBConnection, book_id: int):
     cursor = db.cursor()
 
     # Get book
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT id, title, author, calibre_id, description
         FROM books
         WHERE id = ?
-    """, (book_id,))
+    """,
+        (book_id,),
+    )
     row = cursor.fetchone()
     if not row:
         raise HTTPException(status_code=404, detail="Book not found")
@@ -62,7 +71,8 @@ def get_book(db: DBConnection, book_id: int):
     chunk_count = cursor.fetchone()["cnt"]
 
     # Get topics for this book with occurrence counts
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT t.id, t.label, COUNT(*) as count, t.cluster_id
         FROM topics t
         JOIN chunk_topic_links ctl ON ctl.topic_id = t.id
@@ -71,7 +81,9 @@ def get_book(db: DBConnection, book_id: int):
         GROUP BY t.id
         ORDER BY count DESC
         LIMIT 30
-    """, (book_id,))
+    """,
+        (book_id,),
+    )
     topics = [TopicInfo(**dict(r)) for r in cursor.fetchall()]
 
     # Get unique theme IDs
@@ -104,13 +116,16 @@ def get_related_books(
         raise HTTPException(status_code=404, detail="Book not found")
 
     # Get topics for source book
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT DISTINCT t.id
         FROM topics t
         JOIN chunk_topic_links ctl ON ctl.topic_id = t.id
         JOIN chunks c ON c.id = ctl.chunk_id
         WHERE c.book_id = ?
-    """, (book_id,))
+    """,
+        (book_id,),
+    )
     source_topics = {row["id"] for row in cursor.fetchall()}
 
     if not source_topics:
@@ -118,7 +133,8 @@ def get_related_books(
 
     # Find books sharing topics
     placeholders = ",".join("?" * len(source_topics))
-    cursor.execute(f"""
+    cursor.execute(
+        f"""
         SELECT
             b.id, b.title, b.author, b.calibre_id,
             COUNT(DISTINCT t.id) as shared_topics
@@ -131,19 +147,23 @@ def get_related_books(
         GROUP BY b.id
         ORDER BY shared_topics DESC
         LIMIT ?
-    """, (*source_topics, book_id, limit))
+    """,
+        (*source_topics, book_id, limit),
+    )
 
     results = []
     for row in cursor.fetchall():
         shared = row["shared_topics"]
         similarity = shared / len(source_topics) if source_topics else 0
-        results.append(RelatedBook(
-            id=row["id"],
-            title=row["title"],
-            author=row["author"],
-            calibre_id=row["calibre_id"],
-            shared_topics=shared,
-            similarity=round(similarity, 3),
-        ))
+        results.append(
+            RelatedBook(
+                id=row["id"],
+                title=row["title"],
+                author=row["author"],
+                calibre_id=row["calibre_id"],
+                shared_topics=shared,
+                similarity=round(similarity, 3),
+            )
+        )
 
     return results

@@ -20,7 +20,7 @@ class TestExtractText:
         epub_path = tmp_path / "test.epub"
         epub_path.touch()
 
-        with patch('libtrails.document_parser.extract_text_from_epub') as mock:
+        with patch("libtrails.document_parser.extract_text_from_epub") as mock:
             mock.return_value = "EPUB content"
             result = extract_text(epub_path)
 
@@ -32,7 +32,7 @@ class TestExtractText:
         pdf_path = tmp_path / "test.pdf"
         pdf_path.touch()
 
-        with patch('libtrails.document_parser.extract_text_from_pdf') as mock:
+        with patch("libtrails.document_parser.extract_text_from_pdf") as mock:
             mock.return_value = "PDF content"
             result = extract_text(pdf_path)
 
@@ -58,7 +58,7 @@ class TestExtractTextFromEpub:
         epub_path = tmp_path / "test.epub"
 
         # Create a minimal EPUB (ZIP with HTML content)
-        with zipfile.ZipFile(epub_path, 'w') as zf:
+        with zipfile.ZipFile(epub_path, "w") as zf:
             html_content = """
             <html>
             <body>
@@ -81,10 +81,14 @@ class TestExtractTextFromEpub:
         epub_path = tmp_path / "test.epub"
 
         # Content needs to be > 50 chars to be included
-        long_content = "This is the real content of the chapter that should be extracted from the EPUB file."
+        long_content = (
+            "This is the real content of the chapter that should be extracted from the EPUB file."
+        )
 
-        with zipfile.ZipFile(epub_path, 'w') as zf:
-            zf.writestr("toc.xhtml", "<html><body>Table of Contents with navigation links</body></html>")
+        with zipfile.ZipFile(epub_path, "w") as zf:
+            zf.writestr(
+                "toc.xhtml", "<html><body>Table of Contents with navigation links</body></html>"
+            )
             zf.writestr("chapter1.xhtml", f"<html><body>{long_content}</body></html>")
 
         result = extract_text_from_epub(epub_path)
@@ -101,7 +105,7 @@ class TestExtractTextFromEpub:
         ch2 = "Chapter Two continues the narrative with more exciting developments and plot twists."
         ch3 = "Chapter Three wraps up the story with a satisfying conclusion to all storylines."
 
-        with zipfile.ZipFile(epub_path, 'w') as zf:
+        with zipfile.ZipFile(epub_path, "w") as zf:
             zf.writestr("chapter1.xhtml", f"<html><body>{ch1}</body></html>")
             zf.writestr("chapter2.xhtml", f"<html><body>{ch2}</body></html>")
             zf.writestr("chapter3.html", f"<html><body>{ch3}</body></html>")
@@ -116,7 +120,7 @@ class TestExtractTextFromEpub:
         """Test handling of EPUB with no content."""
         epub_path = tmp_path / "test.epub"
 
-        with zipfile.ZipFile(epub_path, 'w') as zf:
+        with zipfile.ZipFile(epub_path, "w") as zf:
             zf.writestr("metadata.opf", "<package></package>")
 
         result = extract_text_from_epub(epub_path)
