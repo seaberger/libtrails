@@ -3,7 +3,7 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from .routers import books, covers, domains, search, themes
+from .routers import books, covers, domains, search, themes, universe
 
 
 def create_app() -> FastAPI:
@@ -27,6 +27,7 @@ def create_app() -> FastAPI:
     app.include_router(books.router, prefix="/api/v1", tags=["books"])
     app.include_router(search.router, prefix="/api/v1", tags=["search"])
     app.include_router(covers.router, prefix="/api/v1", tags=["covers"])
+    app.include_router(universe.router, prefix="/api/v1", tags=["universe"])
 
     @app.get("/api/health")
     def health_check():

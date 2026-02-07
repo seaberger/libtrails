@@ -1,4 +1,8 @@
 ---
-// Redirect to themes page
-return Astro.redirect('/themes');
+import GalaxyLayout from '../layouts/GalaxyLayout.astro';
+import GalaxyView from '../components/GalaxyView';
 ---
+
+<GalaxyLayout title="Universe">
+  <GalaxyView client:load />
+</GalaxyLayout>

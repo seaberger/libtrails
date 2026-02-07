@@ -83,3 +83,6 @@ CLUSTER_MODE = "knn"  # "cooccurrence", "knn", or "full"
 CLUSTER_KNN_K = 10  # k neighbors for knn mode
 CLUSTER_PARTITION_TYPE = "cpm"  # "modularity", "surprise", or "cpm"
 CLUSTER_RESOLUTION = 0.001  # Resolution for CPM (lower = fewer clusters)
+
+# Universe visualization
+UNIVERSE_JSON_PATH = DATA_DIR / "universe_coords.json"

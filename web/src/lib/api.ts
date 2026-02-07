@@ -9,6 +9,7 @@ import type {
   SearchResult,
   ThemeDetail,
   ThemeSummary,
+  UniverseData,
 } from "./types";
 
 // During SSR, we need the full URL. On client, relative works via proxy.
@@ -86,4 +87,9 @@ export async function getDomains(): Promise<DomainSummary[]> {
 
 export async function getDomain(domainId: number): Promise<DomainDetail> {
   return fetchJson(`/domains/${domainId}`);
+}
+
+// Universe (galaxy visualization) API
+export async function getUniverse(): Promise<UniverseData> {
+  return fetchJson("/universe");
 }

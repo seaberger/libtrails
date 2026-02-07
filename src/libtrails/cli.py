@@ -1618,6 +1618,105 @@ def regenerate_domains(n_domains: int, output: str, dry_run: bool):
         console.print("  3. Run: [cyan]uv run libtrails load-domains[/cyan]")
 
 
+@main.command("generate-universe")
+@click.option(
+    "--output",
+    "-o",
+    default=None,
+    type=click.Path(),
+    help="Output JSON file path (default: data/universe_coords.json)",
+)
+@click.option(
+    "--n-neighbors",
+    default=15,
+    type=int,
+    help="UMAP n_neighbors parameter",
+)
+@click.option(
+    "--min-dist",
+    default=0.3,
+    type=float,
+    help="UMAP min_dist parameter",
+)
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Show cluster/domain counts without generating",
+)
+def generate_universe(output: str | None, n_neighbors: int, min_dist: float, dry_run: bool):
+    """
+    Generate UMAP projection of clusters for the Galaxy visualization.
+
+    Produces a JSON file with 2D coordinates for every Leiden cluster,
+    colored by domain assignment. Used by the frontend galaxy homepage.
+    """
+    import sqlite3
+    from pathlib import Path
+
+    from .config import IPAD_DB_PATH, UNIVERSE_JSON_PATH
+
+    if dry_run:
+        conn = sqlite3.connect(IPAD_DB_PATH)
+        conn.row_factory = sqlite3.Row
+        cursor = conn.cursor()
+
+        cursor.execute("""
+            SELECT COUNT(DISTINCT cluster_id) as n
+            FROM topics
+            WHERE cluster_id IS NOT NULL AND cluster_id >= 0
+        """)
+        n_clusters = cursor.fetchone()["n"]
+
+        cursor.execute("SELECT COUNT(*) as n FROM domains")
+        n_domains = cursor.fetchone()["n"]
+
+        conn.close()
+
+        console.print(f"[bold]Clusters:[/bold] {n_clusters}")
+        console.print(f"[bold]Domains:[/bold] {n_domains}")
+        console.print(f"[bold]UMAP params:[/bold] n_neighbors={n_neighbors}, min_dist={min_dist}")
+        console.print("\n[bold yellow]DRY RUN — not generating[/bold yellow]")
+        return
+
+    from .universe import generate_universe_data
+
+    output_path = Path(output) if output else UNIVERSE_JSON_PATH
+
+    console.print("[bold]Generating universe coordinates...[/bold]")
+    console.print(f"  UMAP: n_neighbors={n_neighbors}, min_dist={min_dist}")
+
+    result = generate_universe_data(
+        output_path=output_path,
+        n_neighbors=n_neighbors,
+        min_dist=min_dist,
+    )
+
+    n_clusters = len(result["clusters"])
+    n_domains = len(result["domains"])
+
+    console.print(f"\n[green]Saved {n_clusters} clusters across {n_domains} domains[/green]")
+    console.print(f"  Output: [cyan]{output_path}[/cyan]")
+
+    # Show sample
+    table = Table(title="Sample Clusters")
+    table.add_column("ID", style="dim", width=6)
+    table.add_column("Label", style="cyan")
+    table.add_column("Books", justify="right", width=6)
+    table.add_column("Domain", style="green")
+    table.add_column("Position")
+
+    for cd in result["clusters"][:10]:
+        table.add_row(
+            str(cd["cluster_id"]),
+            cd["label"][:30],
+            str(cd["book_count"]),
+            cd["domain_label"][:20],
+            f"({cd['x']:.3f}, {cd['y']:.3f})",
+        )
+
+    console.print(table)
+
+
 @main.command()
 @click.option("--host", default="127.0.0.1", help="Host to bind to")
 @click.option("--port", default=8000, type=int, help="Port to bind to")

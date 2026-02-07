@@ -103,3 +103,33 @@ class DomainDetail(BaseModel):
     cluster_count: int
     clusters: list[dict] = []
     books: list[BookSummary] = []
+
+
+class UniverseCluster(BaseModel):
+    """A cluster positioned in the 3D galaxy map."""
+
+    cluster_id: int
+    label: str
+    size: int
+    book_count: int
+    domain_id: int
+    domain_label: str
+    x: float
+    y: float
+    z: float
+    top_topics: list[str] = []
+
+
+class UniverseDomain(BaseModel):
+    """Domain with its display color."""
+
+    domain_id: int
+    label: str
+    color: str
+
+
+class UniverseData(BaseModel):
+    """Full galaxy visualization payload."""
+
+    clusters: list[UniverseCluster]
+    domains: list[UniverseDomain]
