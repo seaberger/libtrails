@@ -4,6 +4,9 @@ import pytest
 from unittest.mock import patch, MagicMock
 import numpy as np
 
+# Mark all tests in this module as slow (imports igraph/leidenalg)
+pytestmark = pytest.mark.slow
+
 
 class TestClusterTopics:
     """Tests for Leiden clustering."""

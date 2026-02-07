@@ -38,6 +38,9 @@ packages = ["src/libtrails"]
 testpaths = ["tests"]
 python_files = ["test_*.py"]
 addopts = "-v"
+markers = [
+    "slow: marks tests as slow (deselect with '-m \"not slow\"')",
+]
 
 [tool.coverage.run]
 source = ["src/libtrails"]
