@@ -44,7 +44,8 @@ pydantic>=2.0.0
 # ============================================
 # Visualization (Galaxy View)
 # ============================================
-umap-learn>=0.5.7        # UMAP dimensionality reduction (0.5.7+ for Python 3.12)
+umap-learn>=0.5.6
+numba>=0.59.0            # Pin newer numba for Python 3.12 support
 
 # ============================================
 # Development/Testing (optional)
