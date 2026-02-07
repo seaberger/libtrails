@@ -16,15 +16,20 @@ libtrails helps you discover conceptual connections across your book collection.
 
 ## Screenshots
 
-### Themes Browser
-Browse 24 broad themes (super-clusters) with a two-panel interface. Click a theme to see its top clusters and featured books.
+### Galaxy Universe
+Interactive 3D visualization of your entire library. Each sphere is a topic cluster—sized by book count, colored by domain. Rotate, zoom, and click to explore.
 
-![Themes Page](docs/images/themes-page.png)
+![Galaxy Universe](docs/screenshots/universe.png)
 
 ### Clusters Grid
-Explore 845 topic clusters with semantic search. Each card shows stacked book covers with a fan-out effect on hover.
+Explore topic clusters with semantic search. Each card shows stacked book covers with topic and book counts.
 
-![Clusters Page](docs/images/clusters-page.png)
+![Clusters Page](docs/screenshots/clusters.png)
+
+### Themes Browser
+Browse 28 broad themes (super-clusters) with a two-panel interface. Click a theme to see its top clusters and featured books.
+
+![Themes Page](docs/images/themes-page.png)
 
 ## How it works
 
@@ -42,17 +47,18 @@ EPUB → Chunks (500 words) → Topic Extraction (Ollama) → Normalize → Embe
 4. **Embed**: Generate semantic embeddings with BGE-small-en-v1.5
 5. **Deduplicate**: Merge similar topics (cosine similarity > 0.85)
 6. **Cluster**: Group related topics using Leiden algorithm
-7. **Super-cluster**: K-means on cluster centroids creates 24 broad themes
+7. **Super-cluster**: K-means on cluster centroids creates 29 broad themes
 8. **Search**: Query topics semantically with sqlite-vec
 
 ## Features
 
+- **3D Galaxy Visualization**: Interactive Three.js universe showing all clusters as spheres, colored by domain
 - **100% Local**: All processing happens on your machine (Ollama + local embeddings)
 - **Calibre Integration**: Reads metadata from your Calibre library
 - **Semantic Search**: Find topics by meaning, not just keywords
 - **Topic Clustering**: Automatic hierarchical organization with Leiden algorithm
-- **Super-clusters**: 24 broad themes generated via LLM labeling
-- **Web Interface**: Modern Astro + FastAPI frontend for browsing
+- **Super-clusters**: 28 broad themes generated via LLM labeling
+- **Web Interface**: Astro + React Three Fiber + FastAPI
 - **Co-occurrence Analysis**: Discover topics that appear together
 - **SQLite Storage**: Everything in one portable database file
 
@@ -117,8 +123,9 @@ cd web && npm install && npm run dev
 ```
 
 **Navigation:**
-- **Themes** (`/themes`): Browse 24 broad themes with two-panel domain browser
-- **Clusters** (`/clusters`): Explore 845 topic clusters with semantic search
+- **Universe** (`/`): 3D galaxy visualization of all clusters
+- **Themes** (`/themes`): Browse 28 broad themes with two-panel domain browser
+- **Clusters** (`/clusters`): Explore topic clusters with semantic search
 - **Books** (`/books`): Browse all indexed books
 
 ## CLI Reference
@@ -170,7 +177,8 @@ cd web && npm install && npm run dev
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /api/v1/domains` | List 24 broad themes with cluster counts |
+| `GET /api/v1/universe` | 3D galaxy data (clusters with UMAP coordinates) |
+| `GET /api/v1/domains` | List broad themes with cluster counts |
 | `GET /api/v1/domains/{id}` | Domain detail with all clusters |
 | `GET /api/v1/themes` | List topic clusters (Leiden) |
 | `GET /api/v1/themes/search?q=...` | Semantic search for clusters |
@@ -179,7 +187,9 @@ cd web && npm install && npm run dev
 | `GET /api/v1/books/{id}` | Book detail with topics |
 | `GET /api/v1/books/{id}/related` | Find related books |
 | `GET /api/v1/search?q=...` | Search books and topics |
+| `GET /api/v1/search/semantic?q=...` | Semantic search for books/topics |
 | `GET /api/v1/covers/{calibre_id}` | Book cover image |
+| `GET /api/v1/covers/book/{book_id}` | Book cover by internal ID |
 
 ## Example Output
 
@@ -233,6 +243,8 @@ cluster_domains    -- Mapping: Leiden cluster → domain
 | `click` + `rich` | CLI interface |
 | `fastapi` + `uvicorn` | API server |
 | `astro` | Frontend framework |
+| `@react-three/fiber` + `drei` | 3D galaxy visualization |
+| `three` | WebGL rendering |
 
 ### Embedding Model
 
@@ -246,10 +258,10 @@ Uses [BGE-small-en-v1.5](https://huggingface.co/BAAI/bge-small-en-v1.5):
 
 | Metric | Value |
 |--------|-------|
-| Indexed books | 925 |
-| Topics | 108,668 |
-| Leiden clusters | 845 |
-| Super-clusters (domains) | 24 |
+| Indexed books | 927 |
+| Topics | 153,040 |
+| Leiden clusters | 1,284 |
+| Super-clusters (domains) | 29 |
 
 ## Roadmap
 
@@ -264,14 +276,12 @@ Uses [BGE-small-en-v1.5](https://huggingface.co/BAAI/bge-small-en-v1.5):
 - [x] Web interface (Astro + FastAPI)
 - [x] Two-panel theme browser
 - [x] Semantic search in UI
-
-### In Progress
-- [ ] Galaxy/Universe visualization (UMAP projection)
-- [ ] Domain filtering on clusters page
+- [x] 3D Galaxy/Universe visualization (Three.js + UMAP projection)
 
 ### Future
 - [ ] Cross-book trail generation
 - [ ] Book recommendations based on topic overlap
+- [ ] Domain filtering on clusters page
 - [ ] Deploy to cloud (AWS Lightsail)
 - [ ] Calibre plugin integration
 
