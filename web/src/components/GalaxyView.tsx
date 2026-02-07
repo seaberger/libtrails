@@ -84,8 +84,8 @@ function ClusterSpheres({ clusters, colorMap, onHover, onClick }: ClusterSpheres
       onPointerOut={handlePointerOut}
       onClick={handleClick}
     >
-      <sphereGeometry args={[1, 16, 16]} />
-      <meshBasicMaterial transparent opacity={0.9} />
+      <sphereGeometry args={[1, 24, 24]} />
+      <meshStandardMaterial transparent opacity={0.9} roughness={0.4} metalness={0.1} />
     </instancedMesh>
   );
 }
@@ -171,6 +171,9 @@ export default function GalaxyView() {
         dpr={[1, 2]}
       >
         <color attach="background" args={["#0f0f1a"]} />
+        <ambientLight intensity={0.4} />
+        <directionalLight position={[50, 80, 60]} intensity={0.8} />
+        <directionalLight position={[-40, -20, -50]} intensity={0.3} />
         {visibleClusters.length > 0 && (
           <ClusterSpheres
             clusters={visibleClusters}
