@@ -1,8 +1,9 @@
 """Tests for topic graph construction."""
 
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 import numpy as np
+import pytest
 
 # Mark all tests in this module as slow (imports igraph)
 pytestmark = pytest.mark.slow
@@ -59,8 +60,9 @@ class TestBuildTopicGraph:
     @patch('libtrails.topic_graph.get_db')
     def test_returns_igraph(self, mock_db, mock_get_topics, mock_get_embeddings):
         """Test that build returns an igraph Graph."""
-        from libtrails.topic_graph import build_topic_graph
         import igraph as ig
+
+        from libtrails.topic_graph import build_topic_graph
 
         mock_get_topics.return_value = [
             {'id': 1, 'label': 'topic1', 'occurrence_count': 10, 'cluster_id': None},
@@ -122,8 +124,9 @@ class TestGetRelatedTopics:
     @patch('libtrails.topic_graph.build_topic_graph')
     def test_finds_neighbors(self, mock_build_graph):
         """Test finding topics related via graph."""
-        from libtrails.topic_graph import get_related_topics
         import igraph as ig
+
+        from libtrails.topic_graph import get_related_topics
 
         # Create a simple graph with all required attributes
         g = ig.Graph()
@@ -146,8 +149,9 @@ class TestGetRelatedTopics:
     @patch('libtrails.topic_graph.build_topic_graph')
     def test_not_found_returns_empty(self, mock_build_graph):
         """Test that nonexistent topic returns empty."""
-        from libtrails.topic_graph import get_related_topics
         import igraph as ig
+
+        from libtrails.topic_graph import get_related_topics
 
         g = ig.Graph()
         g.add_vertices(2)
@@ -163,8 +167,9 @@ class TestGetRelatedTopics:
     @patch('libtrails.topic_graph.build_topic_graph')
     def test_partial_match(self, mock_build_graph):
         """Test partial matching of topic names."""
-        from libtrails.topic_graph import get_related_topics
         import igraph as ig
+
+        from libtrails.topic_graph import get_related_topics
 
         g = ig.Graph()
         g.add_vertices(2)
@@ -191,8 +196,9 @@ class TestGetGraphStats:
 
     def test_returns_stats(self):
         """Test that stats include expected metrics."""
-        from libtrails.topic_graph import get_graph_stats
         import igraph as ig
+
+        from libtrails.topic_graph import get_graph_stats
 
         g = ig.Graph()
         g.add_vertices(5)
@@ -209,8 +215,9 @@ class TestGetGraphStats:
 
     def test_empty_graph_stats(self):
         """Test stats for empty graph."""
-        from libtrails.topic_graph import get_graph_stats
         import igraph as ig
+
+        from libtrails.topic_graph import get_graph_stats
 
         g = ig.Graph()
 
@@ -228,8 +235,9 @@ class TestBuildTopicGraphCooccurrenceOnly:
     @patch('libtrails.topic_graph.get_db')
     def test_returns_igraph(self, mock_db, mock_get_topics):
         """Test that cooccurrence-only build returns an igraph Graph."""
-        from libtrails.topic_graph import build_topic_graph_cooccurrence_only
         import igraph as ig
+
+        from libtrails.topic_graph import build_topic_graph_cooccurrence_only
 
         mock_get_topics.return_value = [
             {'id': 1, 'label': 'topic1', 'occurrence_count': 10, 'cluster_id': None},
@@ -309,8 +317,9 @@ class TestBuildTopicGraphKNN:
     @patch('libtrails.topic_graph.get_db')
     def test_returns_igraph(self, mock_db, mock_get_topics, mock_get_embeddings):
         """Test that k-NN build returns an igraph Graph."""
-        from libtrails.topic_graph import build_topic_graph_knn
         import igraph as ig
+
+        from libtrails.topic_graph import build_topic_graph_knn
 
         mock_get_topics.return_value = [
             {'id': 1, 'label': 'topic1', 'occurrence_count': 10, 'cluster_id': None},

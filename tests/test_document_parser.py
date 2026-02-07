@@ -1,15 +1,14 @@
 """Tests for document parsing functionality."""
 
-import pytest
-from unittest.mock import patch, MagicMock
-from pathlib import Path
 import zipfile
-import io
+from unittest.mock import patch
+
+import pytest
 
 from libtrails.document_parser import (
+    _clean_markdown,
     extract_text,
     extract_text_from_epub,
-    _clean_markdown,
 )
 
 

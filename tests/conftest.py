@@ -1,13 +1,11 @@
 """Shared fixtures for libtrails tests."""
 
-import json
 import sqlite3
 import tempfile
 from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
-
 
 # Sample iPad HTML responses for mocking
 SAMPLE_TAGS_HTML = """

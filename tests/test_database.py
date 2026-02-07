@@ -1,22 +1,19 @@
 """Tests for database operations."""
 
-import pytest
 import sqlite3
-from unittest.mock import patch, MagicMock
 from contextlib import contextmanager
 
+import pytest
+
 from libtrails.database import (
-    get_db,
-    init_chunks_table,
-    save_chunks,
-    save_chunk_topics,
+    get_all_books,
     get_book,
     get_book_by_title,
-    get_all_books,
     get_indexing_status,
     get_topics_without_embeddings,
+    save_chunk_topics,
+    save_chunks,
     save_topic_embedding,
-    migrate_raw_topics_to_normalized,
 )
 
 

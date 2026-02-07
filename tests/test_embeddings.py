@@ -1,16 +1,16 @@
 """Tests for embedding generation functionality."""
 
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 
 from libtrails.embeddings import (
-    embed_text,
-    embed_texts,
-    embedding_to_bytes,
     bytes_to_embedding,
     cosine_similarity,
     cosine_similarity_matrix,
+    embed_text,
+    embed_texts,
+    embedding_to_bytes,
     get_embedding_dimension,
     get_model_info,
 )

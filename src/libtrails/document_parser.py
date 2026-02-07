@@ -59,7 +59,7 @@ def extract_text_from_epub(epub_path: Path) -> str:
                 content = re.sub(r'\s+xmlns(?::[a-zA-Z]+)?="[^"]*"', '', content)
                 # Convert XHTML self-closing tags to proper HTML
                 # (e.g., <title/> becomes <title></title> - void elements excluded)
-                void_elements = {'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 
+                void_elements = {'area', 'base', 'br', 'col', 'embed', 'hr', 'img',
                                 'input', 'link', 'meta', 'param', 'source', 'track', 'wbr'}
                 def fix_self_closing(match):
                     tag = match.group(1).lower()

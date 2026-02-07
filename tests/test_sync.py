@@ -1,15 +1,16 @@
 """Tests for iPad library sync functionality."""
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 
 from libtrails.sync import (
-    scrape_ipad_library,
-    normalize_for_matching,
     authors_match,
     find_new_books,
     get_existing_ipad_ids,
     match_to_calibre,
+    normalize_for_matching,
+    scrape_ipad_library,
 )
 
 

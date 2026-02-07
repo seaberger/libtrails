@@ -1,14 +1,15 @@
 """Tests for book indexer functionality."""
 
-import pytest
-from unittest.mock import patch, MagicMock
 from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from libtrails.indexer import (
+    IndexingError,
+    IndexingResult,
     index_book,
     index_books_batch,
-    IndexingResult,
-    IndexingError,
 )
 
 
@@ -327,7 +328,7 @@ class TestIndexBooksBatch:
         def progress_callback(msg):
             messages.append(msg)
 
-        result = index_books_batch(
+        index_books_batch(
             [1],
             battery_check=mock_battery_check,
             min_battery=15,

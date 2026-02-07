@@ -10,8 +10,8 @@ from .config import DEFAULT_MODEL
 from .database import (
     get_calibre_db,
     get_db,
-    migrate_raw_topics_to_normalized,
     get_topics_without_embeddings,
+    migrate_raw_topics_to_normalized,
     save_topic_embedding,
 )
 
@@ -195,7 +195,7 @@ def match_to_calibre(book: dict) -> Optional[dict]:
     Returns Calibre metadata dict if found, None otherwise.
     """
     title_norm = normalize_for_matching(book['title'])
-    author_norm = normalize_for_matching(book['author'])
+    normalize_for_matching(book['author'])
 
     with get_calibre_db() as conn:
         cursor = conn.cursor()

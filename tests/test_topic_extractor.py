@@ -1,13 +1,12 @@
 """Tests for topic extraction functionality."""
 
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
 
 from libtrails.topic_extractor import (
-    normalize_topic,
     _parse_topics,
     extract_topics,
     extract_topics_batch,
+    normalize_topic,
 )
 
 

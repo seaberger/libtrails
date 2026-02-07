@@ -1,7 +1,7 @@
 """Tests for vector search functionality."""
 
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 
 

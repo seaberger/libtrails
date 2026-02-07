@@ -1,6 +1,5 @@
 """Tests for text chunking functionality."""
 
-import pytest
 
 from libtrails.chunker import chunk_text
 

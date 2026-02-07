@@ -1,10 +1,7 @@
 """Tests for configuration management."""
 
-import pytest
-import yaml
-from pathlib import Path
 
-from libtrails.config import get_user_config, save_user_config, get_ipad_url, set_ipad_url
+from libtrails.config import get_ipad_url, get_user_config, save_user_config, set_ipad_url
 
 
 class TestUserConfig:

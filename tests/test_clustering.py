@@ -1,8 +1,8 @@
 """Tests for topic clustering functionality."""
 
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
-import numpy as np
 
 # Mark all tests in this module as slow (imports igraph/leidenalg)
 pytestmark = pytest.mark.slow
@@ -16,8 +16,9 @@ class TestClusterTopics:
     @patch('libtrails.topic_graph.build_topic_graph_cooccurrence_only')
     def test_cluster_returns_stats_cooccurrence_mode(self, mock_build_graph, mock_leidenalg, mock_update_cluster):
         """Test that clustering returns statistics in cooccurrence mode."""
-        from libtrails.clustering import cluster_topics
         import igraph as ig
+
+        from libtrails.clustering import cluster_topics
 
         # Create a real graph with proper attributes
         mock_graph = ig.Graph()
@@ -46,8 +47,9 @@ class TestClusterTopics:
     @patch('libtrails.topic_graph.build_topic_graph_cooccurrence_only')
     def test_cluster_with_partition_types(self, mock_build_graph, mock_leidenalg, mock_update_cluster):
         """Test clustering with different partition types."""
-        from libtrails.clustering import cluster_topics
         import igraph as ig
+
+        from libtrails.clustering import cluster_topics
 
         mock_graph = ig.Graph()
         mock_graph.add_vertices(5)
@@ -81,8 +83,9 @@ class TestClusterTopics:
     @patch('libtrails.topic_graph.build_topic_graph_knn')
     def test_cluster_with_knn_mode(self, mock_build_graph, mock_leidenalg, mock_update_cluster):
         """Test clustering with k-NN mode."""
-        from libtrails.clustering import cluster_topics
         import igraph as ig
+
+        from libtrails.clustering import cluster_topics
 
         mock_graph = ig.Graph()
         mock_graph.add_vertices(5)
@@ -106,8 +109,9 @@ class TestClusterTopics:
     @patch('libtrails.topic_graph.build_topic_graph_cooccurrence_only')
     def test_handles_empty_graph_cooccurrence(self, mock_build_graph):
         """Test handling of empty graph in cooccurrence mode."""
-        from libtrails.clustering import cluster_topics
         import igraph as ig
+
+        from libtrails.clustering import cluster_topics
 
         mock_graph = ig.Graph()  # Empty graph
         mock_build_graph.return_value = mock_graph
@@ -128,8 +132,9 @@ class TestClusterTopics:
     @patch('libtrails.topic_graph.build_topic_graph_cooccurrence_only')
     def test_invalid_partition_type_returns_error(self, mock_build_graph):
         """Test that invalid partition type returns an error."""
-        from libtrails.clustering import cluster_topics
         import igraph as ig
+
+        from libtrails.clustering import cluster_topics
 
         mock_graph = ig.Graph()
         mock_graph.add_vertices(5)
@@ -148,8 +153,9 @@ class TestClusterTopics:
     @patch('libtrails.topic_graph.build_topic_graph_cooccurrence_only')
     def test_cluster_with_custom_cooccurrence_min(self, mock_build_graph, mock_leidenalg, mock_update_cluster):
         """Test clustering with custom cooccurrence minimum."""
-        from libtrails.clustering import cluster_topics
         import igraph as ig
+
+        from libtrails.clustering import cluster_topics
 
         mock_graph = ig.Graph()
         mock_graph.add_vertices(5)
@@ -164,7 +170,7 @@ class TestClusterTopics:
         mock_leidenalg.find_partition.return_value = mock_partition
         mock_leidenalg.ModularityVertexPartition = MagicMock()
 
-        result = cluster_topics(cooccurrence_min=10)
+        cluster_topics(cooccurrence_min=10)
         # Verify the custom value was passed
         mock_build_graph.assert_called_once()
         call_args = mock_build_graph.call_args
