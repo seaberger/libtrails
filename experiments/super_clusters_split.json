@@ -22274,23 +22274,6 @@
             "count": 8
           }
         ]
-      },
-      {
-        "cluster_id": 978,
-        "top_topics": [
-          {
-            "label": "holograms",
-            "count": 58
-          },
-          {
-            "label": "holographic technology",
-            "count": 12
-          },
-          {
-            "label": "holography",
-            "count": 6
-          }
-        ]
       }
     ],
     "top_topics": [
@@ -23464,5 +23447,43 @@
       }
     ],
     "auto_label": "architecture / urban life / domesticity"
+  },
+  {
+    "super_cluster_id": 33,
+    "leiden_clusters": [
+      {
+        "cluster_id": 978,
+        "top_topics": [
+          {
+            "label": "holograms",
+            "count": 58
+          },
+          {
+            "label": "holographic technology",
+            "count": 12
+          },
+          {
+            "label": "holography",
+            "count": 6
+          }
+        ]
+      }
+    ],
+    "top_topics": [
+      {
+        "label": "holograms",
+        "total_count": 58
+      },
+      {
+        "label": "holographic technology",
+        "total_count": 12
+      },
+      {
+        "label": "holography",
+        "total_count": 6
+      }
+    ],
+    "auto_label": "holograms / holographic technology / holography",
+    "split_from": 24
   }
 ]

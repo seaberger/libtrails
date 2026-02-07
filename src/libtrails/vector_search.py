@@ -49,8 +49,7 @@ def index_topic_vector(conn: sqlite3.Connection, topic_id: int, embedding: bytes
     conn.execute("DELETE FROM topic_vectors WHERE topic_id = ?", (topic_id,))
     # Insert new embedding
     conn.execute(
-        "INSERT INTO topic_vectors (topic_id, embedding) VALUES (?, ?)",
-        (topic_id, embedding)
+        "INSERT INTO topic_vectors (topic_id, embedding) VALUES (?, ?)", (topic_id, embedding)
     )
 
 
@@ -78,7 +77,7 @@ def rebuild_vector_index(conn: sqlite3.Connection, force_recreate: bool = False)
     for row in cursor.fetchall():
         conn.execute(
             "INSERT INTO topic_vectors (topic_id, embedding) VALUES (?, ?)",
-            (row['id'], row['embedding'])
+            (row["id"], row["embedding"]),
         )
         count += 1
 
@@ -86,11 +85,7 @@ def rebuild_vector_index(conn: sqlite3.Connection, force_recreate: bool = False)
     return count
 
 
-def search_topics_semantic(
-    query: str,
-    limit: int = 20,
-    db_path: Path = IPAD_DB_PATH
-) -> list[dict]:
+def search_topics_semantic(query: str, limit: int = 20, db_path: Path = IPAD_DB_PATH) -> list[dict]:
     """
     Search for topics semantically using vector similarity.
 
@@ -112,7 +107,8 @@ def search_topics_semantic(
     query_bytes = embedding_to_bytes(query_embedding)
 
     # Vector similarity search - sqlite-vec requires k=? in WHERE clause
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT
             tv.topic_id,
             tv.distance,
@@ -123,7 +119,9 @@ def search_topics_semantic(
         JOIN topics t ON tv.topic_id = t.id
         WHERE tv.embedding MATCH ? AND k = ?
         ORDER BY tv.distance
-    """, (query_bytes, limit))
+    """,
+        (query_bytes, limit),
+    )
 
     results = []
     for row in cursor.fetchall():
@@ -133,23 +131,23 @@ def search_topics_semantic(
         distance = row["distance"]
         similarity = 1.0 - distance
 
-        results.append({
-            "topic_id": row["topic_id"],
-            "label": row["label"],
-            "distance": distance,
-            "similarity": similarity,
-            "occurrence_count": row["occurrence_count"],
-            "cluster_id": row["cluster_id"],
-        })
+        results.append(
+            {
+                "topic_id": row["topic_id"],
+                "label": row["label"],
+                "distance": distance,
+                "similarity": similarity,
+                "occurrence_count": row["occurrence_count"],
+                "cluster_id": row["cluster_id"],
+            }
+        )
 
     conn.close()
     return results
 
 
 def search_books_by_topic_semantic(
-    query: str,
-    limit: int = 20,
-    db_path: Path = IPAD_DB_PATH
+    query: str, limit: int = 20, db_path: Path = IPAD_DB_PATH
 ) -> list[dict]:
     """
     Search for books that contain topics semantically similar to the query.
@@ -169,13 +167,16 @@ def search_books_by_topic_semantic(
     query_bytes = embedding_to_bytes(query_embedding)
 
     # Find matching topics first - sqlite-vec requires k=? in WHERE clause
-    cursor.execute("""
+    cursor.execute(
+        """
         SELECT tv.topic_id, tv.distance, t.label
         FROM topic_vectors tv
         JOIN topics t ON tv.topic_id = t.id
         WHERE tv.embedding MATCH ? AND k = 50
         ORDER BY tv.distance
-    """, (query_bytes,))
+    """,
+        (query_bytes,),
+    )
 
     matching_topics = cursor.fetchall()
     if not matching_topics:
@@ -187,7 +188,8 @@ def search_books_by_topic_semantic(
     topic_ids = list(topic_distances.keys())
     placeholders = ",".join("?" * len(topic_ids))
 
-    cursor.execute(f"""
+    cursor.execute(
+        f"""
         SELECT
             b.id, b.title, b.author,
             GROUP_CONCAT(DISTINCT t.label) as matching_topics,
@@ -201,22 +203,30 @@ def search_books_by_topic_semantic(
         GROUP BY b.id
         ORDER BY match_count DESC
         LIMIT ?
-    """, (*topic_ids, limit))
+    """,
+        (*topic_ids, limit),
+    )
 
     results = []
     for row in cursor.fetchall():
         # Calculate best distance from the matched topics
-        matched_ids = [int(x) for x in row["topic_id_list"].split(",")] if row["topic_id_list"] else []
+        matched_ids = (
+            [int(x) for x in row["topic_id_list"].split(",")] if row["topic_id_list"] else []
+        )
         best_distance = min((topic_distances.get(tid, 1.0) for tid in matched_ids), default=1.0)
 
-        results.append({
-            "id": row["id"],
-            "title": row["title"],
-            "author": row["author"],
-            "matching_topics": row["matching_topics"].split(",") if row["matching_topics"] else [],
-            "match_count": row["match_count"],
-            "relevance": 1.0 - best_distance,
-        })
+        results.append(
+            {
+                "id": row["id"],
+                "title": row["title"],
+                "author": row["author"],
+                "matching_topics": row["matching_topics"].split(",")
+                if row["matching_topics"]
+                else [],
+                "match_count": row["match_count"],
+                "relevance": 1.0 - best_distance,
+            }
+        )
 
     conn.close()
     return results

@@ -33,7 +33,7 @@ def extract_topics_batch(
     chunks: list[str],
     model: str = DEFAULT_MODEL,
     num_topics: int = TOPICS_PER_CHUNK,
-    progress_callback: Optional[callable] = None
+    progress_callback: Optional[callable] = None,
 ) -> list[list[str]]:
     """
     Extract topics from multiple chunks in parallel.
@@ -48,10 +48,7 @@ def extract_topics_batch(
         return idx, topics
 
     with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:
-        futures = {
-            executor.submit(process_chunk, i, chunk): i
-            for i, chunk in enumerate(chunks)
-        }
+        futures = {executor.submit(process_chunk, i, chunk): i for i, chunk in enumerate(chunks)}
 
         for future in as_completed(futures):
             idx, topics = future.result()
@@ -61,7 +58,6 @@ def extract_topics_batch(
                 progress_callback(completed, len(chunks))
 
     return results
-
 
 
 def normalize_topic(topic: str) -> str:
@@ -81,9 +77,7 @@ def normalize_topic(topic: str) -> str:
 
 
 def extract_topics(
-    text: str,
-    model: str = DEFAULT_MODEL,
-    num_topics: int = TOPICS_PER_CHUNK
+    text: str, model: str = DEFAULT_MODEL, num_topics: int = TOPICS_PER_CHUNK
 ) -> list[str]:
     """
     Extract topics from a text chunk using Ollama HTTP API.
@@ -105,7 +99,7 @@ Topics:'''
                 "model": model,
                 "prompt": prompt,
                 "stream": False,
-            }
+            },
         )
         response.raise_for_status()
         result = response.json()
@@ -124,7 +118,7 @@ def _parse_topics(output: str) -> list[str]:
     # Try to parse as JSON array
     try:
         # Find JSON array in output
-        match = re.search(r'\[.*?\]', output, re.DOTALL)
+        match = re.search(r"\[.*?\]", output, re.DOTALL)
         if match:
             topics = json.loads(match.group())
             if isinstance(topics, list):
@@ -138,8 +132,8 @@ def _parse_topics(output: str) -> list[str]:
         return quoted[:TOPICS_PER_CHUNK]
 
     # Last resort: split by commas or newlines
-    if ',' in output:
-        parts = [p.strip().strip('"\'') for p in output.split(',')]
+    if "," in output:
+        parts = [p.strip().strip("\"'") for p in output.split(",")]
         return [p for p in parts if p and len(p) < 50][:TOPICS_PER_CHUNK]
 
     return []
@@ -148,13 +142,8 @@ def _parse_topics(output: str) -> list[str]:
 def check_ollama_available(model: str = DEFAULT_MODEL) -> bool:
     """Check if Ollama is available and model is loaded."""
     try:
-        result = subprocess.run(
-            ['ollama', 'list'],
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
-        return model.split(':')[0] in result.stdout
+        result = subprocess.run(["ollama", "list"], capture_output=True, text=True, timeout=5)
+        return model.split(":")[0] in result.stdout
     except Exception:
         return False
 
@@ -162,14 +151,9 @@ def check_ollama_available(model: str = DEFAULT_MODEL) -> bool:
 def get_available_models() -> list[str]:
     """Get list of available Ollama models."""
     try:
-        result = subprocess.run(
-            ['ollama', 'list'],
-            capture_output=True,
-            text=True,
-            timeout=5
-        )
+        result = subprocess.run(["ollama", "list"], capture_output=True, text=True, timeout=5)
         if result.returncode == 0:
-            lines = result.stdout.strip().split('\n')[1:]  # Skip header
+            lines = result.stdout.strip().split("\n")[1:]  # Skip header
             return [line.split()[0] for line in lines if line]
     except Exception:
         pass

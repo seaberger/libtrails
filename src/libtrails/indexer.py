@@ -19,6 +19,7 @@ from .topic_extractor import check_ollama_available, extract_topics_batch
 
 class IndexingError(Exception):
     """Raised when indexing fails."""
+
     pass
 
 
@@ -34,7 +35,7 @@ class IndexingResult:
         all_topics: list[str] = None,
         skipped: bool = False,
         skip_reason: str = None,
-        error: str = None
+        error: str = None,
     ):
         self.book_id = book_id
         self.word_count = word_count
@@ -96,21 +97,15 @@ def index_book(
         progress_callback(f"Indexing: {book['title'][:60]}")
 
     # Check for Calibre match
-    if not book.get('calibre_id'):
-        return IndexingResult(
-            book_id=book_id,
-            error="No Calibre match for this book"
-        )
+    if not book.get("calibre_id"):
+        return IndexingResult(book_id=book_id, error="No Calibre match for this book")
 
     # Get book file path
-    book_path = get_book_path(book['calibre_id'])
+    book_path = get_book_path(book["calibre_id"])
     if not book_path:
-        return IndexingResult(
-            book_id=book_id,
-            error="No EPUB or PDF found in Calibre library"
-        )
+        return IndexingResult(book_id=book_id, error="No EPUB or PDF found in Calibre library")
 
-    file_format = book_path.suffix.upper().lstrip('.')
+    file_format = book_path.suffix.upper().lstrip(".")
     if progress_callback:
         progress_callback(f"  {file_format}: {book_path.name}")
 
@@ -121,10 +116,7 @@ def index_book(
     try:
         text = extract_text(book_path)
     except Exception as e:
-        return IndexingResult(
-            book_id=book_id,
-            error=f"Text extraction failed: {e}"
-        )
+        return IndexingResult(book_id=book_id, error=f"Text extraction failed: {e}")
 
     word_count = len(text.split())
 
@@ -133,7 +125,7 @@ def index_book(
         return IndexingResult(
             book_id=book_id,
             word_count=word_count,
-            error=f"Insufficient content: only {word_count} words extracted"
+            error=f"Insufficient content: only {word_count} words extracted",
         )
 
     # Check maximum content
@@ -142,7 +134,7 @@ def index_book(
             book_id=book_id,
             word_count=word_count,
             skipped=True,
-            skip_reason=f"{word_count:,} words exceeds max {max_words:,}"
+            skip_reason=f"{word_count:,} words exceeds max {max_words:,}",
         )
 
     if progress_callback:
@@ -163,7 +155,7 @@ def index_book(
             word_count=word_count,
             chunk_count=len(chunks),
             skipped=True,
-            skip_reason="Dry run - skipped topic extraction"
+            skip_reason="Dry run - skipped topic extraction",
         )
 
     # Check Ollama availability
@@ -172,7 +164,7 @@ def index_book(
             book_id=book_id,
             word_count=word_count,
             chunk_count=len(chunks),
-            error=f"Model {model} not available in Ollama"
+            error=f"Model {model} not available in Ollama",
         )
 
     if progress_callback:
@@ -181,10 +173,7 @@ def index_book(
     # Get chunk IDs for saving topics
     with get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute(
-            "SELECT id FROM chunks WHERE book_id = ? ORDER BY chunk_index",
-            (book_id,)
-        )
+        cursor.execute("SELECT id FROM chunks WHERE book_id = ? ORDER BY chunk_index", (book_id,))
         chunk_ids = [row[0] for row in cursor.fetchall()]
 
     # Extract topics in parallel
@@ -209,7 +198,7 @@ def index_book(
         word_count=word_count,
         chunk_count=len(chunks),
         unique_topics=len(unique_topics),
-        all_topics=all_topics
+        all_topics=all_topics,
     )
 
 
@@ -272,7 +261,7 @@ def index_books_batch(
                 max_words=max_words,
                 chunk_size=chunk_size,
                 dry_run=dry_run,
-                progress_callback=progress_callback
+                progress_callback=progress_callback,
             )
 
             if result.success:
@@ -302,5 +291,5 @@ def index_books_batch(
         "failed": len(failed),
         "failed_details": failed,
         "total_processed": i,
-        "elapsed_seconds": elapsed
+        "elapsed_seconds": elapsed,
     }

@@ -3,6 +3,8 @@
 import type {
   BookDetail,
   BookSummary,
+  DomainDetail,
+  DomainSummary,
   RelatedBook,
   SearchResult,
   ThemeDetail,
@@ -75,4 +77,13 @@ export function getCoverUrl(calibreId: number | null): string {
 
 export function getBookCoverUrl(bookId: number): string {
   return `/api/v1/covers/book/${bookId}`;
+}
+
+// Domain (super-cluster) API
+export async function getDomains(): Promise<DomainSummary[]> {
+  return fetchJson("/domains");
+}
+
+export async function getDomain(domainId: number): Promise<DomainDetail> {
+  return fetchJson(`/domains/${domainId}`);
 }

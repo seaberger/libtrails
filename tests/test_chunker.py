@@ -1,7 +1,5 @@
 """Tests for text chunking functionality."""
 
-import pytest
-
 from libtrails.chunker import chunk_text
 
 
@@ -23,7 +21,9 @@ class TestChunkText:
 
     def test_respects_sentence_boundaries(self):
         """Test that chunks don't split sentences."""
-        text = "First sentence here. Second sentence here. Third sentence here. Fourth sentence here."
+        text = (
+            "First sentence here. Second sentence here. Third sentence here. Fourth sentence here."
+        )
 
         chunks = chunk_text(text, target_words=5)
 
@@ -31,7 +31,7 @@ class TestChunkText:
             # Each chunk should end with sentence-ending punctuation or be the last chunk
             chunk = chunk.strip()
             if chunk:
-                assert chunk[-1] in '.!?' or chunk == chunks[-1].strip()
+                assert chunk[-1] in ".!?" or chunk == chunks[-1].strip()
 
     def test_short_text_filtered_out(self):
         """Test that very short text is filtered out (below CHUNK_MIN_WORDS)."""
@@ -68,7 +68,9 @@ class TestChunkText:
 
     def test_various_punctuation(self):
         """Test handling of different sentence-ending punctuation."""
-        text = "Is this a question? Yes it is! And this is a statement. What about this? Sure thing!"
+        text = (
+            "Is this a question? Yes it is! And this is a statement. What about this? Sure thing!"
+        )
 
         chunks = chunk_text(text, target_words=5)
 

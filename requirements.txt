@@ -25,6 +25,7 @@ httpx>=0.27.0
 numpy>=1.24.0
 sentence-transformers>=2.2.0
 sqlite-vec>=0.1.0        # Vector search extension for SQLite
+faiss-cpu>=1.7.0         # Fast batch KNN for deduplication
 
 # ============================================
 # Graph Analysis & Clustering
@@ -43,7 +44,8 @@ pydantic>=2.0.0
 # ============================================
 # Visualization (Galaxy View)
 # ============================================
-umap-learn>=0.5.4        # UMAP dimensionality reduction
+umap-learn>=0.5.6
+numba>=0.59.0            # Pin newer numba for Python 3.12 support
 
 # ============================================
 # Development/Testing (optional)

@@ -1,14 +1,15 @@
 """Tests for book indexer functionality."""
 
-import pytest
-from unittest.mock import patch, MagicMock
 from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from libtrails.indexer import (
+    IndexingError,
+    IndexingResult,
     index_book,
     index_books_batch,
-    IndexingResult,
-    IndexingError,
 )
 
 
@@ -22,7 +23,7 @@ class TestIndexingResult:
             word_count=5000,
             chunk_count=10,
             unique_topics=25,
-            all_topics=["topic1", "topic2"]
+            all_topics=["topic1", "topic2"],
         )
 
         assert result.success is True
@@ -33,11 +34,7 @@ class TestIndexingResult:
 
     def test_skipped_result(self):
         """Test skipped result."""
-        result = IndexingResult(
-            book_id=1,
-            skipped=True,
-            skip_reason="Too large"
-        )
+        result = IndexingResult(book_id=1, skipped=True, skip_reason="Too large")
 
         assert result.success is False
         assert result.skipped is True
@@ -45,10 +42,7 @@ class TestIndexingResult:
 
     def test_error_result(self):
         """Test error result."""
-        result = IndexingResult(
-            book_id=1,
-            error="No file found"
-        )
+        result = IndexingResult(book_id=1, error="No file found")
 
         assert result.success is False
         assert result.error == "No file found"
@@ -65,8 +59,8 @@ class TestIndexingResult:
 class TestIndexBook:
     """Tests for index_book function."""
 
-    @patch('libtrails.indexer.get_book')
-    @patch('libtrails.indexer.init_chunks_table')
+    @patch("libtrails.indexer.get_book")
+    @patch("libtrails.indexer.init_chunks_table")
     def test_book_not_found(self, mock_init, mock_get_book):
         """Test indexing a book that doesn't exist."""
         mock_get_book.return_value = None
@@ -76,31 +70,23 @@ class TestIndexBook:
 
         assert "not found" in str(exc.value)
 
-    @patch('libtrails.indexer.get_book')
-    @patch('libtrails.indexer.init_chunks_table')
+    @patch("libtrails.indexer.get_book")
+    @patch("libtrails.indexer.init_chunks_table")
     def test_no_calibre_match(self, mock_init, mock_get_book):
         """Test indexing a book without Calibre match."""
-        mock_get_book.return_value = {
-            'id': 1,
-            'title': 'Test Book',
-            'calibre_id': None
-        }
+        mock_get_book.return_value = {"id": 1, "title": "Test Book", "calibre_id": None}
 
         result = index_book(1)
 
         assert result.success is False
         assert "No Calibre match" in result.error
 
-    @patch('libtrails.indexer.get_book_path')
-    @patch('libtrails.indexer.get_book')
-    @patch('libtrails.indexer.init_chunks_table')
+    @patch("libtrails.indexer.get_book_path")
+    @patch("libtrails.indexer.get_book")
+    @patch("libtrails.indexer.init_chunks_table")
     def test_no_epub_file(self, mock_init, mock_get_book, mock_get_path):
         """Test indexing when no EPUB/PDF file exists."""
-        mock_get_book.return_value = {
-            'id': 1,
-            'title': 'Test Book',
-            'calibre_id': 123
-        }
+        mock_get_book.return_value = {"id": 1, "title": "Test Book", "calibre_id": 123}
         mock_get_path.return_value = None
 
         result = index_book(1)
@@ -108,17 +94,13 @@ class TestIndexBook:
         assert result.success is False
         assert "No EPUB or PDF" in result.error
 
-    @patch('libtrails.indexer.extract_text')
-    @patch('libtrails.indexer.get_book_path')
-    @patch('libtrails.indexer.get_book')
-    @patch('libtrails.indexer.init_chunks_table')
+    @patch("libtrails.indexer.extract_text")
+    @patch("libtrails.indexer.get_book_path")
+    @patch("libtrails.indexer.get_book")
+    @patch("libtrails.indexer.init_chunks_table")
     def test_insufficient_content(self, mock_init, mock_get_book, mock_get_path, mock_extract):
         """Test indexing when book has too little content."""
-        mock_get_book.return_value = {
-            'id': 1,
-            'title': 'Test Book',
-            'calibre_id': 123
-        }
+        mock_get_book.return_value = {"id": 1, "title": "Test Book", "calibre_id": 123}
         mock_get_path.return_value = Path("/fake/path/book.epub")
         mock_extract.return_value = "Too short"  # Only 2 words
 
@@ -127,17 +109,13 @@ class TestIndexBook:
         assert result.success is False
         assert "Insufficient content" in result.error
 
-    @patch('libtrails.indexer.extract_text')
-    @patch('libtrails.indexer.get_book_path')
-    @patch('libtrails.indexer.get_book')
-    @patch('libtrails.indexer.init_chunks_table')
+    @patch("libtrails.indexer.extract_text")
+    @patch("libtrails.indexer.get_book_path")
+    @patch("libtrails.indexer.get_book")
+    @patch("libtrails.indexer.init_chunks_table")
     def test_max_words_exceeded(self, mock_init, mock_get_book, mock_get_path, mock_extract):
         """Test skipping when book exceeds max_words."""
-        mock_get_book.return_value = {
-            'id': 1,
-            'title': 'Test Book',
-            'calibre_id': 123
-        }
+        mock_get_book.return_value = {"id": 1, "title": "Test Book", "calibre_id": 123}
         mock_get_path.return_value = Path("/fake/path/book.epub")
         # Create text with 1000 words
         mock_extract.return_value = " ".join(["word"] * 1000)
@@ -147,20 +125,17 @@ class TestIndexBook:
         assert result.skipped is True
         assert "exceeds max" in result.skip_reason
 
-    @patch('libtrails.indexer.save_chunks')
-    @patch('libtrails.indexer.chunk_text')
-    @patch('libtrails.indexer.extract_text')
-    @patch('libtrails.indexer.get_book_path')
-    @patch('libtrails.indexer.get_book')
-    @patch('libtrails.indexer.init_chunks_table')
-    def test_dry_run(self, mock_init, mock_get_book, mock_get_path, mock_extract,
-                     mock_chunk, mock_save):
+    @patch("libtrails.indexer.save_chunks")
+    @patch("libtrails.indexer.chunk_text")
+    @patch("libtrails.indexer.extract_text")
+    @patch("libtrails.indexer.get_book_path")
+    @patch("libtrails.indexer.get_book")
+    @patch("libtrails.indexer.init_chunks_table")
+    def test_dry_run(
+        self, mock_init, mock_get_book, mock_get_path, mock_extract, mock_chunk, mock_save
+    ):
         """Test dry run mode."""
-        mock_get_book.return_value = {
-            'id': 1,
-            'title': 'Test Book',
-            'calibre_id': 123
-        }
+        mock_get_book.return_value = {"id": 1, "title": "Test Book", "calibre_id": 123}
         mock_get_path.return_value = Path("/fake/path/book.epub")
         mock_extract.return_value = " ".join(["word"] * 500)
         mock_chunk.return_value = ["chunk1", "chunk2", "chunk3"]
@@ -172,33 +147,36 @@ class TestIndexBook:
         assert result.chunk_count == 3
         mock_save.assert_called_once()
 
-    @patch('libtrails.indexer.save_chunk_topics')
-    @patch('libtrails.indexer.get_db')
-    @patch('libtrails.indexer.extract_topics_batch')
-    @patch('libtrails.indexer.check_ollama_available')
-    @patch('libtrails.indexer.save_chunks')
-    @patch('libtrails.indexer.chunk_text')
-    @patch('libtrails.indexer.extract_text')
-    @patch('libtrails.indexer.get_book_path')
-    @patch('libtrails.indexer.get_book')
-    @patch('libtrails.indexer.init_chunks_table')
-    def test_full_indexing(self, mock_init, mock_get_book, mock_get_path,
-                           mock_extract, mock_chunk, mock_save_chunks,
-                           mock_ollama, mock_extract_topics, mock_db, mock_save_topics):
+    @patch("libtrails.indexer.save_chunk_topics")
+    @patch("libtrails.indexer.get_db")
+    @patch("libtrails.indexer.extract_topics_batch")
+    @patch("libtrails.indexer.check_ollama_available")
+    @patch("libtrails.indexer.save_chunks")
+    @patch("libtrails.indexer.chunk_text")
+    @patch("libtrails.indexer.extract_text")
+    @patch("libtrails.indexer.get_book_path")
+    @patch("libtrails.indexer.get_book")
+    @patch("libtrails.indexer.init_chunks_table")
+    def test_full_indexing(
+        self,
+        mock_init,
+        mock_get_book,
+        mock_get_path,
+        mock_extract,
+        mock_chunk,
+        mock_save_chunks,
+        mock_ollama,
+        mock_extract_topics,
+        mock_db,
+        mock_save_topics,
+    ):
         """Test full indexing pipeline."""
-        mock_get_book.return_value = {
-            'id': 1,
-            'title': 'Test Book',
-            'calibre_id': 123
-        }
+        mock_get_book.return_value = {"id": 1, "title": "Test Book", "calibre_id": 123}
         mock_get_path.return_value = Path("/fake/path/book.epub")
         mock_extract.return_value = " ".join(["word"] * 500)
         mock_chunk.return_value = ["chunk1", "chunk2"]
         mock_ollama.return_value = True
-        mock_extract_topics.return_value = [
-            ["topic1", "topic2"],
-            ["topic2", "topic3"]
-        ]
+        mock_extract_topics.return_value = [["topic1", "topic2"], ["topic2", "topic3"]]
 
         # Mock database context manager
         mock_conn = MagicMock()
@@ -215,21 +193,25 @@ class TestIndexBook:
         assert result.unique_topics == 3  # topic1, topic2, topic3
         assert len(result.all_topics) == 4  # All topic occurrences
 
-    @patch('libtrails.indexer.check_ollama_available')
-    @patch('libtrails.indexer.save_chunks')
-    @patch('libtrails.indexer.chunk_text')
-    @patch('libtrails.indexer.extract_text')
-    @patch('libtrails.indexer.get_book_path')
-    @patch('libtrails.indexer.get_book')
-    @patch('libtrails.indexer.init_chunks_table')
-    def test_ollama_unavailable(self, mock_init, mock_get_book, mock_get_path,
-                                mock_extract, mock_chunk, mock_save, mock_ollama):
+    @patch("libtrails.indexer.check_ollama_available")
+    @patch("libtrails.indexer.save_chunks")
+    @patch("libtrails.indexer.chunk_text")
+    @patch("libtrails.indexer.extract_text")
+    @patch("libtrails.indexer.get_book_path")
+    @patch("libtrails.indexer.get_book")
+    @patch("libtrails.indexer.init_chunks_table")
+    def test_ollama_unavailable(
+        self,
+        mock_init,
+        mock_get_book,
+        mock_get_path,
+        mock_extract,
+        mock_chunk,
+        mock_save,
+        mock_ollama,
+    ):
         """Test when Ollama model is not available."""
-        mock_get_book.return_value = {
-            'id': 1,
-            'title': 'Test Book',
-            'calibre_id': 123
-        }
+        mock_get_book.return_value = {"id": 1, "title": "Test Book", "calibre_id": 123}
         mock_get_path.return_value = Path("/fake/path/book.epub")
         mock_extract.return_value = " ".join(["word"] * 500)
         mock_chunk.return_value = ["chunk1", "chunk2"]
@@ -247,13 +229,11 @@ class TestIndexBook:
         def callback(msg):
             messages.append(msg)
 
-        with patch('libtrails.indexer.get_book') as mock_get_book, \
-             patch('libtrails.indexer.init_chunks_table'):
-            mock_get_book.return_value = {
-                'id': 1,
-                'title': 'Test Book',
-                'calibre_id': None
-            }
+        with (
+            patch("libtrails.indexer.get_book") as mock_get_book,
+            patch("libtrails.indexer.init_chunks_table"),
+        ):
+            mock_get_book.return_value = {"id": 1, "title": "Test Book", "calibre_id": None}
 
             index_book(1, progress_callback=callback)
 
@@ -264,7 +244,7 @@ class TestIndexBook:
 class TestIndexBooksBatch:
     """Tests for index_books_batch function."""
 
-    @patch('libtrails.indexer.index_book')
+    @patch("libtrails.indexer.index_book")
     def test_batch_processing(self, mock_index):
         """Test batch processing of multiple books."""
         mock_index.side_effect = [
@@ -275,11 +255,11 @@ class TestIndexBooksBatch:
 
         result = index_books_batch([1, 2, 3])
 
-        assert result['successful'] == 2
-        assert result['skipped'] == 1
-        assert result['failed'] == 0
+        assert result["successful"] == 2
+        assert result["skipped"] == 1
+        assert result["failed"] == 0
 
-    @patch('libtrails.indexer.index_book')
+    @patch("libtrails.indexer.index_book")
     def test_batch_with_failures(self, mock_index):
         """Test batch handling failures."""
         mock_index.side_effect = [
@@ -290,10 +270,10 @@ class TestIndexBooksBatch:
 
         result = index_books_batch([1, 2, 3])
 
-        assert result['successful'] == 2
-        assert result['failed'] == 1
+        assert result["successful"] == 2
+        assert result["failed"] == 1
 
-    @patch('libtrails.indexer.index_book')
+    @patch("libtrails.indexer.index_book")
     def test_book_callback(self, mock_index):
         """Test that book callback is called after each book."""
         mock_index.return_value = IndexingResult(book_id=1, chunk_count=5, unique_topics=10)
@@ -309,8 +289,8 @@ class TestIndexBooksBatch:
         assert callbacks[0] == (1, 3, 1)
         assert callbacks[-1] == (3, 3, 1)
 
-    @patch('time.sleep')  # Patch at module level
-    @patch('libtrails.indexer.index_book')
+    @patch("time.sleep")  # Patch at module level
+    @patch("libtrails.indexer.index_book")
     def test_battery_management(self, mock_index, mock_sleep):
         """Test battery pause/resume behavior."""
         mock_index.return_value = IndexingResult(book_id=1, chunk_count=5, unique_topics=10)
@@ -327,29 +307,25 @@ class TestIndexBooksBatch:
         def progress_callback(msg):
             messages.append(msg)
 
-        result = index_books_batch(
+        index_books_batch(
             [1],
             battery_check=mock_battery_check,
             min_battery=15,
             resume_battery=50,
-            progress_callback=progress_callback
+            progress_callback=progress_callback,
         )
 
         # Should have paused and resumed
         assert any("pausing" in m.lower() for m in messages)
 
-    @patch('libtrails.indexer.index_book')
+    @patch("libtrails.indexer.index_book")
     def test_dry_run_batch(self, mock_index):
         """Test batch processing with dry run."""
         mock_index.return_value = IndexingResult(
-            book_id=1,
-            word_count=500,
-            chunk_count=5,
-            skipped=True,
-            skip_reason="Dry run"
+            book_id=1, word_count=500, chunk_count=5, skipped=True, skip_reason="Dry run"
         )
 
         result = index_books_batch([1, 2], dry_run=True)
 
-        assert result['skipped'] == 2
-        assert result['successful'] == 0
+        assert result["skipped"] == 2
+        assert result["successful"] == 0

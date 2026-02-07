@@ -1,16 +1,16 @@
 """Tests for embedding generation functionality."""
 
-import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 import numpy as np
 
 from libtrails.embeddings import (
-    embed_text,
-    embed_texts,
-    embedding_to_bytes,
     bytes_to_embedding,
     cosine_similarity,
     cosine_similarity_matrix,
+    embed_text,
+    embed_texts,
+    embedding_to_bytes,
     get_embedding_dimension,
     get_model_info,
 )
@@ -100,7 +100,7 @@ class TestCosineSimilarity:
 class TestEmbedText:
     """Tests for text embedding with mocked model."""
 
-    @patch('libtrails.embeddings.get_model')
+    @patch("libtrails.embeddings.get_model")
     def test_embed_single_text(self, mock_get_model):
         """Test embedding a single text."""
         mock_model = MagicMock()
@@ -112,14 +112,16 @@ class TestEmbedText:
         assert isinstance(result, np.ndarray)
         mock_model.encode.assert_called_once()
 
-    @patch('libtrails.embeddings.get_model')
+    @patch("libtrails.embeddings.get_model")
     def test_embed_multiple_texts(self, mock_get_model):
         """Test embedding multiple texts."""
         mock_model = MagicMock()
-        mock_model.encode.return_value = np.array([
-            [0.1, 0.2, 0.3],
-            [0.4, 0.5, 0.6],
-        ])
+        mock_model.encode.return_value = np.array(
+            [
+                [0.1, 0.2, 0.3],
+                [0.4, 0.5, 0.6],
+            ]
+        )
         mock_get_model.return_value = mock_model
 
         result = embed_texts(["text one", "text two"])
@@ -131,8 +133,8 @@ class TestEmbedText:
 class TestModelInfo:
     """Tests for model information retrieval."""
 
-    @patch('libtrails.embeddings.get_model')
-    @patch('libtrails.embeddings.MODEL_CACHE_DIR')
+    @patch("libtrails.embeddings.get_model")
+    @patch("libtrails.embeddings.MODEL_CACHE_DIR")
     def test_get_model_info(self, mock_cache_dir, mock_get_model):
         """Test retrieving model info."""
         mock_model = MagicMock()
@@ -142,11 +144,11 @@ class TestModelInfo:
 
         result = get_model_info()
 
-        assert 'name' in result
-        assert 'dimension' in result
-        assert result['dimension'] == 384
+        assert "name" in result
+        assert "dimension" in result
+        assert result["dimension"] == 384
 
-    @patch('libtrails.embeddings._model', None)
+    @patch("libtrails.embeddings._model", None)
     def test_get_embedding_dimension(self):
         """Test getting embedding dimension."""
         # Should return the configured dimension

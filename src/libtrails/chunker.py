@@ -13,7 +13,7 @@ def chunk_text(text: str, target_words: int = CHUNK_TARGET_WORDS) -> list[str]:
     Filters out chunks that are too short (likely artifacts).
     """
     # Split into sentences
-    sentences = re.split(r'(?<=[.!?])\s+', text)
+    sentences = re.split(r"(?<=[.!?])\s+", text)
 
     chunks = []
     current_chunk = []
@@ -28,7 +28,7 @@ def chunk_text(text: str, target_words: int = CHUNK_TARGET_WORDS) -> list[str]:
 
         # If adding this sentence would exceed target and we have content, start new chunk
         if current_words + words > target_words and current_chunk:
-            chunk_text = ' '.join(current_chunk)
+            chunk_text = " ".join(current_chunk)
             if len(chunk_text.split()) >= CHUNK_MIN_WORDS:
                 chunks.append(chunk_text)
             current_chunk = [sentence]
@@ -39,7 +39,7 @@ def chunk_text(text: str, target_words: int = CHUNK_TARGET_WORDS) -> list[str]:
 
     # Don't forget the last chunk
     if current_chunk:
-        chunk_text = ' '.join(current_chunk)
+        chunk_text = " ".join(current_chunk)
         if len(chunk_text.split()) >= CHUNK_MIN_WORDS:
             chunks.append(chunk_text)
 
@@ -53,7 +53,7 @@ def chunk_text_by_paragraphs(text: str, target_words: int = CHUNK_TARGET_WORDS) 
     This produces more natural chunks but may have more size variance.
     """
     # Split by double newlines (paragraphs)
-    paragraphs = re.split(r'\n\n+', text)
+    paragraphs = re.split(r"\n\n+", text)
 
     chunks = []
     current_chunk = []
@@ -67,7 +67,7 @@ def chunk_text_by_paragraphs(text: str, target_words: int = CHUNK_TARGET_WORDS) 
         words = len(para.split())
 
         if current_words + words > target_words and current_chunk:
-            chunk_text = '\n\n'.join(current_chunk)
+            chunk_text = "\n\n".join(current_chunk)
             if len(chunk_text.split()) >= CHUNK_MIN_WORDS:
                 chunks.append(chunk_text)
             current_chunk = [para]
@@ -77,7 +77,7 @@ def chunk_text_by_paragraphs(text: str, target_words: int = CHUNK_TARGET_WORDS) 
             current_words += words
 
     if current_chunk:
-        chunk_text = '\n\n'.join(current_chunk)
+        chunk_text = "\n\n".join(current_chunk)
         if len(chunk_text.split()) >= CHUNK_MIN_WORDS:
             chunks.append(chunk_text)
 
