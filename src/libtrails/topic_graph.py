@@ -6,7 +6,12 @@ from collections import defaultdict
 import igraph as ig
 import numpy as np
 
-from .config import COOCCURRENCE_MIN_COUNT, EMBEDDING_EDGE_THRESHOLD, PMI_MIN_THRESHOLD
+from .config import (
+    COOCCURRENCE_MIN_COUNT,
+    EMBEDDING_EDGE_THRESHOLD,
+    KNN_MIN_SIMILARITY,
+    PMI_MIN_THRESHOLD,
+)
 from .database import get_all_topics, get_db, get_topic_embeddings, save_cooccurrence
 from .embeddings import bytes_to_embedding
 
@@ -331,17 +336,20 @@ def build_topic_graph_knn(
     cooccurrence_min: int = 5,
     pmi_min: float = 0.0,
     k: int = 10,
+    min_similarity: float = KNN_MIN_SIMILARITY,
 ) -> ig.Graph:
     """
     Build a topic graph with co-occurrence edges plus k-nearest neighbor embedding edges.
 
     This adds a controlled number of embedding-based edges (k per topic) instead of
-    the O(n²) all-pairs comparison in the full graph.
+    the O(n²) all-pairs comparison in the full graph. Edges below min_similarity
+    are dropped to prevent connecting unrelated topics that happen to be neighbors.
 
     Args:
         cooccurrence_min: Minimum co-occurrence count for edges
         pmi_min: Minimum PMI for co-occurrence edges
         k: Number of nearest neighbors per topic
+        min_similarity: Minimum cosine similarity for KNN edges (default: 0.65)
 
     Returns:
         igraph.Graph with topic nodes and weighted edges
@@ -420,10 +428,15 @@ def build_topic_graph_knn(
                     continue
                 idx2 = id_to_idx[neighbor_topic_id]
 
+                # Convert distance to similarity: sim = 1 - distance
+                similarity = 1.0 - distances[i][j]
+
+                # Skip edges below minimum similarity threshold
+                if similarity < min_similarity:
+                    continue
+
                 edge_key = (min(idx1, idx2), max(idx1, idx2))
                 if edge_key not in edge_set:
-                    # Convert distance to similarity: sim = 1 - distance
-                    similarity = 1.0 - distances[i][j]
                     edges.append((idx1, idx2))
                     weights.append(float(max(0.1, similarity)))
                     edge_types.append("embedding_knn")

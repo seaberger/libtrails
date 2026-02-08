@@ -186,7 +186,7 @@ class TestIndexBook:
         mock_db.return_value.__enter__ = MagicMock(return_value=mock_conn)
         mock_db.return_value.__exit__ = MagicMock(return_value=False)
 
-        result = index_book(1)
+        result = index_book(1, legacy=True)
 
         assert result.success is True
         assert result.chunk_count == 2
@@ -217,7 +217,7 @@ class TestIndexBook:
         mock_chunk.return_value = ["chunk1", "chunk2"]
         mock_ollama.return_value = False
 
-        result = index_book(1, model="nonexistent:model")
+        result = index_book(1, chunk_model="nonexistent:model")
 
         assert result.success is False
         assert "not available" in result.error

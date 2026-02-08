@@ -8,7 +8,14 @@ from typing import Optional
 
 import httpx
 
-from .config import DEFAULT_MODEL, TOPICS_PER_CHUNK
+from .config import (
+    BATCH_SIZE,
+    CHUNK_MODEL,
+    DEFAULT_MODEL,
+    THEME_MODEL,
+    TOPIC_STOPLIST,
+    TOPICS_PER_CHUNK,
+)
 
 # Ollama API endpoint
 OLLAMA_API_URL = "http://localhost:11434/api/generate"
@@ -25,7 +32,7 @@ def _get_client() -> httpx.Client:
     """Get or create a reusable HTTP client."""
     global _client
     if _client is None:
-        _client = httpx.Client(timeout=60.0)
+        _client = httpx.Client(timeout=120.0)
     return _client
 
 
@@ -36,7 +43,7 @@ def extract_topics_batch(
     progress_callback: Optional[callable] = None,
 ) -> list[list[str]]:
     """
-    Extract topics from multiple chunks in parallel.
+    Extract topics from multiple chunks in parallel (legacy single-call mode).
 
     Returns a list of topic lists, one per chunk.
     """
@@ -60,19 +67,24 @@ def extract_topics_batch(
     return results
 
 
-def normalize_topic(topic: str) -> str:
+def normalize_topic(topic: str) -> Optional[str]:
     """
     Normalize a topic label for deduplication.
 
-    - Strips whitespace
-    - Converts to lowercase
-    - Replaces underscores with spaces
-    - Collapses multiple spaces
+    Returns None for stoplist matches (generic single-word topics).
     """
     normalized = topic.strip().lower().replace("_", " ")
     # Collapse multiple spaces
     while "  " in normalized:
         normalized = normalized.replace("  ", " ")
+
+    if not normalized:
+        return None
+
+    # Filter out generic single-word topics from stoplist
+    if normalized in TOPIC_STOPLIST:
+        return None
+
     return normalized
 
 
@@ -87,7 +99,7 @@ def extract_topics(
     prompt = f'''Extract {num_topics} topic labels from this book passage.
 Return ONLY a JSON array of topic strings, no other text.
 
-Passage: "{text[:2000]}"
+Passage: "{text}"
 
 Topics:'''
 
@@ -108,6 +120,238 @@ Topics:'''
     except httpx.TimeoutException:
         return []
     except Exception:
+        return []
+
+
+def extract_book_themes(
+    title: str,
+    author: str,
+    tags: list[str] | None = None,
+    description: str | None = None,
+    sample_text: str | None = None,
+    model: str = THEME_MODEL,
+) -> list[str]:
+    """
+    Extract 5-8 high-level themes for a book using a larger model.
+
+    One call per book. Uses title, author, Calibre tags, description,
+    and the first ~1000 words to produce specific noun-phrase themes.
+
+    Returns a list of theme strings (e.g., "epic fantasy", "magic power systems").
+    """
+    parts = [f"Title: {title}", f"Author: {author}"]
+
+    if tags:
+        parts.append(f"Tags: {', '.join(tags[:15])}")
+
+    if description:
+        # Trim description to ~500 chars
+        desc = description[:500].strip()
+        if desc:
+            parts.append(f"Description: {desc}")
+
+    if sample_text:
+        # First ~1000 words
+        words = sample_text.split()[:1000]
+        parts.append(f"Opening text: {' '.join(words)}")
+
+    book_info = "\n".join(parts)
+
+    prompt = f'''You are a librarian categorizing a book. Based on the information below, extract 5 to 8 high-level themes that describe what this book is about.
+
+Rules:
+- Use specific multi-word noun phrases (e.g., "epic fantasy worldbuilding", "algorithmic trading strategies")
+- Do NOT use generic single words like "conflict", "power", "love", "death"
+- Each theme should be specific enough to distinguish this book from unrelated books
+- Include the book's genre/domain as the first theme
+- Return ONLY a JSON array of strings, no other text
+
+{book_info}
+
+Themes:'''
+
+    try:
+        client = _get_client()
+        response = client.post(
+            OLLAMA_API_URL,
+            json={
+                "model": model,
+                "prompt": prompt,
+                "stream": False,
+            },
+            timeout=120.0,
+        )
+        response.raise_for_status()
+        result = response.json()
+        themes = _parse_topics(result.get("response", ""))
+        # Normalize themes but keep them even if they're in the stoplist
+        # (themes are book-level context, not chunk topics)
+        return [t.strip().lower() for t in themes if t.strip()]
+
+    except httpx.TimeoutException:
+        return []
+    except Exception:
+        return []
+
+
+def extract_topics_batched(
+    chunks: list[str],
+    book_title: str,
+    author: str,
+    book_themes: list[str] | None = None,
+    model: str = CHUNK_MODEL,
+    batch_size: int = BATCH_SIZE,
+    num_topics: int = TOPICS_PER_CHUNK,
+    progress_callback: Optional[callable] = None,
+) -> list[list[str]]:
+    """
+    Extract topics from chunks in batches, contextualized with book metadata.
+
+    Groups consecutive chunks into batches of `batch_size` and asks for
+    per-chunk topic arrays in a single call. Falls back to individual
+    extraction if JSON parsing fails for a batch.
+
+    Returns list[list[str]] matching input chunk order.
+    """
+    results: list[list[str]] = [[] for _ in range(len(chunks))]
+    completed = 0
+
+    # Build context header
+    context_parts = [f"Book: {book_title} by {author}"]
+    if book_themes:
+        context_parts.append(f"Book themes: {', '.join(book_themes)}")
+    context = "\n".join(context_parts)
+
+    # Process in batches
+    for batch_start in range(0, len(chunks), batch_size):
+        batch_end = min(batch_start + batch_size, len(chunks))
+        batch_chunks = chunks[batch_start:batch_end]
+
+        batch_results = _extract_batch(
+            batch_chunks, context, model, num_topics, batch_start
+        )
+
+        if batch_results is not None:
+            for i, topics in enumerate(batch_results):
+                results[batch_start + i] = topics
+        else:
+            # Fallback: extract individually
+            for i, chunk in enumerate(batch_chunks):
+                topics = _extract_single_contextualized(
+                    chunk, context, model, num_topics
+                )
+                results[batch_start + i] = topics
+
+        completed += len(batch_chunks)
+        if progress_callback:
+            progress_callback(completed, len(chunks))
+
+    return results
+
+
+def _extract_batch(
+    chunks: list[str],
+    context: str,
+    model: str,
+    num_topics: int,
+    start_index: int,
+) -> Optional[list[list[str]]]:
+    """
+    Extract topics from a batch of chunks in a single LLM call.
+
+    Returns list of topic lists (one per chunk) or None on failure.
+    """
+    # Build numbered passages
+    passages = []
+    for i, chunk in enumerate(chunks, 1):
+        passages.append(f"--- Passage {i} ---\n{chunk}")
+
+    passages_text = "\n\n".join(passages)
+
+    prompt = f'''{context}
+
+Extract {num_topics} specific topic labels from EACH passage below. Topics should be multi-word noun phrases specific to the content, NOT generic words.
+
+{passages_text}
+
+Return a JSON object mapping passage numbers to topic arrays, like:
+{{"1": ["topic a", "topic b", ...], "2": ["topic c", "topic d", ...], ...}}
+
+Topics:'''
+
+    try:
+        client = _get_client()
+        response = client.post(
+            OLLAMA_API_URL,
+            json={
+                "model": model,
+                "prompt": prompt,
+                "stream": False,
+            },
+            timeout=120.0,
+        )
+        response.raise_for_status()
+        output = response.json().get("response", "").strip()
+
+        # Parse JSON object
+        match = re.search(r"\{.*\}", output, re.DOTALL)
+        if not match:
+            return None
+
+        parsed = json.loads(match.group())
+        if not isinstance(parsed, dict):
+            return None
+
+        # Extract topics for each chunk in order
+        batch_results = []
+        for i in range(1, len(chunks) + 1):
+            key = str(i)
+            if key in parsed and isinstance(parsed[key], list):
+                topics = [str(t).strip() for t in parsed[key] if t]
+                batch_results.append(topics[:num_topics])
+            else:
+                batch_results.append([])
+
+        return batch_results
+
+    except (json.JSONDecodeError, httpx.TimeoutException):
+        return None
+    except Exception:
+        return None
+
+
+def _extract_single_contextualized(
+    text: str,
+    context: str,
+    model: str,
+    num_topics: int,
+) -> list[str]:
+    """Extract topics from a single chunk with book context (fallback)."""
+    prompt = f'''{context}
+
+Extract {num_topics} specific topic labels from this passage. Use multi-word noun phrases, NOT generic single words.
+Return ONLY a JSON array of topic strings.
+
+Passage: "{text}"
+
+Topics:'''
+
+    try:
+        client = _get_client()
+        response = client.post(
+            OLLAMA_API_URL,
+            json={
+                "model": model,
+                "prompt": prompt,
+                "stream": False,
+            },
+            timeout=60.0,
+        )
+        response.raise_for_status()
+        result = response.json()
+        return _parse_topics(result.get("response", ""))
+
+    except (httpx.TimeoutException, Exception):
         return []
 
 

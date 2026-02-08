@@ -30,6 +30,75 @@ def get_calibre_db():
         conn.close()
 
 
+def get_calibre_book_metadata(calibre_id: int) -> dict:
+    """
+    Fetch tags, description, and series from Calibre metadata.db.
+
+    Returns dict with keys: tags, description, series (all may be None/empty).
+    """
+    result = {"tags": [], "description": None, "series": None}
+
+    with get_calibre_db() as conn:
+        cursor = conn.cursor()
+
+        # Tags
+        cursor.execute(
+            """
+            SELECT t.name FROM tags t
+            JOIN books_tags_link btl ON btl.tag = t.id
+            WHERE btl.book = ?
+            """,
+            (calibre_id,),
+        )
+        result["tags"] = [row[0] for row in cursor.fetchall()]
+
+        # Description
+        cursor.execute("SELECT text FROM comments WHERE book = ?", (calibre_id,))
+        row = cursor.fetchone()
+        if row:
+            result["description"] = row[0]
+
+        # Series
+        cursor.execute(
+            """
+            SELECT s.name FROM series s
+            JOIN books_series_link bsl ON bsl.series = s.id
+            WHERE bsl.book = ?
+            """,
+            (calibre_id,),
+        )
+        row = cursor.fetchone()
+        if row:
+            result["series"] = row[0]
+
+    return result
+
+
+def save_book_themes(book_id: int, themes: list[str]):
+    """Save book-level themes as JSON in the books table."""
+    import json
+
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE books SET book_themes = ? WHERE id = ?",
+            (json.dumps(themes), book_id),
+        )
+        conn.commit()
+
+
+def get_book_themes(book_id: int) -> list[str]:
+    """Get book-level themes for a book. Returns empty list if none."""
+    import json
+
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT book_themes FROM books WHERE id = ?", (book_id,))
+        row = cursor.fetchone()
+        if row and row[0]:
+            return json.loads(row[0])
+    return []
+
+
 def get_book(book_id: int) -> Optional[dict]:
     """Get a book by ID from the iPad library."""
     with get_db() as conn:
@@ -251,6 +320,12 @@ def init_chunks_table():
         columns = [row[1] for row in cursor.fetchall()]
         if "topics_json" not in columns:
             conn.execute("ALTER TABLE chunks ADD COLUMN topics_json TEXT")
+
+        # Migration: add book_themes column to books table
+        cursor.execute("PRAGMA table_info(books)")
+        book_columns = [row[1] for row in cursor.fetchall()]
+        if "book_themes" not in book_columns:
+            conn.execute("ALTER TABLE books ADD COLUMN book_themes TEXT")
 
         conn.commit()
 
@@ -476,8 +551,14 @@ def migrate_raw_topics_to_normalized():
         from .topic_extractor import normalize_topic
 
         migrated = 0
+        filtered = 0
         for (topic,) in raw_topics:
             normalized = normalize_topic(topic)
+
+            # Skip topics that normalize to None (stoplist matches)
+            if normalized is None:
+                filtered += 1
+                continue
 
             # Get or create the normalized topic (with initial count of 0)
             cursor.execute("SELECT id FROM topics WHERE label = ?", (normalized,))

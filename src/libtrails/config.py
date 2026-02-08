@@ -1,12 +1,16 @@
 """Configuration settings for libtrails."""
 
+import os
 from pathlib import Path
 from typing import Optional
 
 # Paths
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
-IPAD_DB_PATH = DATA_DIR / "ipad_library.db"
+
+# DB variant toggle: set LIBTRAILS_DB=v2 to use ipad_library_v2.db
+_db_variant = os.environ.get("LIBTRAILS_DB", "")
+IPAD_DB_PATH = DATA_DIR / f"ipad_library_{_db_variant}.db" if _db_variant else DATA_DIR / "ipad_library.db"
 
 # User config directory
 USER_CONFIG_DIR = Path.home() / ".libtrails"
@@ -76,13 +80,30 @@ DEDUP_SIMILARITY_THRESHOLD = 0.85
 # Graph/clustering settings
 EMBEDDING_EDGE_THRESHOLD = 0.7  # For full mode only
 COOCCURRENCE_MIN_COUNT = 2  # Lowered for better connectivity
-PMI_MIN_THRESHOLD = 0.0
+PMI_MIN_THRESHOLD = 1.0
 
 # Clustering defaults (optimized for ~300-400 coherent clusters)
 CLUSTER_MODE = "knn"  # "cooccurrence", "knn", or "full"
 CLUSTER_KNN_K = 10  # k neighbors for knn mode
 CLUSTER_PARTITION_TYPE = "cpm"  # "modularity", "surprise", or "cpm"
 CLUSTER_RESOLUTION = 0.001  # Resolution for CPM (lower = fewer clusters)
+
+# KNN graph: minimum cosine similarity for embedding edges
+KNN_MIN_SIMILARITY = 0.65
+
+# Topic extraction models
+THEME_MODEL = "gemma3:27b"  # For book-level theme extraction (1 call/book)
+CHUNK_MODEL = "gemma3:4b"  # For chunk-level topic extraction (batched)
+BATCH_SIZE = 5  # Chunks per batch for batched extraction
+
+# Generic topic stoplist — filtered during normalization
+TOPIC_STOPLIST = frozenset({
+    "manipulation", "relationships", "technology", "society", "nature",
+    "life", "death", "love", "power", "time", "people", "world",
+    "change", "future", "communication", "conflict", "loss", "survival",
+    "identity", "freedom", "control", "trust", "fear", "growth",
+    "knowledge", "science", "culture", "politics", "art", "history",
+})
 
 # Universe visualization
 UNIVERSE_JSON_PATH = DATA_DIR / "universe_coords.json"
