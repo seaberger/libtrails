@@ -15,7 +15,7 @@ const bookCount = stackBooks.length;
 
 <a
   href={`/clusters/${theme.cluster_id}`}
-  class="group block bg-[var(--color-surface)] rounded-lg p-5 border border-[var(--color-border)] hover:border-[var(--color-accent)] hover:shadow-lg transition-all duration-300"
+  class="group relative block overflow-visible bg-[var(--color-surface)] rounded-lg p-5 border border-[var(--color-border)] hover:border-[var(--color-accent)] hover:shadow-lg hover:z-10 transition-all duration-300"
   data-theme-card
 >
   <!-- Cover stack with fan-out on hover -->
@@ -27,12 +27,12 @@ const bookCount = stackBooks.length;
         const offset = index - center;
 
         // Stacked (default): tight stack
-        const stackedX = offset * 10;
-        const stackedRotate = offset * 2;
+        const stackedX = offset * 8;
+        const stackedRotate = offset * 1.5;
 
-        // Fanned (hover): spread out with more rotation like a card fan
-        const fannedX = offset * 35;
-        const fannedRotate = offset * 18;
+        // Fanned (hover): poker-hand arc via rotation around distant pivot
+        const fannedX = offset * 16;
+        const fannedRotate = offset * 16;
 
         return (
           <div

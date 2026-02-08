@@ -210,6 +210,36 @@ def init_chunks_table():
             );
 
             CREATE INDEX IF NOT EXISTS idx_cluster_domains_domain ON cluster_domains(domain_id);
+
+            -- Materialized stats: bridge table eliminates 4-table join for book lookups
+            CREATE TABLE IF NOT EXISTS cluster_books (
+                cluster_id INTEGER NOT NULL,
+                book_id INTEGER NOT NULL,
+                topic_count INTEGER DEFAULT 0,
+                PRIMARY KEY (cluster_id, book_id)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_cluster_books_book ON cluster_books(book_id);
+
+            -- Materialized stats: per-cluster cached stats with JSON blobs
+            CREATE TABLE IF NOT EXISTS cluster_stats (
+                cluster_id INTEGER PRIMARY KEY,
+                size INTEGER NOT NULL DEFAULT 0,
+                book_count INTEGER NOT NULL DEFAULT 0,
+                top_label TEXT,
+                top_topics_json TEXT,
+                sample_books_json TEXT,
+                refreshed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            -- Materialized stats: per-domain cached stats
+            CREATE TABLE IF NOT EXISTS domain_stats (
+                domain_id INTEGER PRIMARY KEY,
+                book_count INTEGER NOT NULL DEFAULT 0,
+                sample_books_json TEXT,
+                top_clusters_json TEXT,
+                refreshed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
         """)
 
         # Migration: add topics_json column if it doesn't exist
