@@ -39,7 +39,16 @@ from .topic_extractor import (
     get_available_models,
 )
 
-console = Console()
+
+class _FlushConsole(Console):
+    """Console that flushes after every print for real-time output."""
+
+    def print(self, *args, **kwargs):
+        super().print(*args, **kwargs)
+        self.file.flush()
+
+
+console = _FlushConsole()
 
 
 def _refresh_and_report_stats() -> None:
@@ -186,6 +195,7 @@ def sync(ipad: str, dry_run: bool, skip_index: bool, model: str, save_url: bool)
 
 @main.command()
 @click.argument("book_id", type=int, required=False)
+@click.option("--id", "book_ids", type=int, multiple=True, help="Book ID(s) to index (repeatable)")
 @click.option("--title", "-t", help="Search by title")
 @click.option("--all", "index_all", is_flag=True, help="Index all books")
 @click.option("--model", "-m", default=None, help="Ollama model (sets both theme and chunk model)")
@@ -210,6 +220,7 @@ def sync(ipad: str, dry_run: bool, skip_index: bool, model: str, save_url: bool)
 )
 def index(
     book_id: int,
+    book_ids: tuple[int, ...],
     title: str,
     index_all: bool,
     model: str,
@@ -243,6 +254,25 @@ def index(
             theme_model, chunk_model, batch_size, legacy,
             dry_run, reindex, max_words, chunk_size, min_battery,
         )
+        return
+
+    # Handle --id flag (multiple book IDs)
+    if book_ids:
+        import time as _time
+
+        total_start = _time.time()
+        for i, bid in enumerate(book_ids, 1):
+            book = get_book(bid)
+            if not book:
+                console.print(f"[red]Book {bid} not found — skipping[/red]")
+                continue
+            console.print(f"\n[bold]({i}/{len(book_ids)})[/bold]")
+            _index_single_book(
+                book, theme_model, chunk_model, batch_size, legacy,
+                dry_run, chunk_size=chunk_size,
+            )
+        elapsed = _time.time() - total_start
+        console.print(f"\n[bold green]Indexed {len(book_ids)} books in {int(elapsed // 60)}m {int(elapsed % 60)}s[/bold green]")
         return
 
     # Find the book

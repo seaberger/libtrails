@@ -176,7 +176,7 @@ class TestClusterTopics:
         mock_leidenalg.find_partition.return_value = mock_partition
         mock_leidenalg.ModularityVertexPartition = MagicMock()
 
-        cluster_topics(cooccurrence_min=10)
+        cluster_topics(mode="cooccurrence", cooccurrence_min=10)
         # Verify the custom value was passed
         mock_build_graph.assert_called_once()
         call_args = mock_build_graph.call_args
