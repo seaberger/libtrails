@@ -77,15 +77,17 @@ def get_domain(db: DBConnection, domain_id: int):
     )
     clusters = [dict(r) for r in cursor.fetchall()]
 
-    # Get all books in domain from cluster_books bridge table
+    # Get all books in domain, ranked by topic relevance
     cursor.execute(
         """
-        SELECT DISTINCT b.id, b.title, b.author, b.calibre_id
+        SELECT b.id, b.title, b.author, b.calibre_id,
+               SUM(cb.topic_count) as total_topics
         FROM cluster_domains cd
         JOIN cluster_books cb ON cb.cluster_id = cd.cluster_id
         JOIN books b ON b.id = cb.book_id
         WHERE cd.domain_id = ?
-        ORDER BY b.title
+        GROUP BY b.id
+        ORDER BY total_topics DESC, b.title
     """,
         (domain_id,),
     )

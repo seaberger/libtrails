@@ -211,14 +211,14 @@ def get_theme(db: DBConnection, cluster_id: int):
     )
     topics = [TopicInfo(**dict(r)) for r in cursor.fetchall()]
 
-    # Get all books from cluster_books bridge table
+    # Get all books from cluster_books bridge table, ranked by relevance
     cursor.execute(
         """
-        SELECT DISTINCT b.id, b.title, b.author, b.calibre_id
+        SELECT b.id, b.title, b.author, b.calibre_id
         FROM cluster_books cb
         JOIN books b ON b.id = cb.book_id
         WHERE cb.cluster_id = ?
-        ORDER BY b.title
+        ORDER BY cb.topic_count DESC, b.title
     """,
         (cluster_id,),
     )
