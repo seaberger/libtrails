@@ -1,6 +1,5 @@
 ---
 // Semantic search bar for themes
-// Note: innerHTML is used with API data from our own backend - sanitized at source
 ---
 
 <div class="theme-search mb-8">
@@ -39,34 +38,45 @@
 <script>
   const API_BASE = '/api/v1';
 
-  // Escape HTML to prevent XSS when rendering theme data
-  function escapeHtml(text: string): string {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML;
-  }
+  // AbortController to tear down listeners before re-attaching
+  let searchAbortController: AbortController | null = null;
 
   function initThemeSearch() {
     const form = document.getElementById('theme-search-form') as HTMLFormElement;
     const input = document.getElementById('theme-search-input') as HTMLInputElement;
     const loading = document.getElementById('search-loading');
     const status = document.getElementById('search-status');
-    const themesGrid = document.querySelector('[data-themes-grid]');
 
-    if (!form || !input || !themesGrid) return;
+    if (!form || !input) return;
+
+    // Tear down previous listeners to prevent leaks
+    if (searchAbortController) {
+      searchAbortController.abort();
+    }
+    searchAbortController = new AbortController();
+    const { signal } = searchAbortController;
+
+    // Always query live grid reference (avoids stale closure after replaceWith)
+    function getGrid() {
+      return document.querySelector('[data-themes-grid]');
+    }
+
+    const themesGrid = getGrid();
+    if (!themesGrid) return;
 
     let debounceTimer: ReturnType<typeof setTimeout>;
     let originalContent = themesGrid.cloneNode(true) as HTMLElement;
 
     async function searchThemes(query: string) {
-      if (!loading || !status) return;
+      const grid = getGrid();
+      if (!loading || !status || !grid) return;
 
       if (!query.trim()) {
         // Restore original content
-        themesGrid.replaceWith(originalContent.cloneNode(true));
+        grid.replaceWith(originalContent.cloneNode(true));
         status.classList.add('hidden');
-        // Re-attach event listeners
-        initThemeSearch();
+        // Re-initialize fan effects on restored content
+        initFanEffect();
         return;
       }
 
@@ -80,10 +90,13 @@
         const themes = await response.json();
         loading.classList.add('hidden');
 
+        const currentGrid = getGrid();
+        if (!currentGrid) return;
+
         if (themes.length === 0) {
           status.textContent = `No themes found for "${query}"`;
           status.classList.remove('hidden');
-          while (themesGrid.firstChild) themesGrid.removeChild(themesGrid.firstChild);
+          while (currentGrid.firstChild) currentGrid.removeChild(currentGrid.firstChild);
           return;
         }
 
@@ -91,9 +104,9 @@
         status.classList.remove('hidden');
 
         // Clear and render search results using DOM methods
-        while (themesGrid.firstChild) themesGrid.removeChild(themesGrid.firstChild);
+        while (currentGrid.firstChild) currentGrid.removeChild(currentGrid.firstChild);
         themes.forEach((theme: any) => {
-          themesGrid.appendChild(createThemeCard(theme));
+          currentGrid.appendChild(createThemeCard(theme));
         });
 
         // Re-initialize fan effects
@@ -114,7 +127,7 @@
 
       const card = document.createElement('a');
       card.href = `/clusters/${theme.cluster_id}`;
-      card.className = 'group block bg-[var(--color-surface)] rounded-lg p-5 border border-[var(--color-border)] hover:border-[var(--color-accent)] hover:shadow-lg transition-all duration-300';
+      card.className = 'group relative block overflow-visible bg-[var(--color-surface)] rounded-lg p-5 border border-[var(--color-border)] hover:border-[var(--color-accent)] hover:shadow-lg hover:z-10 transition-all duration-300';
       card.setAttribute('data-theme-card', '');
 
       // Cover stack container
@@ -127,10 +140,10 @@
 
       books.forEach((book: any, index: number) => {
         const offset = index - center;
-        const stackedX = offset * 10;
-        const stackedRotate = offset * 2;
-        const fannedX = offset * 35;
-        const fannedRotate = offset * 18;
+        const stackedX = offset * 8;
+        const stackedRotate = offset * 1.5;
+        const fannedX = offset * 16;
+        const fannedRotate = offset * 16;
 
         const bookDiv = document.createElement('div');
         bookDiv.className = 'absolute left-1/2 transition-all duration-300 ease-out group-hover:scale-105';
@@ -201,27 +214,29 @@
       debounceTimer = setTimeout(() => {
         searchThemes(query);
       }, 300);
-    });
+    }, { signal });
 
     // Handle form submit
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       clearTimeout(debounceTimer);
       searchThemes(input.value);
-    });
+    }, { signal });
 
     // Handle clear (escape key)
     input.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         input.value = '';
-        themesGrid.replaceWith(originalContent.cloneNode(true));
+        const grid = getGrid();
+        if (grid) {
+          grid.replaceWith(originalContent.cloneNode(true));
+        }
         status?.classList.add('hidden');
-        initThemeSearch();
+        initFanEffect();
       }
-    });
+    }, { signal });
   }
 
-  // Initialize on load and after navigation
-  initThemeSearch();
+  // Initialize after navigation (astro:page-load fires on initial load too)
   document.addEventListener('astro:page-load', initThemeSearch);
 </script>

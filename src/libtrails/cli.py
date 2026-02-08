@@ -28,9 +28,17 @@ from .database import (
     save_topic_embedding,
 )
 from .document_parser import extract_text
+from .stats import refresh_all_stats
 from .topic_extractor import check_ollama_available, extract_topics_batch, get_available_models
 
 console = Console()
+
+
+def _refresh_and_report_stats() -> None:
+    """Refresh materialized stats and print summary."""
+    console.print("\n[bold cyan]Refreshing materialized stats...[/bold cyan]")
+    stats_result = refresh_all_stats()
+    console.print(f"  [green]Stats refreshed in {stats_result['elapsed_seconds']:.1f}s[/green]")
 
 
 @click.group()
@@ -1295,6 +1303,8 @@ def process():
 
     console.print("\n[bold green]Pipeline complete![/bold green]")
 
+    _refresh_and_report_stats()
+
     # Show final stats
     stats = get_indexing_status()
     console.print(
@@ -1496,6 +1506,7 @@ def cluster(
             console.print("\n[bold yellow]DRY RUN - no changes saved to database[/bold yellow]")
         else:
             console.print("\n[bold green]Clustering complete![/bold green]")
+            _refresh_and_report_stats()
     else:
         console.print(f"  [red]Error: {cluster_result['error']}[/red]")
 
@@ -1527,6 +1538,8 @@ def load_domains(json_file: str):
     console.print(f"Loading domains from [cyan]{json_file}[/cyan]...")
     count = load_domains_from_json(json_path)
     console.print(f"[green]Loaded {count} domains[/green]")
+
+    _refresh_and_report_stats()
 
     # Show summary
     table = Table(title="Domains")
@@ -1715,6 +1728,23 @@ def generate_universe(output: str | None, n_neighbors: int, min_dist: float, dry
         )
 
     console.print(table)
+
+
+@main.command("refresh-stats")
+def refresh_stats():
+    """Refresh materialized stats tables for fast API responses.
+
+    Pre-computes cluster→book mappings, per-cluster stats, and per-domain
+    stats so that /domains and /themes endpoints respond in <100ms.
+
+    Runs automatically after 'cluster', 'load-domains', and 'process'.
+    """
+    console.print("[bold]Refreshing materialized stats...[/bold]")
+    result = refresh_all_stats()
+    console.print(f"  [green]cluster_books rows: {result['cluster_book_rows']:,}[/green]")
+    console.print(f"  [green]clusters with stats: {result['clusters_with_stats']:,}[/green]")
+    console.print(f"  [green]domains with stats: {result['domains_with_stats']:,}[/green]")
+    console.print(f"  [dim]Completed in {result['elapsed_seconds']:.1f}s[/dim]")
 
 
 @main.command()

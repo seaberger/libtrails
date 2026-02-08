@@ -1,34 +1,32 @@
 """Book cover image endpoints."""
 
+import sqlite3
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
-from ...config import CALIBRE_LIBRARY_PATH
+from ...config import CALIBRE_DB_PATH, CALIBRE_LIBRARY_PATH
 from ..dependencies import DBConnection
 
 router = APIRouter()
 
 
 def _find_cover_path(calibre_id: int) -> Path | None:
-    """Find cover image path in Calibre library."""
-    # Calibre stores books in: Author Name/Title (ID)/cover.jpg
-    # We need to find the directory with the matching ID
+    """Find cover image path in Calibre library via metadata.db lookup."""
+    conn = sqlite3.connect(f"file:{CALIBRE_DB_PATH}?mode=ro", uri=True)
+    try:
+        conn.row_factory = sqlite3.Row
+        row = conn.execute("SELECT path FROM books WHERE id = ?", (calibre_id,)).fetchone()
+    finally:
+        conn.close()
 
-    for author_dir in CALIBRE_LIBRARY_PATH.iterdir():
-        if not author_dir.is_dir() or author_dir.name.startswith("."):
-            continue
+    if not row:
+        return None
 
-        for book_dir in author_dir.iterdir():
-            if not book_dir.is_dir():
-                continue
-
-            # Check if directory name ends with (ID)
-            if book_dir.name.endswith(f"({calibre_id})"):
-                cover_path = book_dir / "cover.jpg"
-                if cover_path.exists():
-                    return cover_path
+    cover_path = CALIBRE_LIBRARY_PATH / str(row["path"]) / "cover.jpg"
+    if cover_path.exists():
+        return cover_path
 
     return None
 
@@ -44,7 +42,7 @@ def get_cover(calibre_id: int):
     return FileResponse(
         cover_path,
         media_type="image/jpeg",
-        headers={"Cache-Control": "public, max-age=86400"},  # Cache for 1 day
+        headers={"Cache-Control": "public, max-age=86400"},
     )
 
 

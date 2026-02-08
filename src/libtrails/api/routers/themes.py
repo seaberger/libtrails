@@ -1,4 +1,10 @@
-"""Theme/cluster API endpoints."""
+"""Theme/cluster API endpoints.
+
+Uses materialized stats tables (cluster_stats, cluster_books) for fast
+responses. Run `libtrails refresh-stats` to populate after clustering.
+"""
+
+import json
 
 from fastapi import APIRouter, HTTPException, Query
 
@@ -41,7 +47,8 @@ def search_themes(
                     "best_topic": None,
                 }
             cluster_matches[cluster_id]["count"] += 1
-            score = 1 - topic.get("distance", 0)  # Convert distance to similarity
+            distance = topic.get("distance") or 0
+            score = 1 - float(distance)
             if score > cluster_matches[cluster_id]["best_score"]:
                 cluster_matches[cluster_id]["best_score"] = score
                 cluster_matches[cluster_id]["best_topic"] = topic.get("label")
@@ -51,68 +58,64 @@ def search_themes(
         cluster_matches.items(), key=lambda x: (x[1]["count"], x[1]["best_score"]), reverse=True
     )[:limit]
 
+    if not sorted_clusters:
+        return []
+
+    # Batch-fetch cluster_stats for all matching cluster IDs
+    cluster_ids = [cid for cid, _ in sorted_clusters]
+    placeholders = ",".join("?" * len(cluster_ids))
+    cursor.execute(
+        f"""
+        SELECT cluster_id, size, book_count, top_label, top_topics_json, sample_books_json
+        FROM cluster_stats
+        WHERE cluster_id IN ({placeholders})
+    """,
+        cluster_ids,
+    )
+    stats_by_id = {r["cluster_id"]: r for r in cursor.fetchall()}
+
+    # Collect cluster IDs missing from cluster_stats for fallback
+    missing_ids = [cid for cid, _ in sorted_clusters if cid not in stats_by_id]
+    if missing_ids:
+        missing_ph = ",".join("?" * len(missing_ids))
+        cursor.execute(
+            f"""
+            SELECT cluster_id, COUNT(*) as size,
+                   (SELECT label FROM topics t2
+                    WHERE t2.cluster_id = t.cluster_id AND LENGTH(t2.label) >= 4
+                    ORDER BY t2.occurrence_count DESC LIMIT 1) as top_label
+            FROM topics t
+            WHERE cluster_id IN ({missing_ph})
+            GROUP BY cluster_id
+        """,
+            missing_ids,
+        )
+        for row in cursor.fetchall():
+            cid = row["cluster_id"]
+            stats_by_id[cid] = {
+                "cluster_id": cid,
+                "size": row["size"],
+                "book_count": 0,
+                "top_label": row["top_label"] or f"cluster_{cid}",
+                "top_topics_json": "[]",
+                "sample_books_json": "[]",
+            }
+
     themes = []
     for cluster_id, match_info in sorted_clusters:
-        # Get cluster size
-        cursor.execute(
-            """
-            SELECT COUNT(*) as size FROM topics WHERE cluster_id = ?
-        """,
-            (cluster_id,),
-        )
-        size = cursor.fetchone()["size"]
+        cs = stats_by_id.get(cluster_id)
+        if not cs:
+            continue
 
-        # Get book count
-        cursor.execute(
-            """
-            SELECT COUNT(DISTINCT b.id) as book_count
-            FROM books b
-            JOIN chunks c ON c.book_id = b.id
-            JOIN chunk_topic_links ctl ON ctl.chunk_id = c.id
-            JOIN topics t ON t.id = ctl.topic_id
-            WHERE t.cluster_id = ?
-        """,
-            (cluster_id,),
-        )
-        book_count = cursor.fetchone()["book_count"]
-
-        # Get top topics for label
-        cursor.execute(
-            """
-            SELECT id, label, occurrence_count as count
-            FROM topics
-            WHERE cluster_id = ?
-            ORDER BY occurrence_count DESC
-            LIMIT 3
-        """,
-            (cluster_id,),
-        )
-        top_topics = [dict(r) for r in cursor.fetchall()]
-
-        # Get sample books
-        cursor.execute(
-            """
-            SELECT b.id, b.title, b.author, b.calibre_id,
-                   COUNT(DISTINCT t.id) as topics_in_cluster
-            FROM books b
-            JOIN chunks c ON c.book_id = b.id
-            JOIN chunk_topic_links ctl ON ctl.chunk_id = c.id
-            JOIN topics t ON t.id = ctl.topic_id
-            WHERE t.cluster_id = ? AND b.calibre_id IS NOT NULL
-            GROUP BY b.id
-            ORDER BY topics_in_cluster DESC
-            LIMIT 5
-        """,
-            (cluster_id,),
-        )
-        sample_books = [BookSummary(**dict(r)) for r in cursor.fetchall()]
+        top_topics = json.loads(cs["top_topics_json"] or "[]")
+        sample_books = [BookSummary(**b) for b in json.loads(cs["sample_books_json"] or "[]")]
 
         themes.append(
             ThemeSummary(
                 cluster_id=cluster_id,
                 label=_generate_cluster_label(top_topics),
-                size=size,
-                book_count=book_count,
+                size=cs["size"],
+                book_count=cs["book_count"],
                 sample_books=sample_books,
             )
         )
@@ -121,12 +124,7 @@ def search_themes(
 
 
 def _generate_cluster_label(topics: list[dict], max_labels: int = 1) -> str:
-    """Generate a label from top topics in cluster.
-
-    Args:
-        topics: List of topic dicts with 'label' key
-        max_labels: Number of labels to include (1 for focused, 3 for descriptive)
-    """
+    """Generate a label from top topics in cluster."""
     if not topics:
         return "Miscellaneous"
     top_labels = [t["label"] for t in topics[:max_labels]]
@@ -142,103 +140,36 @@ def list_themes(
 ):
     """List theme clusters with sample books.
 
-    Sample books are selected by "concentration" - books with the highest
-    percentage of their topics in this cluster are shown first.
-
     Clusters with >max_topics are filtered out as they're too broad to be useful.
     """
     cursor = db.cursor()
 
-    # Get clusters with topic counts, filtering out mega-clusters
     cursor.execute(
         """
-        SELECT
-            cluster_id,
-            COUNT(*) as size
-        FROM topics
-        WHERE cluster_id IS NOT NULL
-        GROUP BY cluster_id
-        HAVING COUNT(*) <= ?
+        SELECT cluster_id, size, book_count, top_label, top_topics_json, sample_books_json
+        FROM cluster_stats
+        WHERE size <= ? AND book_count >= ?
         ORDER BY size DESC
         LIMIT ?
     """,
-        (
-            max_topics,
-            limit * 2,
-        ),
-    )  # Fetch extra to filter by min_books
+        (max_topics, min_books, limit),
+    )
+    rows = cursor.fetchall()
 
-    clusters = cursor.fetchall()
     themes = []
-
-    for row in clusters:
-        cluster_id = row["cluster_id"]
-
-        # Get book count for this cluster
-        cursor.execute(
-            """
-            SELECT COUNT(DISTINCT b.id) as book_count
-            FROM books b
-            JOIN chunks c ON c.book_id = b.id
-            JOIN chunk_topic_links ctl ON ctl.chunk_id = c.id
-            JOIN topics t ON t.id = ctl.topic_id
-            WHERE t.cluster_id = ?
-        """,
-            (cluster_id,),
-        )
-        book_count = cursor.fetchone()["book_count"]
-
-        if book_count < min_books:
-            continue
-
-        # Get top topics for label
-        cursor.execute(
-            """
-            SELECT id, label, occurrence_count as count
-            FROM topics
-            WHERE cluster_id = ?
-            ORDER BY occurrence_count DESC
-            LIMIT 3
-        """,
-            (cluster_id,),
-        )
-        top_topics = [dict(r) for r in cursor.fetchall()]
-
-        # Get sample books with most topics in this cluster
-        # (Simple and fast - books deeply covering this theme appear first)
-        cursor.execute(
-            """
-            SELECT
-                b.id,
-                b.title,
-                b.author,
-                b.calibre_id,
-                COUNT(DISTINCT t.id) as topics_in_cluster
-            FROM books b
-            JOIN chunks c ON c.book_id = b.id
-            JOIN chunk_topic_links ctl ON ctl.chunk_id = c.id
-            JOIN topics t ON t.id = ctl.topic_id
-            WHERE t.cluster_id = ? AND b.calibre_id IS NOT NULL
-            GROUP BY b.id
-            ORDER BY topics_in_cluster DESC
-            LIMIT 5
-        """,
-            (cluster_id,),
-        )
-        sample_books = [BookSummary(**dict(r)) for r in cursor.fetchall()]
+    for row in rows:
+        top_topics = json.loads(row["top_topics_json"] or "[]")
+        sample_books = [BookSummary(**b) for b in json.loads(row["sample_books_json"] or "[]")]
 
         themes.append(
             ThemeSummary(
-                cluster_id=cluster_id,
+                cluster_id=row["cluster_id"],
                 label=_generate_cluster_label(top_topics),
                 size=row["size"],
-                book_count=book_count,
+                book_count=row["book_count"],
                 sample_books=sample_books,
             )
         )
-
-        if len(themes) >= limit:
-            break
 
     return themes
 
@@ -248,18 +179,26 @@ def get_theme(db: DBConnection, cluster_id: int):
     """Get theme detail with all books."""
     cursor = db.cursor()
 
-    # Verify cluster exists
+    # Verify cluster exists via cluster_stats
     cursor.execute(
-        """
-        SELECT COUNT(*) as size FROM topics WHERE cluster_id = ?
-    """,
+        "SELECT size FROM cluster_stats WHERE cluster_id = ?",
         (cluster_id,),
     )
-    result = cursor.fetchone()
-    if result["size"] == 0:
-        raise HTTPException(status_code=404, detail="Theme not found")
+    stats_row = cursor.fetchone()
+    if not stats_row:
+        # Fall back to checking topics directly (stats may not be populated)
+        cursor.execute(
+            "SELECT COUNT(*) as size FROM topics WHERE cluster_id = ?",
+            (cluster_id,),
+        )
+        result = cursor.fetchone()
+        if result["size"] == 0:
+            raise HTTPException(status_code=404, detail="Theme not found")
+        size = result["size"]
+    else:
+        size = stats_row["size"]
 
-    # Get all topics in cluster
+    # Get all topics in cluster (already fast — single table scan)
     cursor.execute(
         """
         SELECT id, label, occurrence_count as count, cluster_id
@@ -272,15 +211,13 @@ def get_theme(db: DBConnection, cluster_id: int):
     )
     topics = [TopicInfo(**dict(r)) for r in cursor.fetchall()]
 
-    # Get all books in this cluster
+    # Get all books from cluster_books bridge table
     cursor.execute(
         """
         SELECT DISTINCT b.id, b.title, b.author, b.calibre_id
-        FROM books b
-        JOIN chunks c ON c.book_id = b.id
-        JOIN chunk_topic_links ctl ON ctl.chunk_id = c.id
-        JOIN topics t ON t.id = ctl.topic_id
-        WHERE t.cluster_id = ?
+        FROM cluster_books cb
+        JOIN books b ON b.id = cb.book_id
+        WHERE cb.cluster_id = ?
         ORDER BY b.title
     """,
         (cluster_id,),
@@ -290,7 +227,7 @@ def get_theme(db: DBConnection, cluster_id: int):
     return ThemeDetail(
         cluster_id=cluster_id,
         label=_generate_cluster_label([{"label": t.label} for t in topics]),
-        size=result["size"],
+        size=size,
         topics=topics,
         books=books,
     )
