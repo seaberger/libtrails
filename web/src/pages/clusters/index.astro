@@ -5,7 +5,7 @@ import ThemeSearch from '../../components/ThemeSearch.astro';
 import { getThemes } from '../../lib/api';
 
 // Fetch clusters at build time (SSR) or request time
-const clusters = await getThemes(200, 3);
+const clusters = await getThemes(2000, 3);
 ---
 
 <BaseLayout title="Clusters" description="Browse all topic clusters from your library">
