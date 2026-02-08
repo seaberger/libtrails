@@ -96,6 +96,10 @@ THEME_MODEL = "gemma3:27b"  # For book-level theme extraction (1 call/book)
 CHUNK_MODEL = "gemma3:4b"  # For chunk-level topic extraction (batched)
 BATCH_SIZE = 5  # Chunks per batch for batched extraction
 
+# Ollama context window — both gemma3 models support 128K tokens
+# Default of 2048 is far too small for batched extraction
+OLLAMA_NUM_CTX = 8192
+
 # Generic topic stoplist — filtered during normalization
 TOPIC_STOPLIST = frozenset({
     "manipulation", "relationships", "technology", "society", "nature",

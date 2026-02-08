@@ -12,6 +12,7 @@ from .config import (
     BATCH_SIZE,
     CHUNK_MODEL,
     DEFAULT_MODEL,
+    OLLAMA_NUM_CTX,
     THEME_MODEL,
     TOPIC_STOPLIST,
     TOPICS_PER_CHUNK,
@@ -52,7 +53,7 @@ def extract_topics_batch(
 
     def process_chunk(idx: int, text: str) -> tuple[int, list[str]]:
         topics = extract_topics(text, model, num_topics)
-        return idx, topics
+        return idx, _filter_topics(topics)
 
     with ThreadPoolExecutor(max_workers=NUM_WORKERS) as executor:
         futures = {executor.submit(process_chunk, i, chunk): i for i, chunk in enumerate(chunks)}
@@ -92,16 +93,26 @@ def extract_topics(
     text: str, model: str = DEFAULT_MODEL, num_topics: int = TOPICS_PER_CHUNK
 ) -> list[str]:
     """
-    Extract topics from a text chunk using Ollama HTTP API.
+    Extract topics from a text chunk using Ollama HTTP API (legacy mode).
 
     Returns a list of topic strings.
     """
     prompt = f'''Extract {num_topics} topic labels from this book passage.
-Return ONLY a JSON array of topic strings, no other text.
 
-Passage: "{text}"
+Passage: "{text}"'''
 
-Topics:'''
+    schema = {
+        "type": "object",
+        "properties": {
+            "topics": {
+                "type": "array",
+                "items": {"type": "string"},
+                "minItems": num_topics,
+                "maxItems": num_topics,
+            }
+        },
+        "required": ["topics"],
+    }
 
     try:
         client = _get_client()
@@ -110,12 +121,17 @@ Topics:'''
             json={
                 "model": model,
                 "prompt": prompt,
+                "format": schema,
                 "stream": False,
+                "options": {"num_ctx": OLLAMA_NUM_CTX},
             },
         )
         response.raise_for_status()
-        result = response.json()
-        return _parse_topics(result.get("response", ""))
+        output = response.json().get("response", "").strip()
+        parsed = json.loads(output)
+        if isinstance(parsed, dict) and "topics" in parsed:
+            return [str(t).strip() for t in parsed["topics"] if t][:num_topics]
+        return _parse_topics(output)
 
     except httpx.TimeoutException:
         return []
@@ -178,6 +194,7 @@ Themes:'''
                 "model": model,
                 "prompt": prompt,
                 "stream": False,
+                "options": {"num_ctx": OLLAMA_NUM_CTX},
             },
             timeout=120.0,
         )
@@ -211,10 +228,14 @@ def extract_topics_batched(
     per-chunk topic arrays in a single call. Falls back to individual
     extraction if JSON parsing fails for a batch.
 
+    Topics are normalized and filtered through the stoplist before returning.
+
     Returns list[list[str]] matching input chunk order.
     """
     results: list[list[str]] = [[] for _ in range(len(chunks))]
     completed = 0
+    batch_successes = 0
+    batch_fallbacks = 0
 
     # Build context header
     context_parts = [f"Book: {book_title} by {author}"]
@@ -232,21 +253,59 @@ def extract_topics_batched(
         )
 
         if batch_results is not None:
+            batch_successes += 1
             for i, topics in enumerate(batch_results):
-                results[batch_start + i] = topics
+                results[batch_start + i] = _filter_topics(topics)
         else:
             # Fallback: extract individually
+            batch_fallbacks += 1
             for i, chunk in enumerate(batch_chunks):
                 topics = _extract_single_contextualized(
                     chunk, context, model, num_topics
                 )
-                results[batch_start + i] = topics
+                results[batch_start + i] = _filter_topics(topics)
 
         completed += len(batch_chunks)
         if progress_callback:
             progress_callback(completed, len(chunks))
 
+    # Log batch success/fallback ratio
+    total_batches = batch_successes + batch_fallbacks
+    if total_batches > 0 and batch_fallbacks > 0:
+        print(
+            f"  Batch stats: {batch_successes}/{total_batches} succeeded, "
+            f"{batch_fallbacks} fell back to individual extraction",
+            flush=True,
+        )
+
     return results
+
+
+def _filter_topics(topics: list[str]) -> list[str]:
+    """Normalize topics and filter out stoplist matches."""
+    filtered = []
+    for topic in topics:
+        normalized = normalize_topic(topic)
+        if normalized is not None:
+            filtered.append(normalized)
+    return filtered
+
+
+def _build_batch_schema(num_chunks: int, num_topics: int) -> dict:
+    """Build a JSON schema for batch extraction output."""
+    properties = {}
+    for i in range(1, num_chunks + 1):
+        properties[str(i)] = {
+            "type": "array",
+            "items": {"type": "string"},
+            "minItems": num_topics,
+            "maxItems": num_topics,
+        }
+    return {
+        "type": "object",
+        "properties": properties,
+        "required": [str(i) for i in range(1, num_chunks + 1)],
+    }
 
 
 def _extract_batch(
@@ -258,6 +317,8 @@ def _extract_batch(
 ) -> Optional[list[list[str]]]:
     """
     Extract topics from a batch of chunks in a single LLM call.
+
+    Uses Ollama's structured output (format parameter) to guarantee valid JSON.
 
     Returns list of topic lists (one per chunk) or None on failure.
     """
@@ -274,10 +335,9 @@ Extract {num_topics} specific topic labels from EACH passage below. Topics shoul
 
 {passages_text}
 
-Return a JSON object mapping passage numbers to topic arrays, like:
-{{"1": ["topic a", "topic b", ...], "2": ["topic c", "topic d", ...], ...}}
+Return a JSON object mapping passage numbers to topic arrays.'''
 
-Topics:'''
+    schema = _build_batch_schema(len(chunks), num_topics)
 
     try:
         client = _get_client()
@@ -286,19 +346,16 @@ Topics:'''
             json={
                 "model": model,
                 "prompt": prompt,
+                "format": schema,
                 "stream": False,
+                "options": {"num_ctx": OLLAMA_NUM_CTX},
             },
             timeout=120.0,
         )
         response.raise_for_status()
         output = response.json().get("response", "").strip()
 
-        # Parse JSON object
-        match = re.search(r"\{.*\}", output, re.DOTALL)
-        if not match:
-            return None
-
-        parsed = json.loads(match.group())
+        parsed = json.loads(output)
         if not isinstance(parsed, dict):
             return None
 
@@ -330,11 +387,21 @@ def _extract_single_contextualized(
     prompt = f'''{context}
 
 Extract {num_topics} specific topic labels from this passage. Use multi-word noun phrases, NOT generic single words.
-Return ONLY a JSON array of topic strings.
 
-Passage: "{text}"
+Passage: "{text}"'''
 
-Topics:'''
+    schema = {
+        "type": "object",
+        "properties": {
+            "topics": {
+                "type": "array",
+                "items": {"type": "string"},
+                "minItems": num_topics,
+                "maxItems": num_topics,
+            }
+        },
+        "required": ["topics"],
+    }
 
     try:
         client = _get_client()
@@ -343,13 +410,18 @@ Topics:'''
             json={
                 "model": model,
                 "prompt": prompt,
+                "format": schema,
                 "stream": False,
+                "options": {"num_ctx": OLLAMA_NUM_CTX},
             },
             timeout=60.0,
         )
         response.raise_for_status()
-        result = response.json()
-        return _parse_topics(result.get("response", ""))
+        output = response.json().get("response", "").strip()
+        parsed = json.loads(output)
+        if isinstance(parsed, dict) and "topics" in parsed:
+            return [str(t).strip() for t in parsed["topics"] if t][:num_topics]
+        return _parse_topics(output)
 
     except (httpx.TimeoutException, Exception):
         return []
