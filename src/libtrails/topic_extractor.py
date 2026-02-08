@@ -139,11 +139,78 @@ Passage: "{text}"'''
         return []
 
 
+def strip_html(html: str) -> str:
+    """Strip HTML tags and clean up whitespace from Calibre descriptions."""
+    # Remove HTML tags
+    text = re.sub(r"<[^>]+>", " ", html)
+    # Remove non-breaking spaces
+    text = text.replace("\xa0", " ")
+    # Collapse whitespace
+    text = re.sub(r"\s+", " ", text).strip()
+    return text
+
+
+# Tags to remove entirely — pure noise with no topical signal
+_NOISE_TAGS = frozenset({
+    "general", "fiction", "unknown", "adult", "non-fiction", "nonfiction",
+})
+
+# Patterns for compound tag variants
+_PREFIX_RE = re.compile(
+    r"^(?:fiction|general|non-fiction)\s*[-–/]\s*", re.IGNORECASE
+)
+_SUFFIX_RE = re.compile(
+    r"\s*[-–/]\s*(?:general|fiction)$", re.IGNORECASE
+)
+
+
+def clean_calibre_tags(tags: list[str]) -> list[str]:
+    """
+    Clean Calibre tags for use in theme extraction prompts.
+
+    1. Remove noise tags ("General", "Fiction", "Unknown", etc.)
+    2. Normalize compound variants ("Fiction - Science Fiction" → "Science Fiction",
+       "Science Fiction - General" → "Science Fiction")
+    3. Remove substring duplicates, keeping the more specific tag
+    4. Cap at 10 tags
+    """
+    if not tags:
+        return []
+
+    # Step 1-2: Filter noise and normalize compounds
+    cleaned = []
+    seen_lower = set()
+    for tag in tags:
+        if tag.lower().strip() in _NOISE_TAGS:
+            continue
+        # Strip noise prefixes/suffixes
+        normalized = _PREFIX_RE.sub("", tag).strip()
+        normalized = _SUFFIX_RE.sub("", normalized).strip()
+        if not normalized or normalized.lower() in _NOISE_TAGS:
+            continue
+        # Deduplicate case-insensitive
+        if normalized.lower() not in seen_lower:
+            seen_lower.add(normalized.lower())
+            cleaned.append(normalized)
+
+    # Step 3: Remove substring duplicates (keep longer/more specific)
+    cleaned.sort(key=len, reverse=True)
+    result = []
+    for tag in cleaned:
+        tag_lower = tag.lower()
+        if not any(tag_lower in existing.lower() for existing in result):
+            result.append(tag)
+
+    # Step 4: Cap at 10
+    return result[:10]
+
+
 def extract_book_themes(
     title: str,
     author: str,
     tags: list[str] | None = None,
     description: str | None = None,
+    series: str | None = None,
     sample_text: str | None = None,
     model: str = THEME_MODEL,
 ) -> list[str]:
@@ -151,18 +218,25 @@ def extract_book_themes(
     Extract 5-8 high-level themes for a book using a larger model.
 
     One call per book. Uses title, author, Calibre tags, description,
-    and the first ~1000 words to produce specific noun-phrase themes.
+    series, and the first ~1000 words to produce specific noun-phrase themes.
+
+    Tags are cleaned (noise removed, duplicates collapsed) and descriptions
+    are stripped of HTML before inclusion in the prompt.
 
     Returns a list of theme strings (e.g., "epic fantasy", "magic power systems").
     """
     parts = [f"Title: {title}", f"Author: {author}"]
 
+    if series:
+        parts.append(f"Series: {series}")
+
     if tags:
-        parts.append(f"Tags: {', '.join(tags[:15])}")
+        cleaned_tags = clean_calibre_tags(tags)
+        if cleaned_tags:
+            parts.append(f"Tags: {', '.join(cleaned_tags)}")
 
     if description:
-        # Trim description to ~500 chars
-        desc = description[:500].strip()
+        desc = strip_html(description)[:500].strip()
         if desc:
             parts.append(f"Description: {desc}")
 
@@ -180,11 +254,21 @@ Rules:
 - Do NOT use generic single words like "conflict", "power", "love", "death"
 - Each theme should be specific enough to distinguish this book from unrelated books
 - Include the book's genre/domain as the first theme
-- Return ONLY a JSON array of strings, no other text
 
-{book_info}
+{book_info}'''
 
-Themes:'''
+    schema = {
+        "type": "object",
+        "properties": {
+            "themes": {
+                "type": "array",
+                "items": {"type": "string"},
+                "minItems": 5,
+                "maxItems": 8,
+            }
+        },
+        "required": ["themes"],
+    }
 
     try:
         client = _get_client()
@@ -193,16 +277,19 @@ Themes:'''
             json={
                 "model": model,
                 "prompt": prompt,
+                "format": schema,
                 "stream": False,
                 "options": {"num_ctx": OLLAMA_NUM_CTX},
             },
             timeout=120.0,
         )
         response.raise_for_status()
-        result = response.json()
-        themes = _parse_topics(result.get("response", ""))
-        # Normalize themes but keep them even if they're in the stoplist
-        # (themes are book-level context, not chunk topics)
+        output = response.json().get("response", "").strip()
+        parsed = json.loads(output)
+        if isinstance(parsed, dict) and "themes" in parsed:
+            return [str(t).strip().lower() for t in parsed["themes"] if t]
+        # Fallback to generic parsing
+        themes = _parse_topics(output)
         return [t.strip().lower() for t in themes if t.strip()]
 
     except httpx.TimeoutException:

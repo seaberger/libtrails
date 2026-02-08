@@ -218,6 +218,7 @@ def index_book(
             author=book.get("author", "Unknown"),
             tags=calibre_meta.get("tags"),
             description=calibre_meta.get("description"),
+            series=calibre_meta.get("series"),
             sample_text=sample_text,
             model=theme_model,
         )
