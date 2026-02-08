@@ -28,9 +28,17 @@ from .database import (
     save_topic_embedding,
 )
 from .document_parser import extract_text
+from .stats import refresh_all_stats
 from .topic_extractor import check_ollama_available, extract_topics_batch, get_available_models
 
 console = Console()
+
+
+def _refresh_and_report_stats() -> None:
+    """Refresh materialized stats and print summary."""
+    console.print("\n[bold cyan]Refreshing materialized stats...[/bold cyan]")
+    stats_result = refresh_all_stats()
+    console.print(f"  [green]Stats refreshed in {stats_result['elapsed_seconds']:.1f}s[/green]")
 
 
 @click.group()
@@ -1295,12 +1303,7 @@ def process():
 
     console.print("\n[bold green]Pipeline complete![/bold green]")
 
-    # Refresh materialized stats for fast API responses
-    console.print("\n[bold cyan]Refreshing materialized stats...[/bold cyan]")
-    from .stats import refresh_all_stats
-
-    stats_result = refresh_all_stats()
-    console.print(f"  [green]Stats refreshed in {stats_result['elapsed_seconds']:.1f}s[/green]")
+    _refresh_and_report_stats()
 
     # Show final stats
     stats = get_indexing_status()
@@ -1503,15 +1506,7 @@ def cluster(
             console.print("\n[bold yellow]DRY RUN - no changes saved to database[/bold yellow]")
         else:
             console.print("\n[bold green]Clustering complete![/bold green]")
-
-            # Refresh materialized stats for fast API responses
-            console.print("\n[bold cyan]Refreshing materialized stats...[/bold cyan]")
-            from .stats import refresh_all_stats
-
-            stats_result = refresh_all_stats()
-            console.print(
-                f"  [green]Stats refreshed in {stats_result['elapsed_seconds']:.1f}s[/green]"
-            )
+            _refresh_and_report_stats()
     else:
         console.print(f"  [red]Error: {cluster_result['error']}[/red]")
 
@@ -1544,12 +1539,7 @@ def load_domains(json_file: str):
     count = load_domains_from_json(json_path)
     console.print(f"[green]Loaded {count} domains[/green]")
 
-    # Refresh materialized stats for fast API responses
-    console.print("\n[bold cyan]Refreshing materialized stats...[/bold cyan]")
-    from .stats import refresh_all_stats
-
-    stats_result = refresh_all_stats()
-    console.print(f"  [green]Stats refreshed in {stats_result['elapsed_seconds']:.1f}s[/green]")
+    _refresh_and_report_stats()
 
     # Show summary
     table = Table(title="Domains")
@@ -1749,8 +1739,6 @@ def refresh_stats():
 
     Runs automatically after 'cluster', 'load-domains', and 'process'.
     """
-    from .stats import refresh_all_stats
-
     console.print("[bold]Refreshing materialized stats...[/bold]")
     result = refresh_all_stats()
     console.print(f"  [green]cluster_books rows: {result['cluster_book_rows']:,}[/green]")

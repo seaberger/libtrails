@@ -15,8 +15,8 @@ router = APIRouter()
 def _find_cover_path(calibre_id: int) -> Path | None:
     """Find cover image path in Calibre library via metadata.db lookup."""
     conn = sqlite3.connect(f"file:{CALIBRE_DB_PATH}?mode=ro", uri=True)
-    conn.row_factory = sqlite3.Row
     try:
+        conn.row_factory = sqlite3.Row
         row = conn.execute("SELECT path FROM books WHERE id = ?", (calibre_id,)).fetchone()
     finally:
         conn.close()
@@ -24,7 +24,7 @@ def _find_cover_path(calibre_id: int) -> Path | None:
     if not row:
         return None
 
-    cover_path = CALIBRE_LIBRARY_PATH / row["path"] / "cover.jpg"
+    cover_path = CALIBRE_LIBRARY_PATH / str(row["path"]) / "cover.jpg"
     if cover_path.exists():
         return cover_path
 

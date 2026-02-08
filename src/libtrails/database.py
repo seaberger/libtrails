@@ -71,8 +71,9 @@ def get_epub_path(calibre_id: int) -> Optional[Path]:
         book_dir = CALIBRE_LIBRARY_PATH / row["path"]
 
         # Find EPUB file
-        for epub in book_dir.glob("*.epub"):
-            return epub
+        epub_files = list(book_dir.glob("*.epub"))
+        if epub_files:
+            return epub_files[0]
 
         return None
 
@@ -94,12 +95,14 @@ def get_book_path(calibre_id: int) -> Optional[Path]:
         book_dir = CALIBRE_LIBRARY_PATH / row["path"]
 
         # Prefer EPUB
-        for epub in book_dir.glob("*.epub"):
-            return epub
+        epub_files = list(book_dir.glob("*.epub"))
+        if epub_files:
+            return epub_files[0]
 
         # Fall back to PDF
-        for pdf in book_dir.glob("*.pdf"):
-            return pdf
+        pdf_files = list(book_dir.glob("*.pdf"))
+        if pdf_files:
+            return pdf_files[0]
 
         return None
 

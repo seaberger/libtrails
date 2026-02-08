@@ -47,7 +47,8 @@ def search_themes(
                     "best_topic": None,
                 }
             cluster_matches[cluster_id]["count"] += 1
-            score = 1 - topic.get("distance", 0)
+            distance = topic.get("distance") or 0
+            score = 1 - float(distance)
             if score > cluster_matches[cluster_id]["best_score"]:
                 cluster_matches[cluster_id]["best_score"] = score
                 cluster_matches[cluster_id]["best_topic"] = topic.get("label")
@@ -72,6 +73,33 @@ def search_themes(
         cluster_ids,
     )
     stats_by_id = {r["cluster_id"]: r for r in cursor.fetchall()}
+
+    # Collect cluster IDs missing from cluster_stats for fallback
+    missing_ids = [cid for cid, _ in sorted_clusters if cid not in stats_by_id]
+    if missing_ids:
+        missing_ph = ",".join("?" * len(missing_ids))
+        cursor.execute(
+            f"""
+            SELECT cluster_id, COUNT(*) as size,
+                   (SELECT label FROM topics t2
+                    WHERE t2.cluster_id = t.cluster_id AND LENGTH(t2.label) >= 4
+                    ORDER BY t2.occurrence_count DESC LIMIT 1) as top_label
+            FROM topics t
+            WHERE cluster_id IN ({missing_ph})
+            GROUP BY cluster_id
+        """,
+            missing_ids,
+        )
+        for row in cursor.fetchall():
+            cid = row["cluster_id"]
+            stats_by_id[cid] = {
+                "cluster_id": cid,
+                "size": row["size"],
+                "book_count": 0,
+                "top_label": row["top_label"] or f"cluster_{cid}",
+                "top_topics_json": "[]",
+                "sample_books_json": "[]",
+            }
 
     themes = []
     for cluster_id, match_info in sorted_clusters:

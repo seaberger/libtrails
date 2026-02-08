@@ -95,7 +95,6 @@ const bookCount = stackBooks.length;
     });
   }
 
-  // Run on load and after navigation
-  initFanEffect();
+  // Run after navigation (astro:page-load fires on initial load too)
   document.addEventListener('astro:page-load', initFanEffect);
 </script>

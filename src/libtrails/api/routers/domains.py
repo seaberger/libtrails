@@ -61,14 +61,17 @@ def get_domain(db: DBConnection, domain_id: int):
     if not domain:
         raise HTTPException(status_code=404, detail="Domain not found")
 
-    # Get cluster details from cluster_stats
+    # Get cluster details from cluster_stats (LEFT JOIN for clusters without stats)
     cursor.execute(
         """
-        SELECT cs.cluster_id, cs.size, cs.top_label as label, cs.book_count
+        SELECT cd.cluster_id,
+               COALESCE(cs.size, 0) as size,
+               COALESCE(cs.top_label, 'cluster_' || cd.cluster_id) as label,
+               COALESCE(cs.book_count, 0) as book_count
         FROM cluster_domains cd
-        JOIN cluster_stats cs ON cs.cluster_id = cd.cluster_id
+        LEFT JOIN cluster_stats cs ON cs.cluster_id = cd.cluster_id
         WHERE cd.domain_id = ?
-        ORDER BY cs.size DESC
+        ORDER BY size DESC
     """,
         (domain_id,),
     )

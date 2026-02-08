@@ -14,10 +14,10 @@ echo "=== LibTrails Service Manager ==="
 echo ""
 echo "Stopping existing services..."
 
-api_pid=$(lsof -ti :$API_PORT 2>/dev/null || true)
-if [ -n "$api_pid" ]; then
-    kill $api_pid 2>/dev/null || true
-    echo "  Stopped API server (pid $api_pid)"
+api_pids=$(lsof -ti :$API_PORT 2>/dev/null || true)
+if [ -n "$api_pids" ]; then
+    echo "$api_pids" | xargs kill 2>/dev/null || true
+    echo "  Stopped API server on port $API_PORT"
     sleep 1
 else
     echo "  API server not running"
@@ -63,7 +63,7 @@ for i in $(seq 1 15); do
 done
 
 for i in $(seq 1 10); do
-    fe_port=$(grep -oP 'localhost:\K\d+' /tmp/libtrails-frontend.log 2>/dev/null | head -1 || true)
+    fe_port=$(grep -oE 'localhost:[0-9]+' /tmp/libtrails-frontend.log 2>/dev/null | head -1 | sed 's/localhost://' || true)
     if [ -n "$fe_port" ]; then
         echo "  Frontend ready on http://localhost:$fe_port"
         break
