@@ -149,7 +149,7 @@ def list_themes(
         SELECT cluster_id, size, book_count, top_label, top_topics_json, sample_books_json
         FROM cluster_stats
         WHERE size <= ? AND book_count >= ?
-        ORDER BY size DESC
+        ORDER BY CAST(book_count AS REAL) / MAX(size, 1) DESC
         LIMIT ?
     """,
         (max_topics, min_books, limit),
