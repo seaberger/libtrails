@@ -47,17 +47,36 @@ def _call_gemini(
     model: str,
     response_schema: dict | None = None,
     timeout: float = 120.0,
+    system_prompt: str | None = None,
 ) -> str:
     """Call Gemini API via litellm and return the response text.
 
     Uses response_format for JSON output when a schema is provided.
     Requires GEMINI_API_KEY in environment (loaded from .env by caller).
+
+    When system_prompt is provided, it is sent as a cached system message
+    (Gemini context caching — 90% discount on repeated prefix tokens).
+    The prompt then becomes the user message with per-call content.
     """
     import litellm
 
+    messages = []
+    if system_prompt:
+        messages.append({
+            "role": "system",
+            "content": [
+                {
+                    "type": "text",
+                    "text": system_prompt,
+                    "cache_control": {"type": "ephemeral"},
+                }
+            ],
+        })
+    messages.append({"role": "user", "content": prompt})
+
     kwargs = {
         "model": model,
-        "messages": [{"role": "user", "content": prompt}],
+        "messages": messages,
         "max_tokens": 4096,
         "temperature": 0.7,
         "timeout": timeout,
@@ -697,7 +716,9 @@ def extract_topics_single_optimized(
     Uses the instruction and 4 demonstrations produced by MIPROv2 optimization.
     Each demo shows the model a passage + book context → 5 multi-word noun-phrase topics.
 
-    This is for A/B comparison against the batched extraction approach.
+    When using Gemini, the instruction + demos are sent as a cached system message
+    (context caching — 90% discount on repeated tokens). The per-chunk passage and
+    book context are sent as the user message.
     """
     # Build few-shot section
     demo_parts = []
@@ -710,17 +731,6 @@ def extract_topics_single_optimized(
             f"Topics: {demo_topics}"
         )
     demos_text = "\n\n".join(demo_parts)
-
-    prompt = f"""{_DSPY_INSTRUCTION}
-
-{demos_text}
-
----
-Passage: {text}
-
-Book Context: {context}
-
-Topics:"""
 
     schema = {
         "type": "object",
@@ -737,8 +747,16 @@ Topics:"""
 
     try:
         if _is_gemini_model(model):
-            output = _call_gemini(prompt, model, response_schema=schema, timeout=60.0)
+            # Split into cached system prompt (instruction + demos) and user prompt (chunk)
+            system_prompt = f"{_DSPY_INSTRUCTION}\n\n{demos_text}"
+            user_prompt = f"---\nPassage: {text}\n\nBook Context: {context}\n\nTopics:"
+            output = _call_gemini(
+                user_prompt, model,
+                response_schema=schema, timeout=60.0,
+                system_prompt=system_prompt,
+            )
         else:
+            prompt = f"""{_DSPY_INSTRUCTION}\n\n{demos_text}\n\n---\nPassage: {text}\n\nBook Context: {context}\n\nTopics:"""
             client = _get_client()
             response = client.post(
                 OLLAMA_API_URL,
