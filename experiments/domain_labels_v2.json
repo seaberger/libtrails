@@ -1,0 +1,2633 @@
+[
+  {
+    "domain_id": 0,
+    "label": "Narrative Fiction",
+    "cluster_count": 128,
+    "original_super_ids": [
+      3
+    ],
+    "leiden_cluster_ids": [
+      93,
+      132,
+      155,
+      163,
+      168,
+      171,
+      190,
+      226,
+      233,
+      239,
+      353,
+      369,
+      392,
+      424,
+      427,
+      467,
+      491,
+      511,
+      516,
+      532,
+      538,
+      564,
+      605,
+      608,
+      609,
+      626,
+      634,
+      646,
+      650,
+      657,
+      673,
+      685,
+      690,
+      699,
+      720,
+      726,
+      730,
+      737,
+      742,
+      744,
+      786,
+      789,
+      804,
+      820,
+      823,
+      827,
+      829,
+      831,
+      837,
+      843,
+      845,
+      846,
+      849,
+      871,
+      876,
+      880,
+      881,
+      882,
+      884,
+      897,
+      901,
+      904,
+      905,
+      907,
+      923,
+      926,
+      936,
+      937,
+      938,
+      939,
+      941,
+      947,
+      949,
+      958,
+      964,
+      965,
+      966,
+      976,
+      979,
+      983,
+      986,
+      991,
+      992,
+      999,
+      1002,
+      1009,
+      1010,
+      1011,
+      1013,
+      1015,
+      1016,
+      1020,
+      1022,
+      1023,
+      1030,
+      1041,
+      1046,
+      1048,
+      1049,
+      1071,
+      1075,
+      1077,
+      1080,
+      1097,
+      1102,
+      1103,
+      1108,
+      1110,
+      1113,
+      1114,
+      1115,
+      1118,
+      1120,
+      1125,
+      1126,
+      1129,
+      1135,
+      1138,
+      1140,
+      1142,
+      1145,
+      1151,
+      1154,
+      1160,
+      1161,
+      1164,
+      1166,
+      1169
+    ],
+    "top_topics": [
+      {
+        "label": "cugel's arrival in smolod",
+        "count": 279
+      },
+      {
+        "label": "alethiometer's significance",
+        "count": 269
+      },
+      {
+        "label": "colton harris-moore's criminal activities",
+        "count": 196
+      },
+      {
+        "label": "voigt-kampff empathy test",
+        "count": 191
+      },
+      {
+        "label": "briony's concern for barrick",
+        "count": 185
+      },
+      {
+        "label": "colt's escape route",
+        "count": 162
+      },
+      {
+        "label": "doctor manette's influence",
+        "count": 145
+      },
+      {
+        "label": "protomolecule experimentation on children",
+        "count": 130
+      },
+      {
+        "label": "hoshino's past indiscretions",
+        "count": 128
+      },
+      {
+        "label": "swan's latent abilities",
+        "count": 127
+      }
+    ]
+  },
+  {
+    "domain_id": 1,
+    "label": "Epic & Historical Fiction",
+    "cluster_count": 76,
+    "original_super_ids": [
+      20
+    ],
+    "leiden_cluster_ids": [
+      97,
+      130,
+      134,
+      166,
+      212,
+      237,
+      271,
+      285,
+      344,
+      360,
+      409,
+      428,
+      432,
+      433,
+      451,
+      550,
+      561,
+      567,
+      569,
+      589,
+      603,
+      611,
+      638,
+      648,
+      660,
+      661,
+      678,
+      680,
+      686,
+      696,
+      708,
+      714,
+      715,
+      745,
+      747,
+      756,
+      763,
+      769,
+      770,
+      778,
+      788,
+      826,
+      852,
+      883,
+      899,
+      908,
+      913,
+      953,
+      969,
+      972,
+      982,
+      987,
+      989,
+      1018,
+      1027,
+      1031,
+      1042,
+      1045,
+      1054,
+      1060,
+      1068,
+      1072,
+      1083,
+      1085,
+      1087,
+      1090,
+      1100,
+      1101,
+      1119,
+      1124,
+      1131,
+      1137,
+      1143,
+      1162,
+      1167,
+      1170
+    ],
+    "top_topics": [
+      {
+        "label": "bene gesserit manipulation tactics",
+        "count": 253
+      },
+      {
+        "label": "colonel aureliano's solitude",
+        "count": 198
+      },
+      {
+        "label": "aenea's unique abilities",
+        "count": 189
+      },
+      {
+        "label": "phagor migration patterns",
+        "count": 178
+      },
+      {
+        "label": "augustus's political maneuvering",
+        "count": 174
+      },
+      {
+        "label": "roman invasion of britain",
+        "count": 154
+      },
+      {
+        "label": "elric's internal conflict",
+        "count": 152
+      },
+      {
+        "label": "\u00farsula's business acumen",
+        "count": 138
+      },
+      {
+        "label": "shallan's internal conflict",
+        "count": 136
+      },
+      {
+        "label": "stark's combat prowess",
+        "count": 117
+      }
+    ]
+  },
+  {
+    "domain_id": 2,
+    "label": "Character Psychology",
+    "cluster_count": 75,
+    "original_super_ids": [
+      25
+    ],
+    "leiden_cluster_ids": [
+      48,
+      105,
+      112,
+      232,
+      291,
+      340,
+      358,
+      389,
+      411,
+      438,
+      448,
+      459,
+      465,
+      476,
+      490,
+      521,
+      525,
+      541,
+      554,
+      570,
+      595,
+      615,
+      617,
+      622,
+      632,
+      645,
+      649,
+      666,
+      670,
+      709,
+      718,
+      728,
+      740,
+      765,
+      768,
+      774,
+      795,
+      797,
+      799,
+      802,
+      809,
+      858,
+      866,
+      873,
+      888,
+      903,
+      909,
+      915,
+      919,
+      935,
+      942,
+      959,
+      962,
+      974,
+      975,
+      981,
+      985,
+      995,
+      1003,
+      1005,
+      1026,
+      1032,
+      1051,
+      1052,
+      1053,
+      1056,
+      1058,
+      1067,
+      1074,
+      1091,
+      1107,
+      1112,
+      1130,
+      1136,
+      1150
+    ],
+    "top_topics": [
+      {
+        "label": "catherine's social anxieties",
+        "count": 295
+      },
+      {
+        "label": "daphne's social anxieties",
+        "count": 159
+      },
+      {
+        "label": "stephen's internal conflict",
+        "count": 158
+      },
+      {
+        "label": "george's frustration with lennie",
+        "count": 140
+      },
+      {
+        "label": "adam's emotional distress",
+        "count": 139
+      },
+      {
+        "label": "family's rejection of gregor",
+        "count": 131
+      },
+      {
+        "label": "fred's financial anxieties",
+        "count": 124
+      },
+      {
+        "label": "cathy's physical recovery",
+        "count": 118
+      },
+      {
+        "label": "dick's influence on perry",
+        "count": 118
+      },
+      {
+        "label": "dorothy's desire for escape",
+        "count": 118
+      }
+    ]
+  },
+  {
+    "domain_id": 3,
+    "label": "Language & Culture",
+    "cluster_count": 74,
+    "original_super_ids": [
+      6
+    ],
+    "leiden_cluster_ids": [
+      12,
+      17,
+      21,
+      22,
+      24,
+      28,
+      33,
+      87,
+      88,
+      92,
+      99,
+      123,
+      160,
+      185,
+      210,
+      219,
+      221,
+      228,
+      240,
+      261,
+      269,
+      286,
+      304,
+      333,
+      348,
+      350,
+      364,
+      381,
+      383,
+      406,
+      408,
+      413,
+      419,
+      431,
+      455,
+      461,
+      464,
+      466,
+      483,
+      504,
+      506,
+      524,
+      529,
+      548,
+      562,
+      586,
+      599,
+      616,
+      651,
+      663,
+      677,
+      694,
+      710,
+      716,
+      743,
+      748,
+      762,
+      785,
+      791,
+      801,
+      812,
+      868,
+      891,
+      928,
+      950,
+      951,
+      970,
+      988,
+      993,
+      997,
+      1105,
+      1111,
+      1132,
+      1149
+    ],
+    "top_topics": [
+      {
+        "label": "heptapod logogram structure",
+        "count": 60
+      },
+      {
+        "label": "copyright and legal notices",
+        "count": 45
+      },
+      {
+        "label": "annja's combat prowess",
+        "count": 44
+      },
+      {
+        "label": "precognitive abilities",
+        "count": 33
+      },
+      {
+        "label": "storytelling traditions",
+        "count": 30
+      },
+      {
+        "label": "belief in the book of skulls",
+        "count": 29
+      },
+      {
+        "label": "vernacular speech patterns",
+        "count": 26
+      },
+      {
+        "label": "acknowledgment of collaborators",
+        "count": 26
+      },
+      {
+        "label": "consulting the i ching",
+        "count": 26
+      },
+      {
+        "label": "mark twain's observational humor",
+        "count": 25
+      }
+    ]
+  },
+  {
+    "domain_id": 4,
+    "label": "Literary Arts",
+    "cluster_count": 57,
+    "original_super_ids": [
+      9
+    ],
+    "leiden_cluster_ids": [
+      1,
+      3,
+      8,
+      27,
+      29,
+      42,
+      54,
+      96,
+      98,
+      148,
+      173,
+      234,
+      249,
+      277,
+      317,
+      324,
+      341,
+      479,
+      481,
+      487,
+      542,
+      551,
+      574,
+      612,
+      636,
+      640,
+      642,
+      698,
+      700,
+      712,
+      721,
+      727,
+      733,
+      757,
+      760,
+      814,
+      816,
+      821,
+      825,
+      863,
+      925,
+      946,
+      957,
+      977,
+      980,
+      984,
+      1028,
+      1094,
+      1116,
+      1117,
+      1128,
+      1133,
+      1141,
+      1144,
+      1165,
+      1168,
+      1174
+    ],
+    "top_topics": [
+      {
+        "label": "alvin's return to diaspar",
+        "count": 268
+      },
+      {
+        "label": "lord henry's influence on dorian",
+        "count": 197
+      },
+      {
+        "label": "comic book creation process",
+        "count": 108
+      },
+      {
+        "label": "joe's emotional distress",
+        "count": 93
+      },
+      {
+        "label": "sammy's literary aspirations",
+        "count": 79
+      },
+      {
+        "label": "admiration for mrs ramsay's authority",
+        "count": 70
+      },
+      {
+        "label": "alice's confusion and politeness",
+        "count": 56
+      },
+      {
+        "label": "american poets' reactions to eliot",
+        "count": 54
+      },
+      {
+        "label": "academic studies on steinbeck's writing process",
+        "count": 46
+      },
+      {
+        "label": "gen's infatuation with carmen",
+        "count": 44
+      }
+    ]
+  },
+  {
+    "domain_id": 5,
+    "label": "Crime & Justice",
+    "cluster_count": 55,
+    "original_super_ids": [
+      19
+    ],
+    "leiden_cluster_ids": [
+      14,
+      35,
+      59,
+      71,
+      126,
+      169,
+      175,
+      199,
+      217,
+      242,
+      251,
+      273,
+      295,
+      301,
+      307,
+      312,
+      314,
+      325,
+      327,
+      331,
+      375,
+      391,
+      404,
+      422,
+      471,
+      472,
+      501,
+      522,
+      537,
+      543,
+      549,
+      593,
+      619,
+      627,
+      630,
+      643,
+      664,
+      687,
+      751,
+      776,
+      803,
+      841,
+      847,
+      898,
+      917,
+      929,
+      930,
+      934,
+      940,
+      954,
+      967,
+      1029,
+      1088,
+      1092,
+      1123
+    ],
+    "top_topics": [
+      {
+        "label": "difficulty and importance of k.'s case",
+        "count": 87
+      },
+      {
+        "label": "marlowe's protective actions",
+        "count": 75
+      },
+      {
+        "label": "bureaucratic inefficiency",
+        "count": 66
+      },
+      {
+        "label": "benedict's intervention",
+        "count": 39
+      },
+      {
+        "label": "bilderberg group secrecy",
+        "count": 30
+      },
+      {
+        "label": "amalfi's strategic planning",
+        "count": 26
+      },
+      {
+        "label": "necessity defense in maritime law",
+        "count": 25
+      },
+      {
+        "label": "bribery and corruption",
+        "count": 24
+      },
+      {
+        "label": "fbi investigation of organized crime",
+        "count": 23
+      },
+      {
+        "label": "prisoner's emotional detachment",
+        "count": 21
+      }
+    ]
+  },
+  {
+    "domain_id": 6,
+    "label": "Nature & Survival",
+    "cluster_count": 54,
+    "original_super_ids": [
+      18
+    ],
+    "leiden_cluster_ids": [
+      7,
+      16,
+      37,
+      52,
+      58,
+      62,
+      69,
+      84,
+      106,
+      125,
+      152,
+      156,
+      194,
+      205,
+      211,
+      258,
+      282,
+      283,
+      315,
+      318,
+      338,
+      347,
+      351,
+      395,
+      415,
+      437,
+      446,
+      489,
+      498,
+      505,
+      515,
+      563,
+      576,
+      598,
+      624,
+      631,
+      782,
+      813,
+      844,
+      867,
+      875,
+      900,
+      914,
+      916,
+      933,
+      952,
+      990,
+      1038,
+      1043,
+      1050,
+      1065,
+      1073,
+      1079,
+      1156
+    ],
+    "top_topics": [
+      {
+        "label": "walden pond's natural beauty",
+        "count": 63
+      },
+      {
+        "label": "river crossing challenges",
+        "count": 50
+      },
+      {
+        "label": "microbot swarm threat",
+        "count": 38
+      },
+      {
+        "label": "disorientation and doubt of goto dengo",
+        "count": 33
+      },
+      {
+        "label": "underground resistance activities",
+        "count": 32
+      },
+      {
+        "label": "encountering island inhabitants",
+        "count": 32
+      },
+      {
+        "label": "fear of richard parker",
+        "count": 32
+      },
+      {
+        "label": "the river as a source of wisdom",
+        "count": 30
+      },
+      {
+        "label": "confrontation with moreau",
+        "count": 28
+      },
+      {
+        "label": "psychological impact of confinement",
+        "count": 27
+      }
+    ]
+  },
+  {
+    "domain_id": 7,
+    "label": "Science Fiction",
+    "cluster_count": 51,
+    "original_super_ids": [
+      21
+    ],
+    "leiden_cluster_ids": [
+      19,
+      31,
+      43,
+      75,
+      103,
+      108,
+      116,
+      117,
+      143,
+      167,
+      189,
+      213,
+      253,
+      292,
+      302,
+      320,
+      334,
+      346,
+      372,
+      374,
+      378,
+      412,
+      417,
+      420,
+      475,
+      509,
+      533,
+      557,
+      667,
+      697,
+      713,
+      722,
+      732,
+      734,
+      736,
+      773,
+      784,
+      808,
+      824,
+      862,
+      890,
+      960,
+      1012,
+      1036,
+      1039,
+      1057,
+      1059,
+      1070,
+      1121,
+      1127,
+      1146
+    ],
+    "top_topics": [
+      {
+        "label": "martian invasion tactics",
+        "count": 122
+      },
+      {
+        "label": "cometary impact aftermath",
+        "count": 120
+      },
+      {
+        "label": "alien life form threat",
+        "count": 21
+      },
+      {
+        "label": "post-human genetic engineering",
+        "count": 20
+      },
+      {
+        "label": "scientific paradigm shift",
+        "count": 19
+      },
+      {
+        "label": "challenges of post-conquest inka sources",
+        "count": 19
+      },
+      {
+        "label": "defense against the dark arts training",
+        "count": 18
+      },
+      {
+        "label": "scientific pursuit of immortality",
+        "count": 18
+      },
+      {
+        "label": "discovery of heechee artifacts",
+        "count": 17
+      },
+      {
+        "label": "humanity's destructive tendencies",
+        "count": 17
+      }
+    ]
+  },
+  {
+    "domain_id": 8,
+    "label": "Spirituality & Mysticism",
+    "cluster_count": 50,
+    "original_super_ids": [
+      4
+    ],
+    "leiden_cluster_ids": [
+      5,
+      39,
+      47,
+      82,
+      90,
+      135,
+      183,
+      187,
+      206,
+      229,
+      241,
+      266,
+      268,
+      313,
+      336,
+      343,
+      365,
+      436,
+      442,
+      462,
+      474,
+      503,
+      517,
+      572,
+      573,
+      583,
+      585,
+      596,
+      600,
+      614,
+      637,
+      669,
+      717,
+      766,
+      777,
+      793,
+      817,
+      842,
+      850,
+      864,
+      886,
+      910,
+      920,
+      932,
+      961,
+      996,
+      998,
+      1082,
+      1099,
+      1158
+    ],
+    "top_topics": [
+      {
+        "label": "siddhartha's decision to become a samana",
+        "count": 145
+      },
+      {
+        "label": "enoch's accusations and jealousy",
+        "count": 72
+      },
+      {
+        "label": "contrast between jalila and nayra",
+        "count": 40
+      },
+      {
+        "label": "divination class setting",
+        "count": 34
+      },
+      {
+        "label": "science and religion relationship",
+        "count": 31
+      },
+      {
+        "label": "atrocities as signs of kali's presence",
+        "count": 30
+      },
+      {
+        "label": "yuli's internal conflict",
+        "count": 27
+      },
+      {
+        "label": "prophetic visions of the future",
+        "count": 26
+      },
+      {
+        "label": "calcutta's dark atmosphere",
+        "count": 26
+      },
+      {
+        "label": "fear of religious persecution",
+        "count": 25
+      }
+    ]
+  },
+  {
+    "domain_id": 9,
+    "label": "Love & Relationships",
+    "cluster_count": 44,
+    "original_super_ids": [
+      23
+    ],
+    "leiden_cluster_ids": [
+      36,
+      38,
+      51,
+      144,
+      178,
+      182,
+      222,
+      264,
+      288,
+      319,
+      321,
+      329,
+      363,
+      370,
+      373,
+      379,
+      397,
+      400,
+      414,
+      425,
+      430,
+      449,
+      453,
+      458,
+      539,
+      568,
+      581,
+      584,
+      602,
+      604,
+      623,
+      628,
+      639,
+      719,
+      772,
+      822,
+      921,
+      922,
+      971,
+      978,
+      1006,
+      1034,
+      1081,
+      1159
+    ],
+    "top_topics": [
+      {
+        "label": "search for camilla",
+        "count": 38
+      },
+      {
+        "label": "unrequited love and sacrifice",
+        "count": 16
+      },
+      {
+        "label": "avoidance of sensitive topics",
+        "count": 16
+      },
+      {
+        "label": "internal locus of control",
+        "count": 16
+      },
+      {
+        "label": "finding a sense of belonging",
+        "count": 15
+      },
+      {
+        "label": "nature's indifference to human affairs",
+        "count": 14
+      },
+      {
+        "label": "interrupted intimacy",
+        "count": 13
+      },
+      {
+        "label": "assessment of tera west's character",
+        "count": 13
+      },
+      {
+        "label": "search for a lost love",
+        "count": 13
+      },
+      {
+        "label": "post-coital intimacy",
+        "count": 12
+      }
+    ]
+  },
+  {
+    "domain_id": 10,
+    "label": "War & Revolution",
+    "cluster_count": 43,
+    "original_super_ids": [
+      12
+    ],
+    "leiden_cluster_ids": [
+      65,
+      94,
+      138,
+      151,
+      179,
+      201,
+      244,
+      250,
+      265,
+      267,
+      293,
+      354,
+      371,
+      421,
+      441,
+      445,
+      452,
+      478,
+      544,
+      553,
+      559,
+      560,
+      591,
+      681,
+      695,
+      703,
+      704,
+      725,
+      749,
+      754,
+      758,
+      764,
+      800,
+      805,
+      830,
+      840,
+      853,
+      870,
+      874,
+      955,
+      1000,
+      1086,
+      1152
+    ],
+    "top_topics": [
+      {
+        "label": "military cover-up of pat tillman's death",
+        "count": 129
+      },
+      {
+        "label": "friendly fire incident",
+        "count": 49
+      },
+      {
+        "label": "american revolution military history",
+        "count": 45
+      },
+      {
+        "label": "resistance to tyranny",
+        "count": 35
+      },
+      {
+        "label": "resistance to change",
+        "count": 33
+      },
+      {
+        "label": "spanish civil war context",
+        "count": 29
+      },
+      {
+        "label": "psychoanalytic self-examination",
+        "count": 24
+      },
+      {
+        "label": "disillusionment of loyalists",
+        "count": 19
+      },
+      {
+        "label": "resistance to psychoanalysis",
+        "count": 18
+      },
+      {
+        "label": "peter walsh's character analysis",
+        "count": 18
+      }
+    ]
+  },
+  {
+    "domain_id": 11,
+    "label": "Science & Innovation",
+    "cluster_count": 41,
+    "original_super_ids": [
+      15
+    ],
+    "leiden_cluster_ids": [
+      15,
+      20,
+      30,
+      83,
+      120,
+      153,
+      161,
+      170,
+      172,
+      200,
+      207,
+      218,
+      227,
+      257,
+      361,
+      366,
+      387,
+      456,
+      468,
+      494,
+      523,
+      587,
+      674,
+      688,
+      729,
+      792,
+      796,
+      807,
+      818,
+      832,
+      848,
+      857,
+      869,
+      878,
+      885,
+      892,
+      895,
+      912,
+      1037,
+      1134,
+      1155
+    ],
+    "top_topics": [
+      {
+        "label": "covariant and contravariant components",
+        "count": 776
+      },
+      {
+        "label": "lean startup methodology",
+        "count": 456
+      },
+      {
+        "label": "sustainable business practices",
+        "count": 93
+      },
+      {
+        "label": "covert envoy deployment",
+        "count": 53
+      },
+      {
+        "label": "advanced automaton prototypes",
+        "count": 52
+      },
+      {
+        "label": "scientific research collaboration",
+        "count": 36
+      },
+      {
+        "label": "minimum viable product (mvp) definition",
+        "count": 32
+      },
+      {
+        "label": "doctor's scientific curiosity",
+        "count": 30
+      },
+      {
+        "label": "communication challenges for scanners",
+        "count": 27
+      },
+      {
+        "label": "limitations of scientific progress",
+        "count": 26
+      }
+    ]
+  },
+  {
+    "domain_id": 12,
+    "label": "Fear & the Unknown",
+    "cluster_count": 40,
+    "original_super_ids": [
+      1
+    ],
+    "leiden_cluster_ids": [
+      23,
+      55,
+      72,
+      78,
+      80,
+      81,
+      109,
+      147,
+      191,
+      225,
+      255,
+      263,
+      281,
+      330,
+      342,
+      345,
+      349,
+      393,
+      447,
+      454,
+      469,
+      473,
+      480,
+      497,
+      502,
+      508,
+      513,
+      540,
+      547,
+      566,
+      582,
+      613,
+      658,
+      711,
+      724,
+      741,
+      759,
+      833,
+      893,
+      902
+    ],
+    "top_topics": [
+      {
+        "label": "fear of the unknown",
+        "count": 149289
+      },
+      {
+        "label": "drug use and its effects",
+        "count": 153
+      },
+      {
+        "label": "underpeople's struggle for survival",
+        "count": 40
+      },
+      {
+        "label": "disorientation in an alien environment",
+        "count": 33
+      },
+      {
+        "label": "desire for normalcy",
+        "count": 24
+      },
+      {
+        "label": "encounter with nightmare",
+        "count": 20
+      },
+      {
+        "label": "fear of death and oblivion",
+        "count": 19
+      },
+      {
+        "label": "osiris's concern for his physical body",
+        "count": 19
+      },
+      {
+        "label": "fear of failure",
+        "count": 18
+      },
+      {
+        "label": "oppressive weather conditions",
+        "count": 18
+      }
+    ]
+  },
+  {
+    "domain_id": 13,
+    "label": "Military & Combat",
+    "cluster_count": 37,
+    "original_super_ids": [
+      10
+    ],
+    "leiden_cluster_ids": [
+      4,
+      34,
+      68,
+      118,
+      124,
+      139,
+      142,
+      157,
+      158,
+      188,
+      235,
+      238,
+      309,
+      359,
+      396,
+      399,
+      416,
+      426,
+      434,
+      435,
+      512,
+      546,
+      580,
+      641,
+      684,
+      755,
+      775,
+      811,
+      838,
+      860,
+      943,
+      1019,
+      1047,
+      1062,
+      1064,
+      1089,
+      1109
+    ],
+    "top_topics": [
+      {
+        "label": "seal team operations",
+        "count": 51
+      },
+      {
+        "label": "elf-human communication barriers",
+        "count": 47
+      },
+      {
+        "label": "acquisition of a firearm",
+        "count": 23
+      },
+      {
+        "label": "accelerated combat training for ender",
+        "count": 20
+      },
+      {
+        "label": "armed guards' intimidating presence",
+        "count": 18
+      },
+      {
+        "label": "use of night vision equipment",
+        "count": 16
+      },
+      {
+        "label": "feeling of being watched",
+        "count": 15
+      },
+      {
+        "label": "survival against overwhelming odds",
+        "count": 14
+      },
+      {
+        "label": "imminent bio-terrorism threat",
+        "count": 14
+      },
+      {
+        "label": "analyzing combat footage",
+        "count": 14
+      }
+    ]
+  },
+  {
+    "domain_id": 14,
+    "label": "Arrivals & Departures",
+    "cluster_count": 37,
+    "original_super_ids": [
+      0
+    ],
+    "leiden_cluster_ids": [
+      25,
+      26,
+      63,
+      66,
+      101,
+      104,
+      110,
+      127,
+      193,
+      223,
+      230,
+      272,
+      280,
+      284,
+      290,
+      299,
+      322,
+      377,
+      440,
+      463,
+      496,
+      499,
+      528,
+      579,
+      633,
+      652,
+      668,
+      707,
+      783,
+      834,
+      948,
+      1001,
+      1014,
+      1017,
+      1063,
+      1104,
+      1157
+    ],
+    "top_topics": [
+      {
+        "label": "joyce carol oates's writing projects",
+        "count": 45
+      },
+      {
+        "label": "farewell and departure",
+        "count": 35
+      },
+      {
+        "label": "rural mexican landscape",
+        "count": 24
+      },
+      {
+        "label": "farewell to loved ones",
+        "count": 20
+      },
+      {
+        "label": "reunion of old friends",
+        "count": 20
+      },
+      {
+        "label": "arrival of guests",
+        "count": 19
+      },
+      {
+        "label": "master-servant dynamics",
+        "count": 18
+      },
+      {
+        "label": "pulcheria alexandrovna's anxiety",
+        "count": 18
+      },
+      {
+        "label": "anticipation of returning home",
+        "count": 16
+      },
+      {
+        "label": "anticipation of bishop henry's arrival",
+        "count": 15
+      }
+    ]
+  },
+  {
+    "domain_id": 15,
+    "label": "Colonialism & Culture",
+    "cluster_count": 33,
+    "original_super_ids": [
+      14
+    ],
+    "leiden_cluster_ids": [
+      18,
+      60,
+      76,
+      145,
+      154,
+      162,
+      165,
+      176,
+      260,
+      287,
+      303,
+      356,
+      402,
+      405,
+      423,
+      460,
+      507,
+      592,
+      597,
+      607,
+      635,
+      653,
+      659,
+      691,
+      705,
+      968,
+      1007,
+      1021,
+      1024,
+      1055,
+      1122,
+      1139,
+      1148
+    ],
+    "top_topics": [
+      {
+        "label": "colonial power dynamics",
+        "count": 74
+      },
+      {
+        "label": "kipling's children's literature",
+        "count": 33
+      },
+      {
+        "label": "rural chinese village life",
+        "count": 27
+      },
+      {
+        "label": "debt bondage of sharecroppers",
+        "count": 25
+      },
+      {
+        "label": "bandini's internal conflict",
+        "count": 21
+      },
+      {
+        "label": "population control measures",
+        "count": 18
+      },
+      {
+        "label": "internal cultural contradictions",
+        "count": 15
+      },
+      {
+        "label": "pack dynamics and social structure",
+        "count": 14
+      },
+      {
+        "label": "escape from a haunted school",
+        "count": 14
+      },
+      {
+        "label": "liminal space between worlds",
+        "count": 14
+      }
+    ]
+  },
+  {
+    "domain_id": 16,
+    "label": "Death & Grief",
+    "cluster_count": 31,
+    "original_super_ids": [
+      16
+    ],
+    "leiden_cluster_ids": [
+      13,
+      46,
+      50,
+      67,
+      114,
+      133,
+      146,
+      149,
+      159,
+      195,
+      209,
+      252,
+      262,
+      270,
+      310,
+      332,
+      335,
+      439,
+      662,
+      676,
+      683,
+      692,
+      693,
+      701,
+      779,
+      806,
+      856,
+      887,
+      927,
+      963,
+      1035
+    ],
+    "top_topics": [
+      {
+        "label": "kaye's emotional state",
+        "count": 75
+      },
+      {
+        "label": "disposal of a body",
+        "count": 64
+      },
+      {
+        "label": "sheva virus activation",
+        "count": 54
+      },
+      {
+        "label": "grief over fallen comrades",
+        "count": 39
+      },
+      {
+        "label": "suspicion of poisoning",
+        "count": 34
+      },
+      {
+        "label": "suicidal ideation",
+        "count": 28
+      },
+      {
+        "label": "public execution spectacle",
+        "count": 26
+      },
+      {
+        "label": "discovery of a survivor",
+        "count": 19
+      },
+      {
+        "label": "discovery of pilot's remains and enoch root's presence",
+        "count": 18
+      },
+      {
+        "label": "concern over sheva infants",
+        "count": 17
+      }
+    ]
+  },
+  {
+    "domain_id": 17,
+    "label": "Places & Architecture",
+    "cluster_count": 29,
+    "original_super_ids": [
+      13
+    ],
+    "leiden_cluster_ids": [
+      11,
+      41,
+      45,
+      53,
+      56,
+      89,
+      122,
+      129,
+      181,
+      247,
+      259,
+      339,
+      398,
+      482,
+      519,
+      530,
+      556,
+      647,
+      682,
+      735,
+      746,
+      761,
+      828,
+      861,
+      865,
+      994,
+      1040,
+      1076,
+      1153
+    ],
+    "top_topics": [
+      {
+        "label": "metaphorical significance of the well",
+        "count": 24
+      },
+      {
+        "label": "architectural beauty of caemlyn's inner city",
+        "count": 20
+      },
+      {
+        "label": "arrival at a village inn",
+        "count": 18
+      },
+      {
+        "label": "challenges in lantern design innovation",
+        "count": 18
+      },
+      {
+        "label": "contrasting environments",
+        "count": 17
+      },
+      {
+        "label": "library as refuge",
+        "count": 16
+      },
+      {
+        "label": "the significance of zima blue",
+        "count": 15
+      },
+      {
+        "label": "library exploration",
+        "count": 13
+      },
+      {
+        "label": "clash between pagan and christian traditions",
+        "count": 13
+      },
+      {
+        "label": "guyal's quest for knowledge",
+        "count": 13
+      }
+    ]
+  },
+  {
+    "domain_id": 18,
+    "label": "Leadership & Growth",
+    "cluster_count": 29,
+    "original_super_ids": [
+      22
+    ],
+    "leiden_cluster_ids": [
+      44,
+      57,
+      208,
+      245,
+      276,
+      305,
+      388,
+      401,
+      418,
+      486,
+      493,
+      520,
+      534,
+      536,
+      571,
+      588,
+      594,
+      618,
+      753,
+      815,
+      854,
+      872,
+      889,
+      896,
+      906,
+      911,
+      945,
+      1084,
+      1106
+    ],
+    "top_topics": [
+      {
+        "label": "police investigation of sakigake",
+        "count": 34
+      },
+      {
+        "label": "personal growth and self-awareness",
+        "count": 16
+      },
+      {
+        "label": "glove manufacturing process",
+        "count": 16
+      },
+      {
+        "label": "burden of responsibility",
+        "count": 15
+      },
+      {
+        "label": "leadership transition",
+        "count": 12
+      },
+      {
+        "label": "consequences of flawed project forecasting",
+        "count": 11
+      },
+      {
+        "label": "questioning of leadership",
+        "count": 11
+      },
+      {
+        "label": "historical perspectives on happiness",
+        "count": 11
+      },
+      {
+        "label": "mentorship and apprenticeship",
+        "count": 10
+      },
+      {
+        "label": "european imperialism and scientific expansion",
+        "count": 9
+      }
+    ]
+  },
+  {
+    "domain_id": 19,
+    "label": "Politics & Social Critique",
+    "cluster_count": 26,
+    "original_super_ids": [
+      8
+    ],
+    "leiden_cluster_ids": [
+      32,
+      136,
+      215,
+      236,
+      248,
+      289,
+      298,
+      316,
+      328,
+      362,
+      382,
+      385,
+      410,
+      470,
+      477,
+      526,
+      590,
+      621,
+      689,
+      781,
+      790,
+      836,
+      851,
+      918,
+      1004,
+      1095
+    ],
+    "top_topics": [
+      {
+        "label": "intellectual isolation",
+        "count": 138
+      },
+      {
+        "label": "contrast between urras and anarres",
+        "count": 55
+      },
+      {
+        "label": "anarchist political factions",
+        "count": 25
+      },
+      {
+        "label": "betrayal of the oligarch's guard",
+        "count": 24
+      },
+      {
+        "label": "critique of the 'liberal story' of the self",
+        "count": 23
+      },
+      {
+        "label": "fear of merry's reaction",
+        "count": 20
+      },
+      {
+        "label": "social commentary on aristocracy",
+        "count": 18
+      },
+      {
+        "label": "complex legacy of empires",
+        "count": 16
+      },
+      {
+        "label": "anti-war activism",
+        "count": 15
+      },
+      {
+        "label": "emotional repression",
+        "count": 15
+      }
+    ]
+  },
+  {
+    "domain_id": 20,
+    "label": "Engineering & Infrastructure",
+    "cluster_count": 26,
+    "original_super_ids": [
+      2
+    ],
+    "leiden_cluster_ids": [
+      49,
+      100,
+      140,
+      174,
+      186,
+      197,
+      216,
+      246,
+      275,
+      323,
+      386,
+      403,
+      443,
+      510,
+      518,
+      535,
+      545,
+      552,
+      672,
+      752,
+      771,
+      810,
+      835,
+      879,
+      1061,
+      1147
+    ],
+    "top_topics": [
+      {
+        "label": "art and science of marine cable deployment",
+        "count": 113
+      },
+      {
+        "label": "space elevator infrastructure",
+        "count": 28
+      },
+      {
+        "label": "courtroom arrest of teleborian",
+        "count": 27
+      },
+      {
+        "label": "environmental hazards",
+        "count": 22
+      },
+      {
+        "label": "challenges to telecom monopolies",
+        "count": 22
+      },
+      {
+        "label": "diy craftiness in steampunk",
+        "count": 22
+      },
+      {
+        "label": "automotive repair and maintenance",
+        "count": 18
+      },
+      {
+        "label": "personal safety concerns",
+        "count": 17
+      },
+      {
+        "label": "analysis of epiphyte's financial strategy",
+        "count": 17
+      },
+      {
+        "label": "ambiguous accident on the black road",
+        "count": 16
+      }
+    ]
+  },
+  {
+    "domain_id": 21,
+    "label": "Animals & Wildlife",
+    "cluster_count": 25,
+    "original_super_ids": [
+      11
+    ],
+    "leiden_cluster_ids": [
+      9,
+      85,
+      91,
+      198,
+      224,
+      279,
+      297,
+      352,
+      444,
+      485,
+      558,
+      654,
+      655,
+      656,
+      675,
+      750,
+      819,
+      894,
+      944,
+      956,
+      1033,
+      1066,
+      1069,
+      1093,
+      1098
+    ],
+    "top_topics": [
+      {
+        "label": "bullfighting techniques",
+        "count": 70
+      },
+      {
+        "label": "dowager's authority and control",
+        "count": 20
+      },
+      {
+        "label": "ancient skull evidence",
+        "count": 19
+      },
+      {
+        "label": "confrontation with a lion",
+        "count": 18
+      },
+      {
+        "label": "comparison of doll mechanisms",
+        "count": 17
+      },
+      {
+        "label": "confronting the lion incident",
+        "count": 16
+      },
+      {
+        "label": "tracker jacker venom effects",
+        "count": 16
+      },
+      {
+        "label": "animal welfare concerns",
+        "count": 14
+      },
+      {
+        "label": "cruelty to animals",
+        "count": 14
+      },
+      {
+        "label": "cosmic perspective of the worminger",
+        "count": 12
+      }
+    ]
+  },
+  {
+    "domain_id": 22,
+    "label": "Family & Childhood",
+    "cluster_count": 24,
+    "original_super_ids": [
+      17
+    ],
+    "leiden_cluster_ids": [
+      2,
+      6,
+      10,
+      64,
+      70,
+      79,
+      95,
+      119,
+      150,
+      177,
+      196,
+      231,
+      337,
+      492,
+      531,
+      625,
+      644,
+      702,
+      706,
+      780,
+      839,
+      924,
+      973,
+      1171
+    ],
+    "top_topics": [
+      {
+        "label": "daughter's emotional distress",
+        "count": 42
+      },
+      {
+        "label": "children's fear of satan",
+        "count": 31
+      },
+      {
+        "label": "father's violent outburst",
+        "count": 26
+      },
+      {
+        "label": "family estrangement",
+        "count": 18
+      },
+      {
+        "label": "divine prophecy of salvation",
+        "count": 15
+      },
+      {
+        "label": "human and hisa cohabitation",
+        "count": 15
+      },
+      {
+        "label": "maternal anxiety and overprotection",
+        "count": 14
+      },
+      {
+        "label": "mother's distress over children",
+        "count": 13
+      },
+      {
+        "label": "ancestral homelands and lineage",
+        "count": 13
+      },
+      {
+        "label": "elusive nature of v.",
+        "count": 12
+      }
+    ]
+  },
+  {
+    "domain_id": 23,
+    "label": "Mystery & Intrigue",
+    "cluster_count": 23,
+    "original_super_ids": [
+      27
+    ],
+    "leiden_cluster_ids": [
+      73,
+      102,
+      121,
+      180,
+      192,
+      214,
+      254,
+      278,
+      294,
+      306,
+      376,
+      380,
+      394,
+      407,
+      457,
+      514,
+      575,
+      601,
+      610,
+      679,
+      787,
+      931,
+      1163
+    ],
+    "top_topics": [
+      {
+        "label": "mysterious phone calls",
+        "count": 41
+      },
+      {
+        "label": "doorkeeper's authority",
+        "count": 16
+      },
+      {
+        "label": "lock picking skills",
+        "count": 15
+      },
+      {
+        "label": "consequences of late pizza delivery",
+        "count": 13
+      },
+      {
+        "label": "psi-bomb deployment strategy",
+        "count": 13
+      },
+      {
+        "label": "security system bypass",
+        "count": 12
+      },
+      {
+        "label": "ancient artifact theft",
+        "count": 11
+      },
+      {
+        "label": "evasion of mafia radar",
+        "count": 11
+      },
+      {
+        "label": "tracking an elephant",
+        "count": 11
+      },
+      {
+        "label": "discovering a locked door",
+        "count": 10
+      }
+    ]
+  },
+  {
+    "domain_id": 24,
+    "label": "Food & Cooking",
+    "cluster_count": 19,
+    "original_super_ids": [
+      7
+    ],
+    "leiden_cluster_ids": [
+      0,
+      86,
+      113,
+      128,
+      204,
+      484,
+      488,
+      577,
+      578,
+      629,
+      665,
+      671,
+      723,
+      738,
+      767,
+      798,
+      855,
+      1008,
+      1078
+    ],
+    "top_topics": [
+      {
+        "label": "baking temperature and time",
+        "count": 10507
+      },
+      {
+        "label": "environmental contamination",
+        "count": 19
+      },
+      {
+        "label": "desperate search for water",
+        "count": 15
+      },
+      {
+        "label": "blight gas and its effects",
+        "count": 15
+      },
+      {
+        "label": "ice cream churning process",
+        "count": 13
+      },
+      {
+        "label": "grape leaf preparation",
+        "count": 12
+      },
+      {
+        "label": "hypothermia symptoms",
+        "count": 12
+      },
+      {
+        "label": "airborne toxic event",
+        "count": 12
+      },
+      {
+        "label": "winter recreation activities",
+        "count": 11
+      },
+      {
+        "label": "challenges of winter encampment",
+        "count": 10
+      }
+    ]
+  },
+  {
+    "domain_id": 25,
+    "label": "Resources & Trade",
+    "cluster_count": 19,
+    "original_super_ids": [
+      5
+    ],
+    "leiden_cluster_ids": [
+      77,
+      107,
+      111,
+      131,
+      137,
+      220,
+      243,
+      355,
+      357,
+      367,
+      450,
+      527,
+      555,
+      620,
+      731,
+      794,
+      1025,
+      1096,
+      1173
+    ],
+    "top_topics": [
+      {
+        "label": "coffee price fluctuations",
+        "count": 819
+      },
+      {
+        "label": "negotiation of terms",
+        "count": 19
+      },
+      {
+        "label": "african agriculture supplying rome",
+        "count": 18
+      },
+      {
+        "label": "negotiating safe passage",
+        "count": 15
+      },
+      {
+        "label": "strategic resource management",
+        "count": 15
+      },
+      {
+        "label": "cotton picking labor",
+        "count": 13
+      },
+      {
+        "label": "gilyak beliefs about agriculture",
+        "count": 12
+      },
+      {
+        "label": "environmental impact of resource extraction",
+        "count": 12
+      },
+      {
+        "label": "disagreement over resource allocation",
+        "count": 12
+      },
+      {
+        "label": "farm chores and the unending cycle of work",
+        "count": 11
+      }
+    ]
+  },
+  {
+    "domain_id": 26,
+    "label": "Money & Finance",
+    "cluster_count": 17,
+    "original_super_ids": [
+      24
+    ],
+    "leiden_cluster_ids": [
+      61,
+      115,
+      141,
+      164,
+      184,
+      256,
+      300,
+      326,
+      384,
+      390,
+      429,
+      500,
+      565,
+      606,
+      739,
+      859,
+      877
+    ],
+    "top_topics": [
+      {
+        "label": "financial speculation and risk",
+        "count": 47
+      },
+      {
+        "label": "gambling and horse racing",
+        "count": 41
+      },
+      {
+        "label": "marketing and advertising strategies",
+        "count": 33
+      },
+      {
+        "label": "unexpected financial windfall",
+        "count": 33
+      },
+      {
+        "label": "housing market speculation",
+        "count": 21
+      },
+      {
+        "label": "payment for services rendered",
+        "count": 21
+      },
+      {
+        "label": "acknowledgments of research assistance",
+        "count": 19
+      },
+      {
+        "label": "money as a social construct",
+        "count": 18
+      },
+      {
+        "label": "financial transaction dispute",
+        "count": 18
+      },
+      {
+        "label": "desire for financial independence",
+        "count": 15
+      }
+    ]
+  },
+  {
+    "domain_id": 27,
+    "label": "Travel & Transportation",
+    "cluster_count": 12,
+    "original_super_ids": [
+      26
+    ],
+    "leiden_cluster_ids": [
+      40,
+      74,
+      202,
+      203,
+      274,
+      296,
+      308,
+      311,
+      368,
+      495,
+      1044,
+      1172
+    ],
+    "top_topics": [
+      {
+        "label": "observation of fellow passengers",
+        "count": 19
+      },
+      {
+        "label": "futuristic urban transportation",
+        "count": 18
+      },
+      {
+        "label": "journey into the unknown",
+        "count": 14
+      },
+      {
+        "label": "lo's manipulative behavior",
+        "count": 14
+      },
+      {
+        "label": "encounter with a hitchhiker",
+        "count": 12
+      },
+      {
+        "label": "discomfort during travel",
+        "count": 11
+      },
+      {
+        "label": "advanced transportation systems",
+        "count": 11
+      },
+      {
+        "label": "exploration of the unknown",
+        "count": 10
+      },
+      {
+        "label": "earth cities preparing for departure",
+        "count": 9
+      },
+      {
+        "label": "economic impact of tourism",
+        "count": 8
+      }
+    ]
+  }
+]
