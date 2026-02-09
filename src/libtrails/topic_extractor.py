@@ -416,13 +416,13 @@ def _extract_batch(
 
     passages_text = "\n\n".join(passages)
 
-    prompt = f'''{context}
+    prompt = f"""{context}
 
 Extract {num_topics} specific topic labels from EACH passage below. Topics should be multi-word noun phrases specific to the content, NOT generic words.
 
 {passages_text}
 
-Return a JSON object mapping passage numbers to topic arrays.'''
+Return a JSON object mapping passage numbers to topic arrays."""
 
     schema = _build_batch_schema(len(chunks), num_topics)
 
@@ -512,6 +512,117 @@ Passage: "{text}"'''
 
     except (httpx.TimeoutException, Exception):
         return []
+
+
+def consolidate_book_topics(
+    topics: list[str],
+    book_title: str,
+    author: str,
+    book_themes: list[str],
+    model: str = THEME_MODEL,
+) -> dict[str, list[str]]:
+    """
+    Pass 3: Consolidate raw chunk topics using a larger model.
+
+    Takes the ~400 raw topics from Pass 2 and returns a mapping of
+    consolidated label → list of original topics that merge into it.
+
+    The model merges near-duplicates, removes noise, and drops
+    verbatim theme echoes. Topics not in the output are discarded.
+
+    Returns dict like {"river as spiritual teacher": ["river as a teacher",
+    "river as a source of wisdom", "the river's wisdom"]}.
+    """
+    if not topics:
+        return {}
+
+    # Deduplicate input list preserving order
+    seen = set()
+    unique_topics = []
+    for t in topics:
+        key = t.strip().lower()
+        if key not in seen:
+            seen.add(key)
+            unique_topics.append(key)
+
+    themes_str = ", ".join(book_themes) if book_themes else "none"
+    topics_str = "\n".join(f"- {t}" for t in unique_topics)
+    target_min = int(len(unique_topics) * 0.55)
+    target_max = int(len(unique_topics) * 0.70)
+
+    prompt = f"""You are deduplicating a topic index for "{book_title}" by {author}.
+
+Below are {len(unique_topics)} topics. Your job is to MERGE only obvious near-duplicates and REMOVE only clear noise. Most topics should survive unchanged.
+
+**Book themes** (remove these verbatim if they appear):
+{themes_str}
+
+**Topics:**
+{topics_str}
+
+**Rules:**
+1. MERGE topics that are clearly the same concept with different wording:
+   - "river as a teacher" + "river as a source of wisdom" → pick one
+   - "spiritual awakening" + "spiritual enlightenment" → pick one
+   - "loss of identity" + "loss of innocence" → these are DIFFERENT concepts, do NOT merge
+2. REMOVE only:
+   - Exact copies of book themes listed above
+   - Trivial 1-2 word plot details that are meaningless on their own
+   - Sentence-length descriptions (7+ words that read like a summary)
+3. KEEP everything else unchanged — when in doubt, keep it
+4. Target: {target_min} to {target_max} consolidated topics (you have {len(unique_topics)} now)
+5. Every output key must map to its list of original topic strings that merged into it
+
+Return a JSON object where each key is the chosen canonical label and each value is the array of original topics it represents (including itself if kept as-is)."""
+
+    schema = {
+        "type": "object",
+        "additionalProperties": {
+            "type": "array",
+            "items": {"type": "string"},
+        },
+    }
+
+    # Use larger context for consolidation (input + output can be large)
+    consolidation_ctx = max(OLLAMA_NUM_CTX, 16384)
+
+    try:
+        client = _get_client()
+        response = client.post(
+            OLLAMA_API_URL,
+            json={
+                "model": model,
+                "prompt": prompt,
+                "format": schema,
+                "stream": False,
+                "options": {"num_ctx": consolidation_ctx},
+            },
+            timeout=300.0,
+        )
+        response.raise_for_status()
+        output = response.json().get("response", "").strip()
+        parsed = json.loads(output)
+
+        if not isinstance(parsed, dict):
+            return {}
+
+        # Normalize keys and validate values
+        result: dict[str, list[str]] = {}
+        for label, originals in parsed.items():
+            clean_label = label.strip().lower()
+            if not clean_label:
+                continue
+            if isinstance(originals, list):
+                clean_originals = [str(o).strip().lower() for o in originals if o]
+                if clean_originals:
+                    result[clean_label] = clean_originals
+
+        return result
+
+    except httpx.TimeoutException:
+        return {}
+    except Exception:
+        return {}
 
 
 def _parse_topics(output: str) -> list[str]:
