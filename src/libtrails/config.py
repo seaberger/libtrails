@@ -76,6 +76,7 @@ EMBEDDING_DIMENSION = 384
 
 # Deduplication settings
 DEDUP_SIMILARITY_THRESHOLD = 0.85
+DEDUP_HIGH_CONFIDENCE_THRESHOLD = 0.95  # Merge unconditionally above this
 
 # Graph/clustering settings
 EMBEDDING_EDGE_THRESHOLD = 0.7  # For full mode only

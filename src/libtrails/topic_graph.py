@@ -18,9 +18,11 @@ from .embeddings import bytes_to_embedding
 
 def compute_cooccurrences(progress_file: str | None = None) -> dict:
     """
-    Compute topic co-occurrences from chunks.
+    Compute topic co-occurrences from chunks, with book-level overlap counts.
 
-    Two topics co-occur if they appear in the same chunk.
+    Two topics co-occur if they appear in the same chunk. Additionally, we
+    track how many distinct books each topic pair shares — pairs that co-occur
+    across multiple books have a stronger domain signal.
 
     Args:
         progress_file: Optional file path to write progress updates (for background runs)
@@ -43,22 +45,25 @@ def compute_cooccurrences(progress_file: str | None = None) -> dict:
     with get_db() as conn:
         cursor = conn.cursor()
 
-        # Get all chunk -> topics mappings
+        # Get all chunk -> topics mappings with book_id for book-level tracking
         cursor.execute("""
-            SELECT chunk_id, topic_id
-            FROM chunk_topic_links
-            ORDER BY chunk_id
+            SELECT ctl.chunk_id, ctl.topic_id, c.book_id
+            FROM chunk_topic_links ctl
+            JOIN chunks c ON ctl.chunk_id = c.id
+            ORDER BY ctl.chunk_id
         """)
 
-        # Group topics by chunk
+        # Group topics by chunk, and track topic -> set of books
         chunk_topics = defaultdict(list)
+        topic_books = defaultdict(set)
         for row in cursor.fetchall():
             chunk_topics[row[0]].append(row[1])
+            topic_books[row[1]].add(row[2])
 
         total_chunks = len(chunk_topics)
         log_progress(f"Computing co-occurrences for {total_chunks:,} chunks...")
 
-        # Count co-occurrences
+        # Count chunk-level co-occurrences
         cooccur_counts = defaultdict(int)
         start_time = time.time()
         log_interval = 10000  # Log every 10k chunks
@@ -88,7 +93,7 @@ def compute_cooccurrences(progress_file: str | None = None) -> dict:
         cursor.execute("SELECT id, occurrence_count FROM topics")
         topic_counts = {row[0]: row[1] for row in cursor.fetchall()}
 
-        # Save to database with PMI
+        # Save to database with PMI and book_count
         log_progress(f"Computing PMI and saving {len(cooccur_counts):,} pairs...")
         saved = 0
         save_interval = 50000  # Log every 50k saves
@@ -105,7 +110,10 @@ def compute_cooccurrences(progress_file: str | None = None) -> dict:
             else:
                 pmi = 0
 
-            save_cooccurrence(t1, t2, count, pmi)
+            # Count how many books both topics share
+            book_count = len(topic_books[t1] & topic_books[t2])
+
+            save_cooccurrence(t1, t2, count, pmi, book_count)
             saved += 1
 
             # Log progress periodically
@@ -382,7 +390,7 @@ def build_topic_graph_knn(
         cursor = conn.cursor()
         cursor.execute(
             """
-            SELECT topic1_id, topic2_id, count, pmi
+            SELECT topic1_id, topic2_id, count, pmi, book_count
             FROM topic_cooccurrences
             WHERE count >= ? AND (pmi >= ? OR pmi IS NULL)
         """,
@@ -396,7 +404,11 @@ def build_topic_graph_knn(
                 edge_key = (min(idx1, idx2), max(idx1, idx2))
                 if edge_key not in edge_set:
                     edges.append((idx1, idx2))
-                    weight = row[3] if row[3] else math.log(row[2] + 1)
+                    base_weight = row[3] if row[3] else math.log(row[2] + 1)
+                    # Boost weight for pairs that co-occur across multiple books
+                    book_count = row[4] or 0
+                    book_boost = 1.0 + math.log(1 + book_count)
+                    weight = base_weight * book_boost
                     weights.append(float(max(0.1, weight)))
                     edge_types.append("cooccurrence")
                     edge_set.add(edge_key)

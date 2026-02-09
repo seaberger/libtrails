@@ -8,7 +8,7 @@ from datetime import datetime
 import numpy as np
 from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
 
-from .config import IPAD_DB_PATH
+from .config import DEDUP_HIGH_CONFIDENCE_THRESHOLD, IPAD_DB_PATH
 from .database import get_db
 from .embeddings import bytes_to_embedding
 
@@ -45,6 +45,7 @@ class UnionFind:
 
 def find_duplicate_groups_numpy(
     threshold: float = 0.85,
+    high_threshold: float = DEDUP_HIGH_CONFIDENCE_THRESHOLD,
     show_progress: bool = True,
     progress_file: str | None = None,
     sample_size: int | None = None,
@@ -53,12 +54,14 @@ def find_duplicate_groups_numpy(
     """
     Find duplicate groups using numpy batch operations (FAST).
 
-    Instead of querying sqlite-vec one topic at a time, this loads all
-    embeddings into memory and uses vectorized numpy operations to find
-    similar topics in batches.
+    Uses two-tier merging to prevent cross-domain conflation:
+      - Above high_threshold (0.95): merge unconditionally (obvious duplicates)
+      - Between threshold (0.85) and high_threshold: merge only if both topics
+        appear in at least one shared book
 
     Args:
-        threshold: Cosine similarity threshold (0.85 = very similar)
+        threshold: Lower cosine similarity threshold (requires book overlap)
+        high_threshold: Upper threshold for unconditional merging
         show_progress: Whether to show progress bars
         progress_file: Optional file path to write progress updates
         sample_size: If set, only process this many topics (for testing)
@@ -110,6 +113,28 @@ def find_duplicate_groups_numpy(
 
     print(f"Embeddings shape: {embeddings.shape}", flush=True)
 
+    # Precompute topic -> book set for book-overlap gate
+    topic_books: dict[int, set[int]] = defaultdict(set)
+    with get_db() as db_conn:
+        db_cursor = db_conn.cursor()
+        db_cursor.execute("""
+            SELECT ctl.topic_id, c.book_id
+            FROM chunk_topic_links ctl
+            JOIN chunks c ON ctl.chunk_id = c.id
+        """)
+        for row in db_cursor.fetchall():
+            topic_books[row[0]].add(row[1])
+    print(f"Book overlap data: {len(topic_books):,} topics across books", flush=True)
+
+    # Build index mapping for fast lookup: array position -> topic_id
+    idx_to_topic_id = {idx: tid for idx, tid in enumerate(topic_ids)}
+
+    def topics_share_book(idx_a: int, idx_b: int) -> bool:
+        """Check if two topics (by array index) share at least one book."""
+        tid_a = idx_to_topic_id[idx_a]
+        tid_b = idx_to_topic_id[idx_b]
+        return bool(topic_books.get(tid_a, set()) & topic_books.get(tid_b, set()))
+
     def write_progress(processed: int, pairs: int):
         elapsed = time.time() - start_time
         rate = processed / elapsed if elapsed > 0 else 0
@@ -132,6 +157,9 @@ def find_duplicate_groups_numpy(
     # Union-Find for grouping
     uf = UnionFind(n)
     pairs_found = 0
+    high_conf_pairs = 0
+    book_gated_pairs = 0
+    book_blocked_pairs = 0
 
     # Process in batches
     num_batches = (n + batch_size - 1) // batch_size
@@ -143,7 +171,7 @@ def find_duplicate_groups_numpy(
         TaskProgressColumn(),
         disable=not show_progress,
     ) as progress:
-        task = progress.add_task("Finding duplicates (numpy batch)...", total=n)
+        task = progress.add_task("Finding duplicates (two-tier)...", total=n)
 
         for batch_idx in range(num_batches):
             batch_start = batch_idx * batch_size
@@ -161,19 +189,40 @@ def find_duplicate_groups_numpy(
                 # Set self-similarity to 0 to exclude it
                 row[topic_idx] = 0
 
-                # Find neighbors above threshold
+                # Find neighbors above lower threshold
                 above_threshold = np.where(row >= threshold)[0]
 
                 for neighbor_idx in above_threshold:
-                    if neighbor_idx != topic_idx:
+                    if neighbor_idx == topic_idx:
+                        continue
+
+                    sim = row[neighbor_idx]
+
+                    if sim >= high_threshold:
+                        # High confidence: merge unconditionally
                         uf.union(topic_idx, neighbor_idx)
                         pairs_found += 1
+                        high_conf_pairs += 1
+                    else:
+                        # Lower tier: merge only if topics share a book
+                        if topics_share_book(topic_idx, neighbor_idx):
+                            uf.union(topic_idx, neighbor_idx)
+                            pairs_found += 1
+                            book_gated_pairs += 1
+                        else:
+                            book_blocked_pairs += 1
 
             progress.update(task, completed=batch_end)
 
             # Progress logging
             if (batch_idx + 1) % 5 == 0 or batch_idx == num_batches - 1:
                 write_progress(batch_end, pairs_found)
+
+    print(
+        f"Two-tier stats: {high_conf_pairs:,} high-confidence, "
+        f"{book_gated_pairs:,} book-gated, {book_blocked_pairs:,} blocked (no shared book)",
+        flush=True,
+    )
 
     elapsed = time.time() - start_time
     print(f"Complete: {n:,} topics in {elapsed:.1f}s ({n / elapsed:.0f}/sec)", flush=True)

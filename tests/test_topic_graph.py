@@ -12,20 +12,21 @@ pytestmark = pytest.mark.slow
 class TestComputeCooccurrences:
     """Tests for computing topic co-occurrences."""
 
+    @patch("libtrails.topic_graph.save_cooccurrence")
     @patch("libtrails.topic_graph.get_db")
-    def test_returns_stats(self, mock_db):
+    def test_returns_stats(self, mock_db, mock_save):
         """Test that co-occurrence computation returns statistics."""
         from libtrails.topic_graph import compute_cooccurrences
 
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
 
-        # Mock fetching chunk topic pairs
+        # Mock fetching chunk topic pairs (chunk_id, topic_id, book_id)
         mock_cursor.fetchall.side_effect = [
-            # First call: get all chunk-topic pairs
-            [(1, 1), (1, 2), (2, 1), (2, 3)],
-            # Second call: existing cooccurrences (empty)
-            [],
+            # First call: get all chunk-topic pairs with book_id
+            [(1, 1, 100), (1, 2, 100), (2, 1, 100), (2, 3, 100)],
+            # Second call: topic occurrence counts
+            [(1, 2), (2, 1), (3, 1)],
         ]
         mock_conn.cursor.return_value = mock_cursor
         mock_db.return_value.__enter__ = MagicMock(return_value=mock_conn)
@@ -34,6 +35,12 @@ class TestComputeCooccurrences:
         result = compute_cooccurrences()
 
         assert "cooccurrence_pairs" in result
+        assert result["cooccurrence_pairs"] == 2
+        # Verify save_cooccurrence was called with book_count
+        assert mock_save.call_count == 2
+        # Check that book_count parameter was passed
+        for call in mock_save.call_args_list:
+            assert len(call[0]) == 5  # t1, t2, count, pmi, book_count
 
     @patch("libtrails.topic_graph.get_db")
     def test_handles_empty_data(self, mock_db):
@@ -417,7 +424,7 @@ class TestBuildTopicGraphKNN:
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
         # Add one cooccurrence edge
-        mock_cursor.fetchall.return_value = [(1, 3, 10, 0.5)]
+        mock_cursor.fetchall.return_value = [(1, 3, 10, 0.5, 2)]
         mock_conn.cursor.return_value = mock_cursor
         mock_db.return_value.__enter__ = MagicMock(return_value=mock_conn)
         mock_db.return_value.__exit__ = MagicMock(return_value=False)

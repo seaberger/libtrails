@@ -241,6 +241,7 @@ def init_chunks_table():
                 topic2_id INTEGER REFERENCES topics(id),
                 count INTEGER DEFAULT 0,
                 pmi REAL,
+                book_count INTEGER DEFAULT 0,
                 PRIMARY KEY (topic1_id, topic2_id)
             );
 
@@ -498,7 +499,13 @@ def update_topic_cluster(topic_id: int, cluster_id: int, parent_id: Optional[int
         conn.commit()
 
 
-def save_cooccurrence(topic1_id: int, topic2_id: int, count: int, pmi: Optional[float] = None):
+def save_cooccurrence(
+    topic1_id: int,
+    topic2_id: int,
+    count: int,
+    pmi: Optional[float] = None,
+    book_count: int = 0,
+):
     """Save or update topic co-occurrence data."""
     # Ensure consistent ordering
     if topic1_id > topic2_id:
@@ -507,13 +514,14 @@ def save_cooccurrence(topic1_id: int, topic2_id: int, count: int, pmi: Optional[
     with get_db() as conn:
         conn.execute(
             """
-            INSERT INTO topic_cooccurrences (topic1_id, topic2_id, count, pmi)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO topic_cooccurrences (topic1_id, topic2_id, count, pmi, book_count)
+            VALUES (?, ?, ?, ?, ?)
             ON CONFLICT(topic1_id, topic2_id) DO UPDATE SET
                 count = excluded.count,
-                pmi = excluded.pmi
+                pmi = excluded.pmi,
+                book_count = excluded.book_count
         """,
-            (topic1_id, topic2_id, count, pmi),
+            (topic1_id, topic2_id, count, pmi, book_count),
         )
         conn.commit()
 
