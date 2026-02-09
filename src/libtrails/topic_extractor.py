@@ -1,4 +1,4 @@
-"""Topic extraction using local LLM via Ollama."""
+"""Topic extraction using local LLM via Ollama or Gemini API."""
 
 import json
 import re
@@ -29,12 +29,44 @@ _client: Optional[httpx.Client] = None
 NUM_WORKERS = 4
 
 
+def _is_gemini_model(model: str) -> bool:
+    """Check if a model string refers to a Gemini API model."""
+    return model.startswith("gemini/")
+
+
 def _get_client() -> httpx.Client:
     """Get or create a reusable HTTP client."""
     global _client
     if _client is None:
         _client = httpx.Client(timeout=120.0)
     return _client
+
+
+def _call_gemini(
+    prompt: str,
+    model: str,
+    response_schema: dict | None = None,
+    timeout: float = 120.0,
+) -> str:
+    """Call Gemini API via litellm and return the response text.
+
+    Uses response_format for JSON output when a schema is provided.
+    Requires GEMINI_API_KEY in environment (loaded from .env by caller).
+    """
+    import litellm
+
+    kwargs = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "max_tokens": 4096,
+        "temperature": 0.7,
+        "timeout": timeout,
+    }
+    if response_schema is not None:
+        kwargs["response_format"] = {"type": "json_object"}
+
+    response = litellm.completion(**kwargs)
+    return response.choices[0].message.content.strip()
 
 
 def extract_topics_batch(
@@ -271,20 +303,24 @@ Rules:
     }
 
     try:
-        client = _get_client()
-        response = client.post(
-            OLLAMA_API_URL,
-            json={
-                "model": model,
-                "prompt": prompt,
-                "format": schema,
-                "stream": False,
-                "options": {"num_ctx": OLLAMA_NUM_CTX},
-            },
-            timeout=120.0,
-        )
-        response.raise_for_status()
-        output = response.json().get("response", "").strip()
+        if _is_gemini_model(model):
+            output = _call_gemini(prompt, model, response_schema=schema)
+        else:
+            client = _get_client()
+            response = client.post(
+                OLLAMA_API_URL,
+                json={
+                    "model": model,
+                    "prompt": prompt,
+                    "format": schema,
+                    "stream": False,
+                    "options": {"num_ctx": OLLAMA_NUM_CTX},
+                },
+                timeout=120.0,
+            )
+            response.raise_for_status()
+            output = response.json().get("response", "").strip()
+
         parsed = json.loads(output)
         if isinstance(parsed, dict) and "themes" in parsed:
             return [str(t).strip().lower() for t in parsed["themes"] if t]
@@ -427,20 +463,23 @@ Return a JSON object mapping passage numbers to topic arrays."""
     schema = _build_batch_schema(len(chunks), num_topics)
 
     try:
-        client = _get_client()
-        response = client.post(
-            OLLAMA_API_URL,
-            json={
-                "model": model,
-                "prompt": prompt,
-                "format": schema,
-                "stream": False,
-                "options": {"num_ctx": OLLAMA_NUM_CTX},
-            },
-            timeout=120.0,
-        )
-        response.raise_for_status()
-        output = response.json().get("response", "").strip()
+        if _is_gemini_model(model):
+            output = _call_gemini(prompt, model, response_schema=schema)
+        else:
+            client = _get_client()
+            response = client.post(
+                OLLAMA_API_URL,
+                json={
+                    "model": model,
+                    "prompt": prompt,
+                    "format": schema,
+                    "stream": False,
+                    "options": {"num_ctx": OLLAMA_NUM_CTX},
+                },
+                timeout=120.0,
+            )
+            response.raise_for_status()
+            output = response.json().get("response", "").strip()
 
         parsed = json.loads(output)
         if not isinstance(parsed, dict):
@@ -491,20 +530,24 @@ Passage: "{text}"'''
     }
 
     try:
-        client = _get_client()
-        response = client.post(
-            OLLAMA_API_URL,
-            json={
-                "model": model,
-                "prompt": prompt,
-                "format": schema,
-                "stream": False,
-                "options": {"num_ctx": OLLAMA_NUM_CTX},
-            },
-            timeout=60.0,
-        )
-        response.raise_for_status()
-        output = response.json().get("response", "").strip()
+        if _is_gemini_model(model):
+            output = _call_gemini(prompt, model, response_schema=schema, timeout=60.0)
+        else:
+            client = _get_client()
+            response = client.post(
+                OLLAMA_API_URL,
+                json={
+                    "model": model,
+                    "prompt": prompt,
+                    "format": schema,
+                    "stream": False,
+                    "options": {"num_ctx": OLLAMA_NUM_CTX},
+                },
+                timeout=60.0,
+            )
+            response.raise_for_status()
+            output = response.json().get("response", "").strip()
+
         parsed = json.loads(output)
         if isinstance(parsed, dict) and "topics" in parsed:
             return [str(t).strip() for t in parsed["topics"] if t][:num_topics]
@@ -512,6 +555,249 @@ Passage: "{text}"'''
 
     except (httpx.TimeoutException, Exception):
         return []
+
+
+# ---------------------------------------------------------------------------
+# DSPy-optimized few-shot demos (from optimized_topic_extractor.json)
+# ---------------------------------------------------------------------------
+
+_DSPY_INSTRUCTION = (
+    "Extract specific topic labels from a book passage.\n\n"
+    "Given a passage from a book along with the book's title, author, and\n"
+    "high-level themes, extract exactly 5 topic labels that capture the\n"
+    "key concepts discussed in this specific passage."
+)
+
+_DSPY_DEMOS = [
+    {
+        "passage": (
+            "A beginning is the time for taking the most delicate care that the balances "
+            "are correct. This every sister of the Bene Gesserit knows. To begin your study "
+            "of the life of Muad'Dib, then, take care that you first place him in his time: "
+            "born in the 57th year of the Padishah Emperor, Shaddam IV. And take the most "
+            "special care that you locate Muad'Dib in his place: the planet Arrakis. Do not "
+            "be deceived by the fact that he was born on Caladan and lived his first fifteen "
+            "years there. Arrakis, the planet known as Dune, is forever his place."
+        ),
+        "book_context": (
+            "Book: Dune by Frank Herbert\n"
+            "Book themes: desert ecology and survival, political intrigue and feudalism, "
+            "prescient abilities and fate, spice melange economy, "
+            "fremen culture and resistance, messianic prophecy"
+        ),
+        "topics": [
+            "muad'dib's planetary origin",
+            "dune as muad'dib's true home",
+            "temporal placement of muad'dib",
+            "caladan as a temporary location",
+            "bene gesserit strategic placement",
+        ],
+    },
+    {
+        "passage": (
+            "Siddhartha had started to nurse discontent in himself, he had started to feel "
+            "that the love of his father and the love of his mother, and also the love of his "
+            "friend, Govinda, would not bring him joy for ever and ever, would not nurse him, "
+            "feed him, satisfy him. He had started to suspect that his venerable father and "
+            "his other teachers, that the wise Brahmans had already revealed to him the most "
+            "and best of their wisdom, that they had already filled his expecting vessel with "
+            "their richness, and the vessel was not full, the spirit was not content, the soul "
+            "was not calm, the heart was not satisfied. The ablutions were good, but they were "
+            "water, they did not wash off the sin, they did not heal the spirit's thirst, "
+            "they did not relieve the fear in his heart."
+        ),
+        "book_context": (
+            "Book: Siddhartha by Hermann Hesse\n"
+            "Book themes: indian religious philosophy, spiritual self-discovery, "
+            "renunciation and worldly life, brahmanical social structure, "
+            "the search for enlightenment, early buddhist influences"
+        ),
+        "topics": [
+            "dissatisfaction with conventional wisdom",
+            "unfulfilled spiritual yearning",
+            "water's inadequacy as a solution",
+            "fear and anxiety within the soul",
+            "seeking beyond brahmanical teachings",
+        ],
+    },
+    {
+        "passage": (
+            "What is meditation? What is leaving one's body? What is fasting? What is holding "
+            "one's breath? It is fleeing from the self, it is a short escape of the agony of "
+            "being a self, it is a short numbing of the senses against the pain and the "
+            "pointlessness of life. The same escape, the same short numbing is what the driver "
+            "of an ox-cart finds in the inn, drinking a few bowls of rice-wine or fermented "
+            "coconut-milk. Then he won't feel his self any more, then he won't feel the pains "
+            "of life any more, then he finds a short numbing of the senses."
+        ),
+        "book_context": (
+            "Book: Siddhartha by Hermann Hesse\n"
+            "Book themes: indian religious philosophy, spiritual self-discovery, "
+            "renunciation and worldly life, brahmanical social structure, "
+            "the search for enlightenment, early buddhist influences"
+        ),
+        "topics": [
+            "self-escape mechanisms",
+            "sensory numbing",
+            "temporary relief from pain",
+            "ox-cart driver's distraction",
+            "avoidance of self-awareness",
+        ],
+    },
+    {
+        "passage": (
+            "mind to be void of all conceptions. These and other ways he learned to go, "
+            "a thousand times he left his self, for hours and days he remained in the non-self. "
+            "But though the ways led away from the self, their end nevertheless always led back "
+            "to the self. Though Siddhartha fled from the self a thousand times, stayed in "
+            "nothingness, stayed in the animal, in the stone, the return was inevitable, "
+            "inescapable was the hour, when he found himself back in the sunshine or in the "
+            "moonlight, in the shade or in the rain, and was once again his self and Siddhartha, "
+            "and again felt the agony of the cycle which had been forced upon him."
+        ),
+        "book_context": (
+            "Book: Siddhartha by Hermann Hesse\n"
+            "Book themes: indian religious philosophy, spiritual self-discovery, "
+            "renunciation and worldly life, brahmanical social structure, "
+            "the search for enlightenment, early buddhist influences"
+        ),
+        "topics": [
+            "samana meditation practices",
+            "escape from self",
+            "inescapable return to selfhood",
+            "agony of cyclical existence",
+            "non-self experience",
+        ],
+    },
+]
+
+
+def extract_topics_single_optimized(
+    text: str,
+    context: str,
+    model: str = CHUNK_MODEL,
+    num_topics: int = TOPICS_PER_CHUNK,
+) -> list[str]:
+    """
+    Extract topics from a single chunk using DSPy-optimized instruction + few-shot demos.
+
+    Uses the instruction and 4 demonstrations produced by MIPROv2 optimization.
+    Each demo shows the model a passage + book context → 5 multi-word noun-phrase topics.
+
+    This is for A/B comparison against the batched extraction approach.
+    """
+    # Build few-shot section
+    demo_parts = []
+    for demo in _DSPY_DEMOS:
+        demo_topics = json.dumps(demo["topics"])
+        demo_parts.append(
+            f"---\n"
+            f"Passage: {demo['passage']}\n\n"
+            f"Book Context: {demo['book_context']}\n\n"
+            f"Topics: {demo_topics}"
+        )
+    demos_text = "\n\n".join(demo_parts)
+
+    prompt = f"""{_DSPY_INSTRUCTION}
+
+{demos_text}
+
+---
+Passage: {text}
+
+Book Context: {context}
+
+Topics:"""
+
+    schema = {
+        "type": "object",
+        "properties": {
+            "topics": {
+                "type": "array",
+                "items": {"type": "string"},
+                "minItems": num_topics,
+                "maxItems": num_topics,
+            }
+        },
+        "required": ["topics"],
+    }
+
+    try:
+        if _is_gemini_model(model):
+            output = _call_gemini(prompt, model, response_schema=schema, timeout=60.0)
+        else:
+            client = _get_client()
+            response = client.post(
+                OLLAMA_API_URL,
+                json={
+                    "model": model,
+                    "prompt": prompt,
+                    "format": schema,
+                    "stream": False,
+                    "options": {"num_ctx": OLLAMA_NUM_CTX},
+                },
+                timeout=60.0,
+            )
+            response.raise_for_status()
+            output = response.json().get("response", "").strip()
+
+        parsed = json.loads(output)
+        if isinstance(parsed, dict) and "topics" in parsed:
+            return [str(t).strip() for t in parsed["topics"] if t][:num_topics]
+        return _parse_topics(output)
+
+    except (httpx.TimeoutException, Exception):
+        return []
+
+
+def extract_topics_single_optimized_parallel(
+    chunks: list[str],
+    book_title: str,
+    author: str,
+    book_themes: list[str] | None = None,
+    model: str = CHUNK_MODEL,
+    num_topics: int = TOPICS_PER_CHUNK,
+    max_workers: int = 30,
+    progress_callback: Optional[callable] = None,
+) -> list[list[str]]:
+    """
+    Extract topics from chunks in parallel using DSPy-optimized single-chunk extraction.
+
+    Each chunk is processed independently with the DSPy instruction + few-shot demos.
+    Uses ThreadPoolExecutor with configurable concurrency to stay within API rate limits.
+
+    For Gemini paid tier (~300 RPM on Flash-Lite), max_workers=30 is safe.
+
+    Returns list[list[str]] matching input chunk order.
+    """
+    results: list[list[str] | None] = [None] * len(chunks)
+    completed = 0
+
+    # Build context header
+    context_parts = [f"Book: {book_title} by {author}"]
+    if book_themes:
+        context_parts.append(f"Book themes: {', '.join(book_themes)}")
+    context = "\n".join(context_parts)
+
+    def process_chunk(idx: int, text: str) -> tuple[int, list[str]]:
+        raw = extract_topics_single_optimized(text, context, model, num_topics)
+        return idx, _filter_topics(raw)
+
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        futures = {
+            executor.submit(process_chunk, i, chunk): i
+            for i, chunk in enumerate(chunks)
+        }
+
+        for future in as_completed(futures):
+            idx, topics = future.result()
+            results[idx] = topics
+            completed += 1
+            if progress_callback:
+                progress_callback(completed, len(chunks))
+
+    # Replace any None entries (shouldn't happen, but safety)
+    return [r if r is not None else [] for r in results]
 
 
 def consolidate_book_topics(
@@ -587,20 +873,24 @@ Return a JSON object where each key is the chosen canonical label and each value
     consolidation_ctx = max(OLLAMA_NUM_CTX, 16384)
 
     try:
-        client = _get_client()
-        response = client.post(
-            OLLAMA_API_URL,
-            json={
-                "model": model,
-                "prompt": prompt,
-                "format": schema,
-                "stream": False,
-                "options": {"num_ctx": consolidation_ctx},
-            },
-            timeout=300.0,
-        )
-        response.raise_for_status()
-        output = response.json().get("response", "").strip()
+        if _is_gemini_model(model):
+            output = _call_gemini(prompt, model, response_schema=schema, timeout=300.0)
+        else:
+            client = _get_client()
+            response = client.post(
+                OLLAMA_API_URL,
+                json={
+                    "model": model,
+                    "prompt": prompt,
+                    "format": schema,
+                    "stream": False,
+                    "options": {"num_ctx": consolidation_ctx},
+                },
+                timeout=300.0,
+            )
+            response.raise_for_status()
+            output = response.json().get("response", "").strip()
+
         parsed = json.loads(output)
 
         if not isinstance(parsed, dict):

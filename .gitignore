@@ -52,5 +52,8 @@ htmlcov/
 *.log
 .playwright-mcp/
 
+# Environment variables (API keys)
+.env
+
 # Serena (AI coding assistant)
 .serena/

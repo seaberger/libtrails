@@ -1,0 +1,80 @@
+{
+  "extract": {
+    "traces": [],
+    "train": [],
+    "demos": [
+      {
+        "augmented": true,
+        "passage": "A beginning is the time for taking the most delicate care that the balances are correct. This every sister of the Bene Gesserit knows. To begin your study of the life of Muad'Dib, then, take care that you first place him in his time: born in the 57th year of the Padishah Emperor, Shaddam IV. And take the most special care that you locate Muad'Dib in his place: the planet Arrakis. Do not be deceived by the fact that he was born on Caladan and lived his first fifteen years there. Arrakis, the planet known as Dune, is forever his place.",
+        "book_context": "Book: Dune by Frank Herbert\nBook themes: desert ecology and survival, political intrigue and feudalism, prescient abilities and fate, spice melange economy, fremen culture and resistance, messianic prophecy",
+        "topics": [
+          "muad'dib's planetary origin",
+          "dune as muad'dib's true home",
+          "temporal placement of muad'dib",
+          "caladan as a temporary location",
+          "bene gesserit strategic placement"
+        ]
+      },
+      {
+        "augmented": true,
+        "passage": "Siddhartha had started to nurse discontent in himself, he had started to feel that the love of his father and the love of his mother, and also the love of his friend, Govinda, would not bring him joy for ever and ever, would not nurse him, feed him, satisfy him. He had started to suspect that his venerable father and his other teachers, that the wise Brahmans had already revealed to him the most and best of their wisdom, that they had already filled his expecting vessel with their richness, and the vessel was not full, the spirit was not content, the soul was not calm, the heart was not satisfied. The ablutions were good, but they were water, they did not wash off the sin, they did not heal the spirit's thirst, they did not relieve the fear in his heart.",
+        "book_context": "Book: Siddhartha by Hermann Hesse\nBook themes: indian religious philosophy, spiritual self-discovery, renunciation and worldly life, brahmanical social structure, the search for enlightenment, early buddhist influences",
+        "topics": [
+          "dissatisfaction with conventional wisdom",
+          "unfulfilled spiritual yearning",
+          "water's inadequacy as a solution",
+          "fear and anxiety within the soul",
+          "seeking beyond brahmanical teachings"
+        ]
+      },
+      {
+        "augmented": true,
+        "passage": "What is meditation? What is leaving one's body? What is fasting? What is holding one's breath? It is fleeing from the self, it is a short escape of the agony of being a self, it is a short numbing of the senses against the pain and the pointlessness of life. The same escape, the same short numbing is what the driver of an ox-cart finds in the inn, drinking a few bowls of rice-wine or fermented coconut-milk. Then he won't feel his self any more, then he won't feel the pains of life any more, then he finds a short numbing of the senses.",
+        "book_context": "Book: Siddhartha by Hermann Hesse\nBook themes: indian religious philosophy, spiritual self-discovery, renunciation and worldly life, brahmanical social structure, the search for enlightenment, early buddhist influences",
+        "topics": [
+          "self-escape mechanisms",
+          "sensory numbing",
+          "temporary relief from pain",
+          "ox-cart driver's distraction",
+          "avoidance of self-awareness"
+        ]
+      },
+      {
+        "passage": "mind to be void of all conceptions. These and other ways he learned to go, a thousand times he left his self, for hours and days he remained in the non-self. But though the ways led away from the self, their end nevertheless always led back to the self. Though Siddhartha fled from the self a thousand times, stayed in nothingness, stayed in the animal, in the stone, the return was inevitable, inescapable was the hour, when he found himself back in the sunshine or in the moonlight, in the shade or in the rain, and was once again his self and Siddhartha, and again felt the agony of the cycle which had been forced upon him.",
+        "book_context": "Book: Siddhartha by Hermann Hesse\nBook themes: indian religious philosophy, spiritual self-discovery, renunciation and worldly life, brahmanical social structure, the search for enlightenment, early buddhist influences",
+        "topics": [
+          "samana meditation practices",
+          "escape from self",
+          "inescapable return to selfhood",
+          "agony of cyclical existence",
+          "non-self experience"
+        ]
+      }
+    ],
+    "signature": {
+      "instructions": "Extract specific topic labels from a book passage.\n\nGiven a passage from a book along with the book's title, author, and\nhigh-level themes, extract exactly 5 topic labels that capture the\nkey concepts discussed in this specific passage.",
+      "fields": [
+        {
+          "prefix": "Passage:",
+          "description": "A ~500 word passage from a book"
+        },
+        {
+          "prefix": "Book Context:",
+          "description": "Book title, author, and high-level themes"
+        },
+        {
+          "prefix": "Topics:",
+          "description": "Exactly 5 specific topic labels as multi-word noun phrases (2-5 words each)"
+        }
+      ]
+    },
+    "lm": null
+  },
+  "metadata": {
+    "dependency_versions": {
+      "python": "3.12",
+      "dspy": "3.1.3",
+      "cloudpickle": "3.1"
+    }
+  }
+}

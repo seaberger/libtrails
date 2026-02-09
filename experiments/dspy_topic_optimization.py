@@ -5,6 +5,10 @@ Uses gemma3:27b as the prompt proposer and gemma3:4b as the task model
 (matching our production pipeline). Trains on 50 gold-standard examples
 spanning 10 books across genres.
 
+Quality metric uses BGE-small-en-v1.5 cosine similarity (same embedding
+model as our pipeline) for semantic overlap scoring, plus structural
+checks for word count, stoplist, and topic count compliance.
+
 Usage:
     uv run python experiments/dspy_topic_optimization.py
 
@@ -12,31 +16,39 @@ After optimization, the best prompt is saved to experiments/optimized_topic_prom
 and can be inspected or integrated into the extraction pipeline.
 """
 
-import json
+from functools import lru_cache
 from pathlib import Path
 
 import dspy
+import numpy as np
+from dotenv import load_dotenv
+
+from libtrails.embeddings import embed_texts
+
+load_dotenv()
 
 # ---------------------------------------------------------------------------
-# 1. Configure DSPy with Ollama
+# 1. Configure DSPy with Ollama (task) + Gemini (prompt proposer)
 # ---------------------------------------------------------------------------
 
-# Task model: what we use in production for chunk-level extraction
+# Task model: local gemma3:4b — our production model for chunk-level extraction.
+# MIPROv2 evaluates candidates against this model, so the optimized prompt
+# is guaranteed to work well with our actual pipeline.
 task_lm = dspy.LM(
     "ollama_chat/gemma3:4b",
     api_base="http://localhost:11434",
-    api_key="",  # Ollama doesn't need a key
+    api_key="",
     temperature=0.7,
     num_ctx=8192,
 )
 
-# Prompt proposer: larger model for generating candidate instructions
+# Prompt proposer: Gemini 3 Flash via API — generates candidate instructions
+# and few-shot bootstrapping. Beats 2.5 Pro on benchmarks at 75% less cost.
+# Reads GEMINI_API_KEY from .env automatically.
 prompt_lm = dspy.LM(
-    "ollama_chat/gemma3:27b",
-    api_base="http://localhost:11434",
-    api_key="",
+    "gemini/gemini-3-flash-preview",
     temperature=1.0,
-    num_ctx=8192,
+    max_tokens=8192,
 )
 
 dspy.configure(lm=task_lm)
@@ -85,12 +97,34 @@ STOPLIST = {
 }
 
 
+@lru_cache(maxsize=512)
+def _embed_topic(topic: str) -> tuple:
+    """Embed a single topic string, cached to avoid recomputation."""
+    vec = embed_texts([topic])[0]
+    return tuple(vec.tolist())
+
+
+def _cosine_similarity_matrix(topics_a: list[str], topics_b: list[str]) -> np.ndarray:
+    """Compute pairwise cosine similarities using BGE embeddings.
+
+    Returns matrix of shape (len(topics_a), len(topics_b)).
+    Embeddings are normalized by BGE, so dot product = cosine similarity.
+    Raw similarities are rescaled: floor at 0.5, then stretch to [0, 1].
+    This makes unrelated topics (~0.4 cosine) map to ~0 and related
+    topics (~0.8+ cosine) map to ~0.6+, giving the optimizer a clearer signal.
+    """
+    vecs_a = np.array([_embed_topic(t) for t in topics_a])
+    vecs_b = np.array([_embed_topic(t) for t in topics_b])
+    raw = vecs_a @ vecs_b.T
+    return np.clip((raw - 0.5) / 0.5, 0.0, 1.0)
+
+
 def topic_quality_metric(example, prediction, trace=None):
     """
     Score predicted topics against gold standard on multiple criteria.
 
     Returns float 0.0-1.0 combining:
-    - Semantic overlap with gold topics (40%)
+    - Semantic overlap with gold topics via BGE cosine similarity (40%)
     - Word count compliance: 2-5 words per topic (25%)
     - No single-word generics from stoplist (15%)
     - No overly long topics > 6 words (10%)
@@ -134,30 +168,16 @@ def topic_quality_metric(example, prediction, trace=None):
     long_violations = sum(1 for t in pred_normalized if len(t.split()) > 6)
     length_score = 1.0 - (long_violations / len(pred_normalized))
 
-    # --- Semantic overlap with gold (40%) ---
-    # Use token-level Jaccard similarity as a cheap proxy for semantic similarity
-    def token_jaccard(a: str, b: str) -> float:
-        tokens_a = set(a.lower().split())
-        tokens_b = set(b.lower().split())
-        if not tokens_a or not tokens_b:
-            return 0.0
-        intersection = tokens_a & tokens_b
-        union = tokens_a | tokens_b
-        return len(intersection) / len(union)
+    # --- Semantic overlap with gold via BGE embeddings (40%) ---
+    sim_matrix = _cosine_similarity_matrix(gold_normalized, pred_normalized)
 
     # For each gold topic, find best matching predicted topic
-    gold_matches = []
-    for gold_t in gold_normalized:
-        best_match = max(token_jaccard(gold_t, pred_t) for pred_t in pred_normalized)
-        gold_matches.append(best_match)
+    gold_matches = sim_matrix.max(axis=1).tolist()
 
     # For each predicted topic, find best matching gold topic
-    pred_matches = []
-    for pred_t in pred_normalized:
-        best_match = max(token_jaccard(pred_t, gold_t) for gold_t in gold_normalized)
-        pred_matches.append(best_match)
+    pred_matches = sim_matrix.max(axis=0).tolist()
 
-    # F1-style: average of precision-analog and recall-analog
+    # F1-style: harmonic mean of recall-analog and precision-analog
     recall_analog = sum(gold_matches) / len(gold_matches) if gold_matches else 0
     precision_analog = sum(pred_matches) / len(pred_matches) if pred_matches else 0
     semantic_score = (
@@ -907,50 +927,58 @@ def main():
     print("=" * 60)
     print("DSPy Topic Extraction Optimization")
     print("=" * 60)
-    print(f"Task model: gemma3:4b (Ollama)")
-    print(f"Prompt model: gemma3:27b (Ollama)")
+    print("Task model:   gemma3:4b (Ollama local)")
+    print("Prompt model: Gemini 3 Flash (Google API)")
     print()
 
     # Build training set
     all_examples = build_training_set()
     print(f"Total gold examples: {len(all_examples)}")
 
-    # Split into train / val
-    train_set = all_examples[:40]
-    val_set = all_examples[40:]
+    # Split into train / val (DSPy recommends 20% train / 80% val)
+    train_set = all_examples[:10]
+    val_set = all_examples[10:]
     print(f"Training: {len(train_set)}, Validation: {len(val_set)}")
     print()
 
-    # First evaluate baseline (unoptimized)
+    # Warm up BGE model so first metric call doesn't skew timing
+    print("Loading BGE embedding model for metric...")
+    _embed_topic("warmup")
+    print("  BGE model ready.")
+    print()
+
+    # First evaluate baseline (unoptimized) on full val set
     print("--- Evaluating baseline (unoptimized) ---")
     baseline = TopicExtractor()
     baseline_scores = []
-    for ex_item in val_set[:5]:
+    for i, ex_item in enumerate(val_set):
         try:
             pred = baseline(passage=ex_item.passage, book_context=ex_item.book_context)
             score = topic_quality_metric(ex_item, pred)
             baseline_scores.append(score)
-            print(f"  Score: {score:.3f} | Topics: {pred.topics[:3]}...")
+            if i < 5:
+                print(f"  Score: {score:.3f} | Topics: {pred.topics[:3]}...")
         except Exception as e:
             print(f"  Error: {e}")
             baseline_scores.append(0.0)
 
     if baseline_scores:
+        print(f"  ... ({len(baseline_scores)} examples evaluated)")
         print(f"  Baseline avg: {sum(baseline_scores)/len(baseline_scores):.3f}")
     print()
 
-    # Run MIPROv2 optimization
-    print("--- Running MIPROv2 optimization ---")
-    print("  (this may take 30-60 minutes with local models)")
+    # Run MIPROv2 optimization (heavy = more Bayesian trials for better results)
+    print("--- Running MIPROv2 optimization (heavy) ---")
+    print("  (this may take 2-4 hours with local models)")
     print()
 
     optimizer = dspy.MIPROv2(
         metric=topic_quality_metric,
         prompt_model=prompt_lm,
         task_model=task_lm,
-        auto="light",
-        max_bootstrapped_demos=3,
-        max_labeled_demos=3,
+        auto="heavy",
+        max_bootstrapped_demos=4,
+        max_labeled_demos=4,
         verbose=True,
         num_threads=1,  # Ollama handles one request at a time
     )
@@ -960,7 +988,7 @@ def main():
         trainset=train_set,
         valset=val_set,
         minibatch=True,
-        minibatch_size=10,
+        minibatch_size=15,
     )
 
     # Evaluate optimized

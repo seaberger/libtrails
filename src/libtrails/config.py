@@ -92,10 +92,11 @@ CLUSTER_RESOLUTION = 0.001  # Resolution for CPM (lower = fewer clusters)
 # KNN graph: minimum cosine similarity for embedding edges
 KNN_MIN_SIMILARITY = 0.65
 
-# Topic extraction models
-THEME_MODEL = "gemma3:27b"  # For book-level theme extraction (1 call/book)
-CHUNK_MODEL = "gemma3:4b"  # For chunk-level topic extraction (batched)
-BATCH_SIZE = 5  # Chunks per batch for batched extraction
+# Topic extraction models — override with env vars to use Gemini API
+# Gemini models use "gemini/" prefix, e.g. "gemini/gemini-3-flash-preview"
+THEME_MODEL = os.environ.get("LIBTRAILS_THEME_MODEL", "gemma3:27b")
+CHUNK_MODEL = os.environ.get("LIBTRAILS_CHUNK_MODEL", "gemma3:4b")
+BATCH_SIZE = int(os.environ.get("LIBTRAILS_BATCH_SIZE", "5"))
 
 # Ollama context window — both gemma3 models support 128K tokens
 # Default of 2048 is far too small for batched extraction

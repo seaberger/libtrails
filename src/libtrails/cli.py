@@ -6,6 +6,7 @@ import time
 from collections import Counter
 
 import click
+from dotenv import load_dotenv
 from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 from rich.table import Table
@@ -38,6 +39,9 @@ from .topic_extractor import (
     extract_topics_batched,
     get_available_models,
 )
+
+# Load .env for Gemini API key (if using API-based models)
+load_dotenv()
 
 
 class _FlushConsole(Console):
@@ -258,21 +262,39 @@ def index(
 
     # Handle --id flag (multiple book IDs)
     if book_ids:
-        import time as _time
-
-        total_start = _time.time()
+        total_start = time.time()
+        total_chunks = 0
         for i, bid in enumerate(book_ids, 1):
             book = get_book(bid)
             if not book:
                 console.print(f"[red]Book {bid} not found — skipping[/red]")
                 continue
             console.print(f"\n[bold]({i}/{len(book_ids)})[/bold]")
+            book_start = time.time()
             _index_single_book(
                 book, theme_model, chunk_model, batch_size, legacy,
                 dry_run, chunk_size=chunk_size,
             )
-        elapsed = _time.time() - total_start
-        console.print(f"\n[bold green]Indexed {len(book_ids)} books in {int(elapsed // 60)}m {int(elapsed % 60)}s[/bold green]")
+            book_elapsed = time.time() - book_start
+            # Count chunks for this book
+            from .database import get_db
+
+            with get_db() as conn:
+                n_chunks = conn.execute(
+                    "SELECT COUNT(*) FROM chunks WHERE book_id = ?", (book["id"],)
+                ).fetchone()[0]
+            total_chunks += n_chunks
+            console.print(
+                f"[bold cyan]Book done: {book_elapsed:.1f}s "
+                f"({n_chunks} chunks, {book_elapsed/max(n_chunks,1):.2f}s/chunk)[/bold cyan]",
+            )
+        elapsed = time.time() - total_start
+        console.print(f"\n[bold green]{'─' * 50}[/bold green]")
+        console.print(
+            f"[bold green]Indexed {len(book_ids)} books, {total_chunks} chunks "
+            f"in {int(elapsed // 60)}m {int(elapsed % 60)}s "
+            f"({elapsed/max(total_chunks,1):.2f}s/chunk avg)[/bold green]"
+        )
         return
 
     # Find the book
@@ -354,8 +376,8 @@ def _index_single_book(
             console.print(chunks[0][:500] + "...")
         return
 
-    # Check Ollama availability
-    if not check_ollama_available(chunk_model):
+    # Check Ollama availability (skip for Gemini API models)
+    if not chunk_model.startswith("gemini/") and not check_ollama_available(chunk_model):
         console.print(f"[red]Model {chunk_model} not available in Ollama[/red]")
         return
 
