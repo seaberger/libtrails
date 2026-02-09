@@ -62,16 +62,7 @@ def _call_gemini(
 
     messages = []
     if system_prompt:
-        messages.append({
-            "role": "system",
-            "content": [
-                {
-                    "type": "text",
-                    "text": system_prompt,
-                    "cache_control": {"type": "ephemeral"},
-                }
-            ],
-        })
+        messages.append({"role": "system", "content": system_prompt})
     messages.append({"role": "user", "content": prompt})
 
     kwargs = {
