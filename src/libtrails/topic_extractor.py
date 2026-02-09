@@ -50,6 +50,42 @@ def _get_client() -> httpx.Client:
     return _client
 
 
+def _extract_json_from_text(text: str) -> str:
+    """Extract JSON from LM Studio responses that may contain prose or markdown.
+
+    Tries in order: direct parse, code fence extraction, brace extraction.
+    Returns the JSON string or the original text if no JSON found.
+    """
+    # 1. Already valid JSON
+    try:
+        json.loads(text)
+        return text
+    except (json.JSONDecodeError, ValueError):
+        pass
+
+    # 2. Markdown code fences: ```json\n{...}\n```
+    fence_match = re.search(r"```(?:json)?\s*\n(.*?)```", text, re.DOTALL)
+    if fence_match:
+        candidate = fence_match.group(1).strip()
+        try:
+            json.loads(candidate)
+            return candidate
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+    # 3. First JSON object in the text
+    brace_match = re.search(r"\{.*\}", text, re.DOTALL)
+    if brace_match:
+        candidate = brace_match.group(0)
+        try:
+            json.loads(candidate)
+            return candidate
+        except (json.JSONDecodeError, ValueError):
+            pass
+
+    return text
+
+
 def _call_litellm(
     prompt: str,
     model: str,
@@ -96,8 +132,18 @@ def _call_litellm(
         "temperature": 0.7,
         "timeout": timeout,
     }
+    is_lm_studio = model.startswith("lm_studio/")
+    if is_lm_studio:
+        kwargs["api_base"] = "http://localhost:1234/v1"
     if response_schema is not None:
-        kwargs["response_format"] = {"type": "json_object"}
+        if is_lm_studio:
+            # LM Studio rejects json_object; use json_schema (non-strict) instead
+            kwargs["response_format"] = {
+                "type": "json_schema",
+                "json_schema": {"name": "response", "schema": response_schema},
+            }
+        else:
+            kwargs["response_format"] = {"type": "json_object"}
 
     response = litellm.completion(**kwargs)
     content = response.choices[0].message.content
@@ -113,7 +159,14 @@ def _call_litellm(
     if content is None:
         raise ContentFilterError("Gemini returned empty content (content_filter)")
 
-    return content.strip()
+    content = content.strip()
+
+    # LM Studio models return unstructured text (no response_format enforcement).
+    # Extract JSON from: code fences, embedded JSON, or plain-text lists.
+    if is_lm_studio and response_schema is not None:
+        content = _extract_json_from_text(content)
+
+    return content
 
 
 
