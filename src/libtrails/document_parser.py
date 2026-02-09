@@ -4,6 +4,7 @@ import re
 import zipfile
 from pathlib import Path
 
+from pypdf import PdfReader
 from selectolax.parser import HTMLParser
 
 
@@ -103,23 +104,20 @@ def extract_text_from_epub(epub_path: Path) -> str:
 
 def extract_text_from_pdf(pdf_path: Path) -> str:
     """
-    Extract plain text from a PDF file using docling.
+    Extract plain text from a PDF file using pypdf.
 
-    Docling handles complex layouts, tables, and reading order.
-    Returns markdown-formatted text which works well for chunking.
+    Fast pure-Python extraction (~1-2s for a 300-page book).
+    Returns page texts joined with double newlines for paragraph-aware chunking.
     """
-    from docling.document_converter import DocumentConverter
+    reader = PdfReader(pdf_path)
+    pages = []
+    for page in reader.pages:
+        text = (page.extract_text() or "").strip()
+        if text:
+            pages.append(text)
 
-    converter = DocumentConverter()
-    result = converter.convert(pdf_path)
+    return "\n\n".join(pages)
 
-    # Export to markdown for clean text with structure
-    markdown_text = result.document.export_to_markdown()
-
-    # Clean up the markdown for our purposes
-    text = _clean_markdown(markdown_text)
-
-    return text
 
 
 # Block-level HTML elements that should produce paragraph breaks

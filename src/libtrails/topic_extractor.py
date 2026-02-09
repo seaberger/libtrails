@@ -69,6 +69,7 @@ def _call_gemini(
     return response.choices[0].message.content.strip()
 
 
+
 def extract_topics_batch(
     chunks: list[str],
     model: str = DEFAULT_MODEL,
@@ -98,6 +99,18 @@ def extract_topics_batch(
                 progress_callback(completed, len(chunks))
 
     return results
+
+
+
+def _unwrap_topic(t) -> str:
+    """Extract a string from a topic that may be a dict or other type.
+
+    Some models return {"topic": "..."} or {"topic label": "..."} instead
+    of plain strings. This unwraps those to the string value.
+    """
+    if isinstance(t, dict):
+        return str(t.get("topic", t.get("topic label", t.get("name", next(iter(t.values()), t)))))
+    return str(t)
 
 
 def normalize_topic(topic: str) -> Optional[str]:
@@ -162,7 +175,7 @@ Passage: "{text}"'''
         output = response.json().get("response", "").strip()
         parsed = json.loads(output)
         if isinstance(parsed, dict) and "topics" in parsed:
-            return [str(t).strip() for t in parsed["topics"] if t][:num_topics]
+            return [_unwrap_topic(t).strip() for t in parsed["topics"] if t][:num_topics]
         return _parse_topics(output)
 
     except httpx.TimeoutException:
@@ -323,7 +336,7 @@ Rules:
 
         parsed = json.loads(output)
         if isinstance(parsed, dict) and "themes" in parsed:
-            return [str(t).strip().lower() for t in parsed["themes"] if t]
+            return [_unwrap_topic(t).strip().lower() for t in parsed["themes"] if t]
         # Fallback to generic parsing
         themes = _parse_topics(output)
         return [t.strip().lower() for t in themes if t.strip()]
@@ -550,7 +563,7 @@ Passage: "{text}"'''
 
         parsed = json.loads(output)
         if isinstance(parsed, dict) and "topics" in parsed:
-            return [str(t).strip() for t in parsed["topics"] if t][:num_topics]
+            return [_unwrap_topic(t).strip() for t in parsed["topics"] if t][:num_topics]
         return _parse_topics(output)
 
     except (httpx.TimeoutException, Exception):
@@ -743,7 +756,7 @@ Topics:"""
 
         parsed = json.loads(output)
         if isinstance(parsed, dict) and "topics" in parsed:
-            return [str(t).strip() for t in parsed["topics"] if t][:num_topics]
+            return [_unwrap_topic(t).strip() for t in parsed["topics"] if t][:num_topics]
         return _parse_topics(output)
 
     except (httpx.TimeoutException, Exception):

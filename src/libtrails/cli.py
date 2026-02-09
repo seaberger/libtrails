@@ -262,6 +262,7 @@ def index(
         _index_all_books(
             theme_model, chunk_model, batch_size, legacy,
             dry_run, reindex, max_words, chunk_size, min_battery,
+            parallel=parallel, workers=workers,
         )
         return
 
@@ -319,6 +320,8 @@ def index(
         dry_run, chunk_size=chunk_size,
         parallel=parallel, workers=workers,
     )
+
+
 
 
 def _index_single_book(
@@ -541,6 +544,8 @@ def _index_all_books(
     max_words: int = None,
     chunk_size: int = None,
     min_battery: int = 15,
+    parallel: bool = False,
+    workers: int = 30,
 ):
     """Index all books with Calibre matches, with resume support."""
     from .database import get_book_path, get_db
@@ -548,6 +553,8 @@ def _index_all_books(
     books = get_all_books(with_calibre_match=True)
 
     mode_desc = "legacy" if legacy else f"two-pass ({theme_model} + {chunk_model})"
+    if parallel:
+        mode_desc += f" [parallel, {workers} workers]"
     console.print(f"[dim]Extraction mode: {mode_desc}[/dim]")
     if max_words:
         console.print(f"[dim]Skipping books with more than {max_words:,} words[/dim]")
@@ -555,16 +562,29 @@ def _index_all_books(
         console.print(f"[dim]Using {chunk_size:,} words per chunk[/dim]")
     console.print(f"[dim]Will pause if battery drops below {min_battery}%[/dim]")
 
-    # Get already indexed book IDs
+    # Get already indexed book IDs (have chunks)
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT DISTINCT book_id FROM chunks")
         indexed_ids = {row[0] for row in cursor.fetchall()}
 
+        # Get books that already have topics extracted (for reindex resume)
+        cursor.execute(
+            "SELECT DISTINCT c.book_id FROM chunks c "
+            "JOIN chunk_topics ct ON c.id = ct.chunk_id"
+        )
+        has_topics_ids = {row[0] for row in cursor.fetchall()}
+
     # Filter books to process
     if reindex:
-        to_process = books
-        console.print(f"[bold]Re-indexing all {len(books)} books...[/bold]")
+        # Skip books that already have topics (resume support)
+        to_process = [b for b in books if b["id"] not in has_topics_ids]
+        already_done = len(has_topics_ids)
+        if already_done > 0:
+            console.print(
+                f"[dim]Skipping {already_done} books already re-indexed with topics[/dim]"
+            )
+        console.print(f"[bold]Re-indexing {len(to_process)} remaining books...[/bold]")
     else:
         to_process = [b for b in books if b["id"] not in indexed_ids]
         skipped = len(books) - len(to_process)
@@ -631,7 +651,7 @@ def _index_all_books(
             result = _index_single_book(
                 book, theme_model, chunk_model, batch_size, legacy,
                 dry_run, max_words, chunk_size,
-                parallel=False, workers=30,
+                parallel=parallel, workers=workers,
             )
             if result == "skipped":
                 skipped_large += 1
