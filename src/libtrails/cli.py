@@ -394,8 +394,8 @@ def _index_single_book(
             console.print(chunks[0][:500] + "...")
         return
 
-    # Check Ollama availability (skip for Gemini API models)
-    if not chunk_model.startswith("gemini/") and not check_ollama_available(chunk_model):
+    # Check Ollama availability (skip for Gemini API and LM Studio models)
+    if not chunk_model.startswith(("gemini/", "lm_studio/")) and not check_ollama_available(chunk_model):
         console.print(f"[red]Model {chunk_model} not available in Ollama[/red]")
         return
 

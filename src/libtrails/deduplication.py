@@ -6,7 +6,10 @@ from collections import defaultdict
 from datetime import datetime
 
 import numpy as np
+from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
+
+console = Console()
 
 from .config import DEDUP_HIGH_CONFIDENCE_THRESHOLD, IPAD_DB_PATH
 from .database import get_db
@@ -401,13 +404,14 @@ def merge_topic_group(group: list[dict], dry_run: bool = False) -> dict:
 
 def merge_groups_batch(groups: list[list[dict]], commit_every: int = 100) -> dict:
     """
-    Merge all duplicate groups in a single transaction with periodic commits.
+    Merge all duplicate groups using bulk SQL operations.
 
-    This is much faster than merging one group at a time.
+    Instead of running 5 SQL statements per duplicate topic (which is ~5.7M ops
+    for 30K groups), this builds a temp mapping table and does bulk updates/deletes.
 
     Args:
         groups: List of duplicate groups to merge
-        commit_every: Commit after this many groups
+        commit_every: (unused, kept for API compat)
 
     Returns:
         Statistics about the merge operation
@@ -418,86 +422,83 @@ def merge_groups_batch(groups: list[list[dict]], commit_every: int = 100) -> dic
     conn = sqlite3.connect(IPAD_DB_PATH, timeout=60.0)
     cursor = conn.cursor()
 
-    total_topics_merged = 0
+    # Build mapping: dup_id → canonical_id, and collect occurrence counts
+    dup_to_canonical = []  # (dup_id, canonical_id)
+    canonical_occ_adds = {}  # canonical_id → total occ to add
+    deleted_topic_ids = []
     groups_processed = 0
-    deleted_topic_ids = []  # Collect IDs for vector cleanup
 
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        TaskProgressColumn(),
-    ) as progress:
-        task = progress.add_task("Merging duplicate groups...", total=len(groups))
+    console.print("  Building merge mapping...")
+    for group in groups:
+        if len(group) < 2:
+            continue
+        canonical = group[0]
+        for dup in group[1:]:
+            dup_to_canonical.append((dup["id"], canonical["id"]))
+            deleted_topic_ids.append(dup["id"])
+            canonical_occ_adds[canonical["id"]] = (
+                canonical_occ_adds.get(canonical["id"], 0) + dup["occurrence_count"]
+            )
+        groups_processed += 1
 
-        for group in groups:
-            if len(group) < 2:
-                progress.advance(task)
-                continue
+    total_topics_merged = len(dup_to_canonical)
+    console.print(f"  Merging {total_topics_merged:,} duplicate topics from {groups_processed:,} groups...")
 
-            canonical = group[0]
-            duplicates = group[1:]
+    # Step 1: Create temp mapping table
+    cursor.execute("CREATE TEMP TABLE dup_map (dup_id INTEGER PRIMARY KEY, canonical_id INTEGER)")
+    cursor.executemany("INSERT INTO dup_map VALUES (?, ?)", dup_to_canonical)
 
-            for dup in duplicates:
-                # Update chunk_topic_links to point to canonical
-                cursor.execute(
-                    """
-                    UPDATE chunk_topic_links
-                    SET topic_id = ?
-                    WHERE topic_id = ?
-                    AND chunk_id NOT IN (
-                        SELECT chunk_id FROM chunk_topic_links WHERE topic_id = ?
-                    )
-                """,
-                    (canonical["id"], dup["id"], canonical["id"]),
-                )
+    # Step 2: Remap chunk_topic_links — update dup references to canonical.
+    # Use OR IGNORE so rows that would violate the UNIQUE(chunk_id, topic_id)
+    # constraint are silently skipped (step 3 deletes them).
+    console.print("  Remapping chunk_topic_links...")
+    cursor.execute("""
+        UPDATE OR IGNORE chunk_topic_links
+        SET topic_id = (SELECT canonical_id FROM dup_map WHERE dup_id = chunk_topic_links.topic_id)
+        WHERE topic_id IN (SELECT dup_id FROM dup_map)
+    """)
+    remapped = cursor.rowcount
+    console.print(f"    Remapped {remapped:,} links")
 
-                # Delete duplicate links
-                cursor.execute("DELETE FROM chunk_topic_links WHERE topic_id = ?", (dup["id"],))
+    # Step 3: Delete remaining duplicate links (ones that would have been duplicates)
+    console.print("  Deleting leftover duplicate links...")
+    cursor.execute("DELETE FROM chunk_topic_links WHERE topic_id IN (SELECT dup_id FROM dup_map)")
+    deleted_links = cursor.rowcount
+    console.print(f"    Deleted {deleted_links:,} duplicate links")
 
-                # Delete cooccurrences for duplicate (skip complex merge for speed)
-                cursor.execute(
-                    "DELETE FROM topic_cooccurrences WHERE topic1_id = ? OR topic2_id = ?",
-                    (dup["id"], dup["id"]),
-                )
+    # Step 4: Delete cooccurrences for duplicates
+    console.print("  Cleaning cooccurrences...")
+    cursor.execute("""
+        DELETE FROM topic_cooccurrences
+        WHERE topic1_id IN (SELECT dup_id FROM dup_map)
+           OR topic2_id IN (SELECT dup_id FROM dup_map)
+    """)
 
-                # Add occurrence count to canonical
-                cursor.execute(
-                    """
-                    UPDATE topics
-                    SET occurrence_count = occurrence_count + ?
-                    WHERE id = ?
-                """,
-                    (dup["occurrence_count"], canonical["id"]),
-                )
+    # Step 5: Update occurrence counts on canonicals
+    console.print("  Updating occurrence counts...")
+    cursor.executemany(
+        "UPDATE topics SET occurrence_count = occurrence_count + ? WHERE id = ?",
+        [(occ, cid) for cid, occ in canonical_occ_adds.items()],
+    )
 
-                # Delete duplicate topic
-                cursor.execute("DELETE FROM topics WHERE id = ?", (dup["id"],))
+    # Step 6: Delete duplicate topics
+    console.print("  Deleting duplicate topics...")
+    cursor.execute("DELETE FROM topics WHERE id IN (SELECT dup_id FROM dup_map)")
+    deleted_topics = cursor.rowcount
+    console.print(f"    Deleted {deleted_topics:,} topics")
 
-                # Track for vector cleanup (done separately due to vec0 extension)
-                deleted_topic_ids.append(dup["id"])
-
-                total_topics_merged += 1
-
-            groups_processed += 1
-            progress.advance(task)
-
-            # Periodic commit for safety
-            if groups_processed % commit_every == 0:
-                conn.commit()
-
-        # Final commit
-        conn.commit()
-
+    # Cleanup temp table and commit
+    cursor.execute("DROP TABLE dup_map")
+    conn.commit()
     conn.close()
 
     # Clean up vectors using vec_db connection (has vec0 extension)
     if deleted_topic_ids:
         from .vector_search import get_vec_db
 
+        console.print("  Cleaning vector index...")
         vec_conn = get_vec_db()
         vec_cursor = vec_conn.cursor()
-        # Delete in batches to avoid SQL limits
         batch_size = 500
         for i in range(0, len(deleted_topic_ids), batch_size):
             batch = deleted_topic_ids[i : i + batch_size]
@@ -508,6 +509,7 @@ def merge_groups_batch(groups: list[list[dict]], commit_every: int = 100) -> dic
         vec_conn.commit()
         vec_conn.close()
 
+    console.print(f"  [green]Merge complete: {total_topics_merged:,} topics merged[/green]")
     return {
         "groups_merged": groups_processed,
         "topics_merged": total_topics_merged,

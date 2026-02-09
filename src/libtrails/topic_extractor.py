@@ -1,4 +1,4 @@
-"""Topic extraction using local LLM via Ollama or Gemini API."""
+"""Topic extraction using local LLM via Ollama, LM Studio, or Gemini API."""
 
 import json
 import re
@@ -34,9 +34,12 @@ _client: Optional[httpx.Client] = None
 NUM_WORKERS = 4
 
 
-def _is_gemini_model(model: str) -> bool:
-    """Check if a model string refers to a Gemini API model."""
-    return model.startswith("gemini/")
+def _is_litellm_model(model: str) -> bool:
+    """Check if a model string should be routed through litellm.
+
+    Matches Gemini API models (gemini/) and LM Studio MLX models (lm_studio/).
+    """
+    return model.startswith("gemini/") or model.startswith("lm_studio/")
 
 
 def _get_client() -> httpx.Client:
@@ -47,7 +50,7 @@ def _get_client() -> httpx.Client:
     return _client
 
 
-def _call_gemini(
+def _call_litellm(
     prompt: str,
     model: str,
     response_schema: dict | None = None,
@@ -55,10 +58,10 @@ def _call_gemini(
     system_prompt: str | None = None,
     cache_system_prompt: bool = False,
 ) -> str:
-    """Call Gemini API via litellm and return the response text.
+    """Call an LLM via litellm and return the response text.
 
+    Supports Gemini API (gemini/...) and LM Studio (lm_studio/...) models.
     Uses response_format for JSON output when a schema is provided.
-    Requires GEMINI_API_KEY in environment (loaded from .env by caller).
 
     When system_prompt is provided, it is sent as a system message
     and prompt becomes the user message.
@@ -371,8 +374,8 @@ Rules:
     }
 
     try:
-        if _is_gemini_model(model):
-            output = _call_gemini(prompt, model, response_schema=schema)
+        if _is_litellm_model(model):
+            output = _call_litellm(prompt, model, response_schema=schema)
         else:
             client = _get_client()
             response = client.post(
@@ -531,8 +534,8 @@ Return a JSON object mapping passage numbers to topic arrays."""
     schema = _build_batch_schema(len(chunks), num_topics)
 
     try:
-        if _is_gemini_model(model):
-            output = _call_gemini(prompt, model, response_schema=schema)
+        if _is_litellm_model(model):
+            output = _call_litellm(prompt, model, response_schema=schema)
         else:
             client = _get_client()
             response = client.post(
@@ -598,8 +601,8 @@ Passage: "{text}"'''
     }
 
     try:
-        if _is_gemini_model(model):
-            output = _call_gemini(prompt, model, response_schema=schema, timeout=60.0)
+        if _is_litellm_model(model):
+            output = _call_litellm(prompt, model, response_schema=schema, timeout=60.0)
         else:
             client = _get_client()
             response = client.post(
@@ -930,10 +933,10 @@ def extract_topics_single_optimized(
     max_retries = 3
     for attempt in range(max_retries):
         try:
-            if _is_gemini_model(model):
+            if _is_litellm_model(model):
                 system_prompt = f"{instruction}\n\n{demos_text}"
                 user_prompt = f"---\nPassage: {text}\n\nBook Context: {context}\n\nTopics:"
-                output = _call_gemini(
+                output = _call_litellm(
                     user_prompt, model,
                     response_schema=schema, timeout=60.0,
                     system_prompt=system_prompt,
@@ -1102,8 +1105,8 @@ Return a JSON object where each key is the chosen canonical label and each value
     consolidation_ctx = max(OLLAMA_NUM_CTX, 16384)
 
     try:
-        if _is_gemini_model(model):
-            output = _call_gemini(prompt, model, response_schema=schema, timeout=300.0)
+        if _is_litellm_model(model):
+            output = _call_litellm(prompt, model, response_schema=schema, timeout=300.0)
         else:
             client = _get_client()
             response = client.post(
