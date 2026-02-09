@@ -225,6 +225,7 @@ def sync(ipad: str, dry_run: bool, skip_index: bool, model: str, save_url: bool)
 )
 @click.option("--parallel", is_flag=True, help="Use parallel single-chunk DSPy extraction (best with Gemini)")
 @click.option("--workers", type=int, default=30, help="Max concurrent workers for parallel extraction (default: 30)")
+@click.option("--extended-prompt", is_flag=True, help="Use extended 9-demo prompt (enables Gemini context caching)")
 def index(
     book_id: int,
     book_ids: tuple[int, ...],
@@ -242,6 +243,7 @@ def index(
     min_battery: int,
     parallel: bool,
     workers: int,
+    extended_prompt: bool,
 ):
     """Index a book (parse, chunk, extract topics).
 
@@ -263,6 +265,7 @@ def index(
             theme_model, chunk_model, batch_size, legacy,
             dry_run, reindex, max_words, chunk_size, min_battery,
             parallel=parallel, workers=workers,
+            extended_prompt=extended_prompt,
         )
         return
 
@@ -281,6 +284,7 @@ def index(
                 book, theme_model, chunk_model, batch_size, legacy,
                 dry_run, chunk_size=chunk_size,
                 parallel=parallel, workers=workers,
+                extended_prompt=extended_prompt,
             )
             book_elapsed = time.time() - book_start
             # Count chunks for this book
@@ -319,6 +323,7 @@ def index(
         book, theme_model, chunk_model, batch_size, legacy,
         dry_run, chunk_size=chunk_size,
         parallel=parallel, workers=workers,
+        extended_prompt=extended_prompt,
     )
 
 
@@ -335,6 +340,7 @@ def _index_single_book(
     chunk_size: int = None,
     parallel: bool = False,
     workers: int = 30,
+    extended_prompt: bool = False,
 ):
     """Index a single book. Raises exception on failure. Returns 'skipped' if over max_words."""
     console.print(f"[bold]Indexing:[/bold] {book['title'][:60]}")
@@ -474,6 +480,7 @@ def _index_single_book(
                     model=chunk_model,
                     max_workers=workers,
                     progress_callback=update_progress,
+                    use_extended_prompt=extended_prompt,
                 )
         else:
             console.print(
@@ -546,6 +553,7 @@ def _index_all_books(
     min_battery: int = 15,
     parallel: bool = False,
     workers: int = 30,
+    extended_prompt: bool = False,
 ):
     """Index all books with Calibre matches, with resume support."""
     from .database import get_book_path, get_db
@@ -652,6 +660,7 @@ def _index_all_books(
                 book, theme_model, chunk_model, batch_size, legacy,
                 dry_run, max_words, chunk_size,
                 parallel=parallel, workers=workers,
+                extended_prompt=extended_prompt,
             )
             if result == "skipped":
                 skipped_large += 1
@@ -1962,6 +1971,114 @@ def refresh_stats():
     console.print(f"  [green]clusters with stats: {result['clusters_with_stats']:,}[/green]")
     console.print(f"  [green]domains with stats: {result['domains_with_stats']:,}[/green]")
     console.print(f"  [dim]Completed in {result['elapsed_seconds']:.1f}s[/dim]")
+
+
+@main.command("backfill")
+@click.option("--chunk-model", default="gemini/gemini-2.5-flash-lite", help="Model for topic extraction")
+@click.option("--workers", type=int, default=20, help="Max concurrent workers (default: 20)")
+@click.option("--extended-prompt", is_flag=True, help="Use extended 9-demo prompt (enables Gemini context caching)")
+@click.option("--dry-run", is_flag=True, help="Show what would be backfilled without doing it")
+def backfill(chunk_model: str, workers: int, extended_prompt: bool, dry_run: bool):
+    """Re-extract topics for chunks that have none (from failed API calls).
+
+    Finds chunks in already-processed books that are missing topics
+    (e.g., from 503 errors) and re-runs extraction on just those chunks.
+    """
+    from .database import get_db
+    from .topic_extractor import (
+        _filter_topics,
+        extract_topics_single_optimized,
+    )
+
+    with get_db() as conn:
+        # Find chunks missing topics in books that have SOME topics
+        missing = conn.execute("""
+            SELECT c.id, c.book_id, b.title, b.author, b.book_themes, c.text, c.chunk_index
+            FROM chunks c
+            JOIN books b ON c.book_id = b.id
+            LEFT JOIN chunk_topics ct ON c.id = ct.chunk_id
+            WHERE ct.chunk_id IS NULL
+            AND c.book_id IN (
+                SELECT DISTINCT c2.book_id FROM chunks c2
+                JOIN chunk_topics ct2 ON c2.id = ct2.chunk_id
+            )
+            ORDER BY c.book_id, c.chunk_index
+        """).fetchall()
+
+    if not missing:
+        console.print("[green]No chunks need backfilling — all chunks have topics.[/green]")
+        return
+
+    book_ids = set(r[1] for r in missing)
+    console.print(f"[bold]Found {len(missing)} chunks missing topics across {len(book_ids)} books[/bold]")
+
+    if dry_run:
+        from collections import Counter
+        by_book = Counter(r[2] for r in missing)
+        for title, count in by_book.most_common(20):
+            console.print(f"  {count:>4} chunks: {title[:60]}")
+        if len(by_book) > 20:
+            console.print(f"  ... and {len(by_book) - 20} more books")
+        return
+
+    # Group by book for context
+    from collections import defaultdict
+    by_book = defaultdict(list)
+    for chunk_id, book_id, title, author, themes_json, text, idx in missing:
+        by_book[book_id].append((chunk_id, title, author, themes_json, text, idx))
+
+    total_fixed = 0
+    total_failed = 0
+
+    from rich.progress import Progress
+
+    with Progress(console=console) as progress:
+        task = progress.add_task("Backfilling", total=len(missing))
+
+        for book_id, chunks_data in by_book.items():
+            title = chunks_data[0][1]
+            author = chunks_data[0][2] or "Unknown"
+            themes_json = chunks_data[0][3]
+
+            import json as _json
+            book_themes = _json.loads(themes_json) if themes_json else []
+
+            context_parts = [f"Book: {title} by {author}"]
+            if book_themes:
+                context_parts.append(f"Book themes: {', '.join(book_themes)}")
+            context = "\n".join(context_parts)
+
+            # Process chunks in parallel
+            from concurrent.futures import ThreadPoolExecutor, as_completed
+
+            def process_one(chunk_info):
+                chunk_id, _, _, _, text, _ = chunk_info
+                raw = extract_topics_single_optimized(
+                    text, context, chunk_model,
+                    use_extended_prompt=extended_prompt,
+                )
+                return chunk_id, _filter_topics(raw)
+
+            with ThreadPoolExecutor(max_workers=min(workers, len(chunks_data))) as executor:
+                futures = {executor.submit(process_one, c): c for c in chunks_data}
+                for future in as_completed(futures):
+                    chunk_id, topics = future.result()
+                    if topics:
+                        with get_db() as conn:
+                            for topic_str in topics:
+                                conn.execute(
+                                    "INSERT OR IGNORE INTO chunk_topics (chunk_id, topic) VALUES (?, ?)",
+                                    (chunk_id, topic_str),
+                                )
+                            conn.commit()
+                        total_fixed += 1
+                    else:
+                        total_failed += 1
+                    progress.update(task, advance=1)
+
+    console.print("\n[bold green]Backfill complete:[/bold green]")
+    console.print(f"  Fixed: {total_fixed} chunks")
+    console.print(f"  Still failed: {total_failed} chunks")
 
 
 @main.command("prepare-v2")

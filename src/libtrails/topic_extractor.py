@@ -3,6 +3,11 @@
 import json
 import re
 import subprocess
+import time
+
+
+class ContentFilterError(Exception):
+    """Raised when Gemini's content filter blocks a response."""
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Optional
 
@@ -48,21 +53,37 @@ def _call_gemini(
     response_schema: dict | None = None,
     timeout: float = 120.0,
     system_prompt: str | None = None,
+    cache_system_prompt: bool = False,
 ) -> str:
     """Call Gemini API via litellm and return the response text.
 
     Uses response_format for JSON output when a schema is provided.
     Requires GEMINI_API_KEY in environment (loaded from .env by caller).
 
-    When system_prompt is provided, it is sent as a cached system message
-    (Gemini context caching — 90% discount on repeated prefix tokens).
-    The prompt then becomes the user message with per-call content.
+    When system_prompt is provided, it is sent as a system message
+    and prompt becomes the user message.
+
+    When cache_system_prompt=True, the system message is marked with
+    cache_control for Gemini context caching (90% discount on cached tokens).
+    Only use this when the system prompt exceeds 2048 tokens.
     """
     import litellm
 
     messages = []
     if system_prompt:
-        messages.append({"role": "system", "content": system_prompt})
+        if cache_system_prompt:
+            messages.append({
+                "role": "system",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": system_prompt,
+                        "cache_control": {"type": "ephemeral"},
+                    }
+                ],
+            })
+        else:
+            messages.append({"role": "system", "content": system_prompt})
     messages.append({"role": "user", "content": prompt})
 
     kwargs = {
@@ -76,7 +97,20 @@ def _call_gemini(
         kwargs["response_format"] = {"type": "json_object"}
 
     response = litellm.completion(**kwargs)
-    return response.choices[0].message.content.strip()
+    content = response.choices[0].message.content
+
+    # Gemini's content filter returns None content with finish_reason="content_filter"
+    # when response_format=json_object is used on sensitive passages.
+    # Retry without response_format as fallback.
+    if content is None and response_schema is not None:
+        del kwargs["response_format"]
+        response = litellm.completion(**kwargs)
+        content = response.choices[0].message.content
+
+    if content is None:
+        raise ContentFilterError("Gemini returned empty content (content_filter)")
+
+    return content.strip()
 
 
 
@@ -116,11 +150,22 @@ def _unwrap_topic(t) -> str:
     """Extract a string from a topic that may be a dict or other type.
 
     Some models return {"topic": "..."} or {"topic label": "..."} instead
-    of plain strings. This unwraps those to the string value.
+    of plain strings. Also handles string-encoded dicts like
+    "{'topic extraction': 'value'}" that JSON parsing leaves as strings.
     """
     if isinstance(t, dict):
         return str(t.get("topic", t.get("topic label", t.get("name", next(iter(t.values()), t)))))
-    return str(t)
+    s = str(t)
+    # Handle string representations of Python dicts: "{'key': 'value'}"
+    # Use regex extraction instead of eval for safety
+    if s.startswith("{") and s.endswith("}"):
+        import re
+        # Extract value after the colon — handles apostrophes in values
+        # Matches: {'any key': 'value with apostrophe's'} or {"key": "value"}
+        m = re.search(r""":\s*['"](.+)['"]\s*\}$""", s)
+        if m:
+            return m.group(1)
+    return s
 
 
 def normalize_topic(topic: str) -> Optional[str]:
@@ -591,6 +636,24 @@ _DSPY_INSTRUCTION = (
     "key concepts discussed in this specific passage."
 )
 
+# Extended instruction with quality guidelines for the cached prompt variant.
+_DSPY_INSTRUCTION_EXTENDED = (
+    "Extract specific topic labels from a book passage.\n\n"
+    "Given a passage from a book along with the book's title, author, and\n"
+    "high-level themes, extract exactly 5 topic labels that capture the\n"
+    "key concepts discussed in this specific passage.\n\n"
+    "Guidelines:\n"
+    "- Each topic must be a multi-word noun phrase (3-6 words ideal).\n"
+    "- Topics should be specific to this passage, not generic labels.\n"
+    "- Avoid single-word topics or vague terms like 'conflict' or 'emotion'.\n"
+    "- Ground topics in the passage's concrete details: names, places, events.\n"
+    "- Return topics as a JSON object: {\"topics\": [\"topic1\", \"topic2\", ...]}.\n"
+    "- Each topic must be a plain string, never a dict or nested object.\n"
+    "- Use the book context to disambiguate: 'river journey' in Siddhartha\n"
+    "  is spiritual, in Huckleberry Finn is geographical.\n"
+    "- Do not wrap topics in dicts like {\"topic\": \"value\"}. Return plain strings only.\n"
+)
+
 _DSPY_DEMOS = [
     {
         "passage": (
@@ -694,26 +757,154 @@ _DSPY_DEMOS = [
     },
 ]
 
+# Extended demos for Gemini context caching (need 2048+ tokens in system prompt).
+# These supplement _DSPY_DEMOS with 5 more examples from diverse genres.
+_DSPY_DEMOS_EXTENDED = [
+    {
+        "passage": (
+            "Economists said it was the boll weevil that tore through the cotton fields "
+            "and left them without work and in even greater misery, which likely gave "
+            "hard-bitten sharecroppers just one more reason to go. Still, many of them "
+            "picked cotton not because it was their preference but because it was the "
+            "only work allowed them in the cotton-growing states. In South Carolina, "
+            "colored people had to apply for a permit to do any work other than "
+            "agriculture after Reconstruction. It would not likely have been their "
+            "choice had there been an alternative."
+        ),
+        "book_context": (
+            "Book: The Warmth of Other Suns by Isabel Wilkerson\n"
+            "Book themes: the great migration of african americans, jim crow era "
+            "social history, demographic shifts in american cities"
+        ),
+        "topics": [
+            "boll weevil's impact on cotton sharecroppers",
+            "restrictions on black labor post-reconstruction",
+            "great migration as a long-term demographic shift",
+            "migrant motivations for leaving the south",
+            "post-world war i acceleration of migration",
+        ],
+    },
+    {
+        "passage": (
+            "He stopped. I was about to demand that he be more specific, but he said, "
+            "'Goodbye, Mr. Ai,' turned, and left. I stood benumbed. The man was like "
+            "an electric shock — nothing to hold on to and you don't know what hit you. "
+            "He had certainly spoiled the mood of peaceful self-congratulation in which "
+            "I had eaten breakfast. I went to the narrow window and looked out. The snow "
+            "had thinned a little. It was bitterly cold; the window, facing south, was "
+            "iced over on the outside."
+        ),
+        "book_context": (
+            "Book: The Left Hand of Darkness by Ursula K. le Guin\n"
+            "Book themes: anthropological science fiction, androgynous alien biology, "
+            "interplanetary diplomatic relations, subarctic planetary survival"
+        ),
+        "topics": [
+            "feelings of isolation and distrust",
+            "harsh winter conditions",
+            "nostalgia for home planet",
+            "political espionage and unknown factions",
+            "sudden departure and confusion",
+        ],
+    },
+    {
+        "passage": (
+            "Startups must attempt to tune the engine from the baseline toward the "
+            "ideal. This may take many attempts. After the startup has made all the "
+            "micro changes and product optimizations it can to move its baseline "
+            "toward the ideal, the company reaches a decision point. That is the "
+            "third step: pivot or persevere. If the company is making good progress "
+            "toward the ideal, that means it is learning appropriately and using that "
+            "learning effectively, in which case it makes sense to continue."
+        ),
+        "book_context": (
+            "Book: The Lean Startup by Eric Ries\n"
+            "Book themes: startup business methodology, preventing startup failure, "
+            "scientific entrepreneurial process, validated learning and customer feedback"
+        ),
+        "topics": [
+            "establishing a baseline with mvps",
+            "pivot or persevere decision point",
+            "testing risky assumptions first",
+            "tuning the engine toward an ideal",
+            "validated learning through experimentation",
+        ],
+    },
+    {
+        "passage": (
+            "Then I went to the bedroom to look for Mackerel. The cat was curled up "
+            "under the quilt, sound asleep. I peeled back the quilt and took the cat's "
+            "tail in my hand to study its shape. I ran my fingers over it, trying to "
+            "recall the exact angle of the bent tip, when the cat gave an annoyed "
+            "stretch and went back to sleep. I could no longer say for sure that this "
+            "was the same exact tail the cat had had when we first got it."
+        ),
+        "book_context": (
+            "Book: The Wind-Up Bird Chronicle by Haruki Murakami\n"
+            "Book themes: japanese magical realism, disintegrating marital "
+            "relationships, subterranean metaphysical exploration"
+        ),
+        "topics": [
+            "cat tail as symbol of identity",
+            "dream logic and symbolism",
+            "letter from lieutenant mamiya and delayed communication",
+            "memory and perception of physical objects",
+            "supermarket and domestic routines",
+        ],
+    },
+    {
+        "passage": (
+            "The book is divided into five parts. Part 1 presents the basic elements "
+            "of a two-systems approach to judgment and choice. It elaborates the "
+            "distinction between the automatic operations of System 1 and the "
+            "controlled operations of System 2, and shows how associative memory, "
+            "the core of System 1, continually constructs a coherent interpretation "
+            "of what is going on in our world at any instant."
+        ),
+        "book_context": (
+            "Book: Thinking, Fast and Slow by Daniel Kahneman\n"
+            "Book themes: behavioral economics and cognitive psychology, "
+            "dual-process model of human cognition, cognitive heuristics "
+            "and systematic biases, critique of rational choice theory"
+        ),
+        "topics": [
+            "deviations from rationality in decision-making",
+            "dual-process model of cognition",
+            "heuristics and biases in judgment",
+            "overconfidence and uncertainty",
+            "system 1 vs system 2 thinking",
+        ],
+    },
+]
+
 
 def extract_topics_single_optimized(
     text: str,
     context: str,
     model: str = CHUNK_MODEL,
     num_topics: int = TOPICS_PER_CHUNK,
+    use_extended_prompt: bool = False,
 ) -> list[str]:
     """
     Extract topics from a single chunk using DSPy-optimized instruction + few-shot demos.
 
-    Uses the instruction and 4 demonstrations produced by MIPROv2 optimization.
-    Each demo shows the model a passage + book context → 5 multi-word noun-phrase topics.
+    Uses the instruction and demonstrations produced by MIPROv2 optimization.
+    Each demo shows the model a passage + book context -> 5 multi-word noun-phrase topics.
 
-    When using Gemini, the instruction + demos are sent as a cached system message
-    (context caching — 90% discount on repeated tokens). The per-chunk passage and
-    book context are sent as the user message.
+    When use_extended_prompt=True, uses 9 demos + detailed instruction (2090+ tokens)
+    which enables Gemini context caching for a 90% discount on the system prompt.
     """
+    # Select instruction and demos based on prompt variant
+    if use_extended_prompt:
+        instruction = _DSPY_INSTRUCTION_EXTENDED
+        demos = _DSPY_DEMOS + _DSPY_DEMOS_EXTENDED
+    else:
+        instruction = _DSPY_INSTRUCTION
+        demos = _DSPY_DEMOS
+
     # Build few-shot section
     demo_parts = []
-    for demo in _DSPY_DEMOS:
+    for demo in demos:
         demo_topics = json.dumps(demo["topics"])
         demo_parts.append(
             f"---\n"
@@ -736,40 +927,51 @@ def extract_topics_single_optimized(
         "required": ["topics"],
     }
 
-    try:
-        if _is_gemini_model(model):
-            # Split into cached system prompt (instruction + demos) and user prompt (chunk)
-            system_prompt = f"{_DSPY_INSTRUCTION}\n\n{demos_text}"
-            user_prompt = f"---\nPassage: {text}\n\nBook Context: {context}\n\nTopics:"
-            output = _call_gemini(
-                user_prompt, model,
-                response_schema=schema, timeout=60.0,
-                system_prompt=system_prompt,
-            )
-        else:
-            prompt = f"""{_DSPY_INSTRUCTION}\n\n{demos_text}\n\n---\nPassage: {text}\n\nBook Context: {context}\n\nTopics:"""
-            client = _get_client()
-            response = client.post(
-                OLLAMA_API_URL,
-                json={
-                    "model": model,
-                    "prompt": prompt,
-                    "format": schema,
-                    "stream": False,
-                    "options": {"num_ctx": OLLAMA_NUM_CTX},
-                },
-                timeout=60.0,
-            )
-            response.raise_for_status()
-            output = response.json().get("response", "").strip()
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            if _is_gemini_model(model):
+                system_prompt = f"{instruction}\n\n{demos_text}"
+                user_prompt = f"---\nPassage: {text}\n\nBook Context: {context}\n\nTopics:"
+                output = _call_gemini(
+                    user_prompt, model,
+                    response_schema=schema, timeout=60.0,
+                    system_prompt=system_prompt,
+                    cache_system_prompt=use_extended_prompt,
+                )
+            else:
+                prompt = f"""{instruction}\n\n{demos_text}\n\n---\nPassage: {text}\n\nBook Context: {context}\n\nTopics:"""
+                client = _get_client()
+                response = client.post(
+                    OLLAMA_API_URL,
+                    json={
+                        "model": model,
+                        "prompt": prompt,
+                        "format": schema,
+                        "stream": False,
+                        "options": {"num_ctx": OLLAMA_NUM_CTX},
+                    },
+                    timeout=60.0,
+                )
+                response.raise_for_status()
+                output = response.json().get("response", "").strip()
 
-        parsed = json.loads(output)
-        if isinstance(parsed, dict) and "topics" in parsed:
-            return [_unwrap_topic(t).strip() for t in parsed["topics"] if t][:num_topics]
-        return _parse_topics(output)
+            try:
+                parsed = json.loads(output)
+                if isinstance(parsed, dict) and "topics" in parsed:
+                    return [_unwrap_topic(t).strip() for t in parsed["topics"] if t][:num_topics]
+            except json.JSONDecodeError:
+                pass
+            # Fallback: parse plain text response (e.g., from content_filter retry)
+            return _parse_topics(output)
 
-    except (httpx.TimeoutException, Exception):
-        return []
+        except ContentFilterError:
+            return []  # Don't retry — content filter is deterministic
+        except Exception:
+            if attempt < max_retries - 1:
+                time.sleep(2 ** attempt)  # 1s, 2s backoff
+                continue
+            return []
 
 
 def extract_topics_single_optimized_parallel(
@@ -781,6 +983,7 @@ def extract_topics_single_optimized_parallel(
     num_topics: int = TOPICS_PER_CHUNK,
     max_workers: int = 30,
     progress_callback: Optional[callable] = None,
+    use_extended_prompt: bool = False,
 ) -> list[list[str]]:
     """
     Extract topics from chunks in parallel using DSPy-optimized single-chunk extraction.
@@ -788,7 +991,8 @@ def extract_topics_single_optimized_parallel(
     Each chunk is processed independently with the DSPy instruction + few-shot demos.
     Uses ThreadPoolExecutor with configurable concurrency to stay within API rate limits.
 
-    For Gemini paid tier (~300 RPM on Flash-Lite), max_workers=30 is safe.
+    When use_extended_prompt=True, uses 9 demos + detailed instruction (2090+ tokens)
+    enabling Gemini context caching for a 90% discount on the system prompt.
 
     Returns list[list[str]] matching input chunk order.
     """
@@ -802,7 +1006,10 @@ def extract_topics_single_optimized_parallel(
     context = "\n".join(context_parts)
 
     def process_chunk(idx: int, text: str) -> tuple[int, list[str]]:
-        raw = extract_topics_single_optimized(text, context, model, num_topics)
+        raw = extract_topics_single_optimized(
+            text, context, model, num_topics,
+            use_extended_prompt=use_extended_prompt,
+        )
         return idx, _filter_topics(raw)
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
