@@ -37,6 +37,7 @@ from .topic_extractor import (
     extract_book_themes,
     extract_topics_batch,
     extract_topics_batched,
+    extract_topics_single_optimized_parallel,
     get_available_models,
 )
 
@@ -222,6 +223,8 @@ def sync(ipad: str, dry_run: bool, skip_index: bool, model: str, save_url: bool)
 @click.option(
     "--min-battery", type=int, default=15, help="Pause if battery drops below this % (default: 15)"
 )
+@click.option("--parallel", is_flag=True, help="Use parallel single-chunk DSPy extraction (best with Gemini)")
+@click.option("--workers", type=int, default=30, help="Max concurrent workers for parallel extraction (default: 30)")
 def index(
     book_id: int,
     book_ids: tuple[int, ...],
@@ -237,6 +240,8 @@ def index(
     max_words: int,
     chunk_size: int,
     min_battery: int,
+    parallel: bool,
+    workers: int,
 ):
     """Index a book (parse, chunk, extract topics).
 
@@ -274,6 +279,7 @@ def index(
             _index_single_book(
                 book, theme_model, chunk_model, batch_size, legacy,
                 dry_run, chunk_size=chunk_size,
+                parallel=parallel, workers=workers,
             )
             book_elapsed = time.time() - book_start
             # Count chunks for this book
@@ -311,6 +317,7 @@ def index(
     _index_single_book(
         book, theme_model, chunk_model, batch_size, legacy,
         dry_run, chunk_size=chunk_size,
+        parallel=parallel, workers=workers,
     )
 
 
@@ -323,6 +330,8 @@ def _index_single_book(
     dry_run: bool,
     max_words: int = None,
     chunk_size: int = None,
+    parallel: bool = False,
+    workers: int = 30,
 ):
     """Index a single book. Raises exception on failure. Returns 'skipped' if over max_words."""
     console.print(f"[bold]Indexing:[/bold] {book['title'][:60]}")
@@ -435,33 +444,61 @@ def _index_single_book(
         else:
             console.print("[yellow]No book themes extracted (continuing without context)[/yellow]")
 
-        # Pass 2: Batched chunk extraction with context
-        console.print(
-            f"\n[bold]Pass 2: Extracting chunk topics with {chunk_model} "
-            f"(batches of {batch_size})...[/bold]"
-        )
-
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-            console=console,
-        ) as progress:
-            task = progress.add_task("Processing chunks", total=len(chunks))
-
-            def update_progress(completed: int, total: int):
-                progress.update(task, completed=completed)
-
-            topics_per_chunk = extract_topics_batched(
-                chunks,
-                book_title=book["title"],
-                author=book.get("author", "Unknown"),
-                book_themes=book_themes,
-                model=chunk_model,
-                batch_size=batch_size,
-                progress_callback=update_progress,
+        # Pass 2: Chunk topic extraction
+        if parallel:
+            console.print(
+                f"\n[bold]Pass 2: Extracting chunk topics with {chunk_model} "
+                f"(parallel, {workers} workers)...[/bold]"
             )
+
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+                console=console,
+            ) as progress:
+                task = progress.add_task("Processing chunks", total=len(chunks))
+
+                def update_progress(completed: int, total: int):
+                    progress.update(task, completed=completed)
+
+                topics_per_chunk = extract_topics_single_optimized_parallel(
+                    chunks,
+                    book_title=book["title"],
+                    author=book.get("author", "Unknown"),
+                    book_themes=book_themes,
+                    model=chunk_model,
+                    max_workers=workers,
+                    progress_callback=update_progress,
+                )
+        else:
+            console.print(
+                f"\n[bold]Pass 2: Extracting chunk topics with {chunk_model} "
+                f"(batches of {batch_size})...[/bold]"
+            )
+
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+                console=console,
+            ) as progress:
+                task = progress.add_task("Processing chunks", total=len(chunks))
+
+                def update_progress(completed: int, total: int):
+                    progress.update(task, completed=completed)
+
+                topics_per_chunk = extract_topics_batched(
+                    chunks,
+                    book_title=book["title"],
+                    author=book.get("author", "Unknown"),
+                    book_themes=book_themes,
+                    model=chunk_model,
+                    batch_size=batch_size,
+                    progress_callback=update_progress,
+                )
 
     # Save topics
     all_topics = []
@@ -594,6 +631,7 @@ def _index_all_books(
             result = _index_single_book(
                 book, theme_model, chunk_model, batch_size, legacy,
                 dry_run, max_words, chunk_size,
+                parallel=False, workers=30,
             )
             if result == "skipped":
                 skipped_large += 1
