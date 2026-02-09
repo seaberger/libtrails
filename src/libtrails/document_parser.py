@@ -88,11 +88,11 @@ def extract_text_from_epub(epub_path: Path) -> str:
                 for tag in tree.css("script, style, nav, header, footer"):
                     tag.decompose()
 
-                # Extract text
-                text = tree.text(separator=" ")
-                text = _clean_text(text)
+                # Extract text preserving paragraph structure
+                cleaned_html = tree.html or ""
+                text = _html_to_structured_text(cleaned_html)
 
-                if len(text) > 50:
+                if len(text.split()) > 10:
                     text_parts.append(text)
 
             except Exception:
@@ -122,14 +122,62 @@ def extract_text_from_pdf(pdf_path: Path) -> str:
     return text
 
 
-def _clean_text(text: str) -> str:
-    """Clean extracted text from EPUB."""
-    # Normalize whitespace
-    text = re.sub(r"\s+", " ", text)
-    # Remove common EPUB artifacts
+# Block-level HTML elements that should produce paragraph breaks
+_BLOCK_TAG_RE = re.compile(
+    r"</?(?:p|div|h[1-6]|li|blockquote|tr|table|section|article"
+    r"|aside|figcaption|figure|main|details|summary|dd|dt)\b[^>]*>",
+    re.IGNORECASE,
+)
+
+
+def _html_to_structured_text(html: str) -> str:
+    """
+    Convert HTML to plain text preserving paragraph boundaries.
+
+    Block-level elements (<p>, <div>, <h1>-<h6>, etc.) become paragraph
+    breaks (double newlines). Inline elements are stripped, leaving their
+    text content. Horizontal whitespace is collapsed but paragraph
+    structure is preserved.
+    """
+    # Convert <br> to single newline
+    text = re.sub(r"<br\s*/?>", "\n", html, flags=re.IGNORECASE)
+    # Convert <hr> to paragraph break
+    text = re.sub(r"<hr\s*/?>", "\n\n", html, flags=re.IGNORECASE)
+    # Convert block-level tags to paragraph breaks
+    text = _BLOCK_TAG_RE.sub("\n\n", text)
+    # Strip remaining HTML tags (inline: <em>, <strong>, <span>, <a>, etc.)
+    text = re.sub(r"<[^>]+>", " ", text)
+    # Decode common HTML entities
+    text = (
+        text.replace("&amp;", "&")
+        .replace("&lt;", "<")
+        .replace("&gt;", ">")
+        .replace("&quot;", '"')
+        .replace("&#39;", "'")
+        .replace("&rsquo;", "\u2019")
+        .replace("&lsquo;", "\u2018")
+        .replace("&rdquo;", "\u201d")
+        .replace("&ldquo;", "\u201c")
+        .replace("&mdash;", "\u2014")
+        .replace("&ndash;", "\u2013")
+        .replace("&hellip;", "\u2026")
+        .replace("&nbsp;", " ")
+        .replace("\xa0", " ")
+    )
+    # Remove EPUB artifacts
     text = re.sub(r"\[\d+\]", "", text)  # Footnote markers
-    text = text.strip()
-    return text
+    # Collapse horizontal whitespace (spaces/tabs) but preserve newlines
+    text = re.sub(r"[ \t]+", " ", text)
+    # Clean spaces around newlines
+    text = re.sub(r" ?\n ?", "\n", text)
+    # Collapse 3+ consecutive newlines to exactly 2 (paragraph break)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    # Remove leading/trailing whitespace from each line
+    lines = [line.strip() for line in text.split("\n")]
+    text = "\n".join(lines)
+    # Final cleanup of excessive paragraph breaks
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
 
 
 def _clean_markdown(text: str) -> str:
