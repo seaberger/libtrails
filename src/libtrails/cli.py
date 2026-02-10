@@ -237,8 +237,8 @@ def sync(ipad: str, dry_run: bool, skip_index: bool, model: str, save_url: bool)
 @click.option(
     "--workers",
     type=int,
-    default=30,
-    help="Max concurrent workers for parallel extraction (default: 30)",
+    default=4,
+    help="Max concurrent workers for parallel extraction (default: 4)",
 )
 @click.option(
     "--extended-prompt",
@@ -376,7 +376,7 @@ def _index_single_book(
     max_words: int = None,
     chunk_size: int = None,
     parallel: bool = False,
-    workers: int = 30,
+    workers: int = 4,
     extended_prompt: bool = False,
 ):
     """Index a single book. Raises exception on failure. Returns 'skipped' if over max_words."""
@@ -591,7 +591,7 @@ def _index_all_books(
     chunk_size: int = None,
     min_battery: int = 15,
     parallel: bool = False,
-    workers: int = 30,
+    workers: int = 4,
     extended_prompt: bool = False,
 ):
     """Index all books with Calibre matches, with resume support."""
@@ -2022,7 +2022,7 @@ def refresh_stats():
 @click.option(
     "--chunk-model", default="gemini/gemini-2.5-flash-lite", help="Model for topic extraction"
 )
-@click.option("--workers", type=int, default=20, help="Max concurrent workers (default: 20)")
+@click.option("--workers", type=int, default=4, help="Max concurrent workers (default: 4)")
 @click.option(
     "--extended-prompt",
     is_flag=True,
