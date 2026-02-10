@@ -4,6 +4,7 @@ import re
 import subprocess
 import time
 from collections import Counter
+from contextlib import contextmanager
 
 import click
 from dotenv import load_dotenv
@@ -61,6 +62,40 @@ def _refresh_and_report_stats() -> None:
     console.print("\n[bold cyan]Refreshing materialized stats...[/bold cyan]")
     stats_result = refresh_all_stats()
     console.print(f"  [green]Stats refreshed in {stats_result['elapsed_seconds']:.1f}s[/green]")
+
+
+@contextmanager
+def _progress_tracker(description: str, total: int):
+    """TTY-safe progress tracker.
+
+    Uses Rich Progress with SpinnerColumn when stdout is a TTY.
+    Falls back to periodic print statements when not a TTY, avoiding
+    Rich's live-rendering thread which deadlocks without a terminal.
+    """
+    if console.is_terminal:
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+            console=console,
+        ) as progress:
+            task_id = progress.add_task(description, total=total)
+
+            def callback(completed: int, _total: int):
+                progress.update(task_id, completed=completed)
+
+            yield callback
+    else:
+        last_pct = [-1]
+
+        def callback(completed: int, total: int):
+            pct = completed * 100 // total if total else 0
+            if pct >= last_pct[0] + 5 or completed == total:
+                last_pct[0] = pct
+                console.print(f"  {description}: {completed}/{total} ({pct}%)")
+
+        yield callback
 
 
 @click.group()
@@ -449,24 +484,21 @@ def _index_single_book(
 
     book_themes = []
 
+    # Save callback: persists each chunk's topics to DB immediately
+    def on_chunk_done(idx, topics):
+        if topics:
+            save_chunk_topics(chunk_ids[idx], topics)
+
     if legacy:
         # Legacy mode: single-call extraction, no context
         console.print(f"\n[bold]Extracting topics with {chunk_model} (legacy mode)...[/bold]")
 
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-            console=console,
-        ) as progress:
-            task = progress.add_task("Processing chunks", total=len(chunks))
-
-            def update_progress(completed: int, total: int):
-                progress.update(task, completed=completed)
-
+        with _progress_tracker("Processing chunks", len(chunks)) as update_progress:
             topics_per_chunk = extract_topics_batch(
-                chunks, chunk_model, progress_callback=update_progress
+                chunks,
+                chunk_model,
+                progress_callback=update_progress,
+                save_callback=on_chunk_done,
             )
     else:
         # Two-pass extraction
@@ -499,18 +531,7 @@ def _index_single_book(
                 f"(parallel, {workers} workers)...[/bold]"
             )
 
-            with Progress(
-                SpinnerColumn(),
-                TextColumn("[progress.description]{task.description}"),
-                BarColumn(),
-                TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-                console=console,
-            ) as progress:
-                task = progress.add_task("Processing chunks", total=len(chunks))
-
-                def update_progress(completed: int, total: int):
-                    progress.update(task, completed=completed)
-
+            with _progress_tracker("Processing chunks", len(chunks)) as update_progress:
                 topics_per_chunk = extract_topics_single_optimized_parallel(
                     chunks,
                     book_title=book["title"],
@@ -519,6 +540,7 @@ def _index_single_book(
                     model=chunk_model,
                     max_workers=workers,
                     progress_callback=update_progress,
+                    save_callback=on_chunk_done,
                     use_extended_prompt=extended_prompt,
                 )
         else:
@@ -527,18 +549,7 @@ def _index_single_book(
                 f"(batches of {batch_size})...[/bold]"
             )
 
-            with Progress(
-                SpinnerColumn(),
-                TextColumn("[progress.description]{task.description}"),
-                BarColumn(),
-                TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-                console=console,
-            ) as progress:
-                task = progress.add_task("Processing chunks", total=len(chunks))
-
-                def update_progress(completed: int, total: int):
-                    progress.update(task, completed=completed)
-
+            with _progress_tracker("Processing chunks", len(chunks)) as update_progress:
                 topics_per_chunk = extract_topics_batched(
                     chunks,
                     book_title=book["title"],
@@ -547,13 +558,13 @@ def _index_single_book(
                     model=chunk_model,
                     batch_size=batch_size,
                     progress_callback=update_progress,
+                    save_callback=on_chunk_done,
                 )
 
-    # Save topics
+    # Summarize (topics already saved per-chunk via on_chunk_done)
     all_topics = []
-    for chunk_id, topics in zip(chunk_ids, topics_per_chunk):
+    for topics in topics_per_chunk:
         if topics:
-            save_chunk_topics(chunk_id, topics)
             all_topics.extend(topics)
 
     unique_topics = set(all_topics)
@@ -1049,16 +1060,20 @@ def embed(force: bool):
 
         get_model()  # Pre-load model
 
+    batch_size = 64
+    embedded_count = 0
+    use_rich = console.is_terminal
+
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
         BarColumn(),
         TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
         console=console,
+        disable=not use_rich,
     ) as progress:
         task = progress.add_task("Embedding topics", total=len(topics))
 
-        batch_size = 64
         for i in range(0, len(labels), batch_size):
             batch_labels = labels[i : i + batch_size]
             batch_ids = topic_ids[i : i + batch_size]
@@ -1068,7 +1083,12 @@ def embed(force: bool):
             for topic_id, embedding in zip(batch_ids, embeddings):
                 save_topic_embedding(topic_id, embedding_to_bytes(embedding))
 
+            embedded_count += len(batch_labels)
             progress.advance(task, len(batch_labels))
+            if not use_rich:
+                pct = embedded_count * 100 // len(topics) if topics else 0
+                if pct % 10 == 0 or embedded_count == len(topics):
+                    console.print(f"  Embedding: {embedded_count}/{len(topics)} ({pct}%)")
 
     console.print(f"\n[green]Generated embeddings for {len(topics)} topics[/green]")
 

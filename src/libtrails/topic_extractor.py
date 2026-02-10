@@ -179,11 +179,13 @@ def extract_topics_batch(
     model: str = DEFAULT_MODEL,
     num_topics: int = TOPICS_PER_CHUNK,
     progress_callback: Optional[Callable] = None,
+    save_callback: Optional[Callable[[int, list[str]], None]] = None,
 ) -> list[list[str]]:
     """
     Extract topics from multiple chunks in parallel (legacy single-call mode).
 
     Returns a list of topic lists, one per chunk.
+    If save_callback is provided, calls save_callback(chunk_index, topics) as each chunk completes.
     """
     results = [None] * len(chunks)
     completed = 0
@@ -199,6 +201,8 @@ def extract_topics_batch(
             idx, topics = future.result()
             results[idx] = topics
             completed += 1
+            if save_callback:
+                save_callback(idx, topics)
             if progress_callback:
                 progress_callback(completed, len(chunks))
 
@@ -474,6 +478,7 @@ def extract_topics_batched(
     batch_size: int = BATCH_SIZE,
     num_topics: int = TOPICS_PER_CHUNK,
     progress_callback: Optional[Callable] = None,
+    save_callback: Optional[Callable[[int, list[str]], None]] = None,
 ) -> list[list[str]]:
     """
     Extract topics from chunks in batches, contextualized with book metadata.
@@ -485,6 +490,7 @@ def extract_topics_batched(
     Topics are normalized and filtered through the stoplist before returning.
 
     Returns list[list[str]] matching input chunk order.
+    If save_callback is provided, calls save_callback(chunk_index, topics) as each chunk completes.
     """
     results: list[list[str]] = [[] for _ in range(len(chunks))]
     completed = 0
@@ -507,13 +513,19 @@ def extract_topics_batched(
         if batch_results is not None:
             batch_successes += 1
             for i, topics in enumerate(batch_results):
-                results[batch_start + i] = _filter_topics(topics)
+                filtered = _filter_topics(topics)
+                results[batch_start + i] = filtered
+                if save_callback:
+                    save_callback(batch_start + i, filtered)
         else:
             # Fallback: extract individually
             batch_fallbacks += 1
             for i, chunk in enumerate(batch_chunks):
                 topics = _extract_single_contextualized(chunk, context, model, num_topics)
-                results[batch_start + i] = _filter_topics(topics)
+                filtered = _filter_topics(topics)
+                results[batch_start + i] = filtered
+                if save_callback:
+                    save_callback(batch_start + i, filtered)
 
         completed += len(batch_chunks)
         if progress_callback:
@@ -1044,6 +1056,7 @@ def extract_topics_single_optimized_parallel(
     num_topics: int = TOPICS_PER_CHUNK,
     max_workers: int = 30,
     progress_callback: Optional[Callable] = None,
+    save_callback: Optional[Callable[[int, list[str]], None]] = None,
     use_extended_prompt: bool = False,
 ) -> list[list[str]]:
     """
@@ -1056,6 +1069,7 @@ def extract_topics_single_optimized_parallel(
     enabling Gemini context caching for a 90% discount on the system prompt.
 
     Returns list[list[str]] matching input chunk order.
+    If save_callback is provided, calls save_callback(chunk_index, topics) as each chunk completes.
     """
     results: list[list[str] | None] = [None] * len(chunks)
     completed = 0
@@ -1083,6 +1097,8 @@ def extract_topics_single_optimized_parallel(
             idx, topics = future.result()
             results[idx] = topics
             completed += 1
+            if save_callback:
+                save_callback(idx, topics)
             if progress_callback:
                 progress_callback(completed, len(chunks))
 

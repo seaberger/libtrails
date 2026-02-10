@@ -21,6 +21,7 @@ from libtrails.topic_extractor import (
     extract_topics_batch,
     extract_topics_batched,
     extract_topics_single_optimized,
+    extract_topics_single_optimized_parallel,
     get_available_models,
     normalize_topic,
     strip_html,
@@ -842,3 +843,155 @@ class TestGetAvailableModels:
         """Returns empty list when command fails."""
         mock_run.return_value = MagicMock(stdout="", returncode=1)
         assert get_available_models() == []
+
+
+class TestSaveCallbackBatch:
+    """Tests for save_callback in extract_topics_batch (legacy)."""
+
+    @patch("libtrails.topic_extractor.extract_topics")
+    def test_save_callback_called_per_chunk(self, mock_extract):
+        """save_callback fires once per chunk with (index, topics)."""
+        mock_extract.side_effect = [["Topic A"], ["Topic B"], ["Topic C"]]
+        saved = []
+
+        extract_topics_batch(
+            ["c1", "c2", "c3"],
+            model="gemma3:4b",
+            save_callback=lambda idx, topics: saved.append((idx, topics)),
+        )
+
+        assert len(saved) == 3
+        indices = {idx for idx, _ in saved}
+        assert indices == {0, 1, 2}
+
+    @patch("libtrails.topic_extractor.extract_topics")
+    def test_save_callback_receives_filtered_topics(self, mock_extract):
+        """save_callback receives normalized/filtered topics, not raw."""
+        mock_extract.return_value = ["Valid Topic"]
+        saved = []
+
+        extract_topics_batch(
+            ["chunk"],
+            model="gemma3:4b",
+            save_callback=lambda idx, topics: saved.append((idx, topics)),
+        )
+
+        assert saved[0] == (0, ["valid topic"])
+
+    @patch("libtrails.topic_extractor.extract_topics")
+    def test_save_callback_not_called_when_none(self, mock_extract):
+        """No error when save_callback is None (default)."""
+        mock_extract.return_value = ["Topic"]
+        # Should not raise
+        extract_topics_batch(["chunk"], model="gemma3:4b", save_callback=None)
+
+
+class TestSaveCallbackBatched:
+    """Tests for save_callback in extract_topics_batched."""
+
+    @patch("libtrails.topic_extractor._get_client")
+    def test_save_callback_called_per_chunk(self, mock_get_client):
+        """save_callback fires for each chunk in a successful batch."""
+        mock_client = MagicMock()
+        mock_response = MagicMock()
+        mock_response.json.return_value = {
+            "response": json.dumps({"1": ["topic a"], "2": ["topic b"]})
+        }
+        mock_response.raise_for_status = MagicMock()
+        mock_client.post.return_value = mock_response
+        mock_get_client.return_value = mock_client
+
+        saved = []
+        extract_topics_batched(
+            chunks=["c1", "c2"],
+            book_title="Test",
+            author="Author",
+            model="gemma3:4b",
+            batch_size=5,
+            save_callback=lambda idx, topics: saved.append((idx, topics)),
+        )
+
+        assert len(saved) == 2
+        assert saved[0][0] == 0
+        assert saved[1][0] == 1
+
+    @patch("libtrails.topic_extractor._extract_single_contextualized")
+    @patch("libtrails.topic_extractor._extract_batch")
+    def test_save_callback_on_fallback(self, mock_batch, mock_single):
+        """save_callback fires even when batch falls back to individual."""
+        mock_batch.return_value = None
+        mock_single.return_value = ["fallback topic"]
+        saved = []
+
+        extract_topics_batched(
+            chunks=["c1", "c2"],
+            book_title="Test",
+            author="Author",
+            model="gemma3:4b",
+            batch_size=5,
+            save_callback=lambda idx, topics: saved.append((idx, topics)),
+        )
+
+        assert len(saved) == 2
+        assert all(topics == ["fallback topic"] for _, topics in saved)
+
+
+class TestSaveCallbackParallel:
+    """Tests for save_callback in extract_topics_single_optimized_parallel."""
+
+    @patch("libtrails.topic_extractor.extract_topics_single_optimized")
+    def test_save_callback_called_per_chunk(self, mock_extract):
+        """save_callback fires once per chunk in parallel mode."""
+        mock_extract.return_value = ["parallel topic"]
+        saved = []
+
+        extract_topics_single_optimized_parallel(
+            chunks=["c1", "c2", "c3"],
+            book_title="Test",
+            author="Author",
+            model="gemma3:4b",
+            max_workers=2,
+            save_callback=lambda idx, topics: saved.append((idx, topics)),
+        )
+
+        assert len(saved) == 3
+        indices = {idx for idx, _ in saved}
+        assert indices == {0, 1, 2}
+
+    @patch("libtrails.topic_extractor.extract_topics_single_optimized")
+    def test_save_callback_and_progress_both_called(self, mock_extract):
+        """save_callback and progress_callback both fire for each chunk."""
+        mock_extract.return_value = ["topic"]
+        saved = []
+        progress = []
+
+        extract_topics_single_optimized_parallel(
+            chunks=["c1", "c2"],
+            book_title="Test",
+            author="Author",
+            model="gemma3:4b",
+            max_workers=2,
+            save_callback=lambda idx, topics: saved.append((idx, topics)),
+            progress_callback=lambda completed, total: progress.append((completed, total)),
+        )
+
+        assert len(saved) == 2
+        assert len(progress) == 2
+        assert progress[-1] == (2, 2)
+
+    @patch("libtrails.topic_extractor.extract_topics_single_optimized")
+    def test_results_still_returned(self, mock_extract):
+        """Function still returns full results list when save_callback is used."""
+        mock_extract.return_value = ["topic a", "topic b"]
+
+        results = extract_topics_single_optimized_parallel(
+            chunks=["c1", "c2"],
+            book_title="Test",
+            author="Author",
+            model="gemma3:4b",
+            max_workers=2,
+            save_callback=lambda idx, topics: None,
+        )
+
+        assert len(results) == 2
+        assert all(len(topics) == 2 for topics in results)

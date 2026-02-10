@@ -348,6 +348,31 @@ calibre_lib/
 
 ---
 
+## Database Versions (V1 vs V2)
+
+**IMPORTANT: V1 and V2 are independent databases. Never cross-query or cross-index between them unless explicitly requested to compare results.**
+
+| | V1 | V2 |
+|---|---|---|
+| **File** | `data/ipad_library.db` | `data/ipad_library_v2.db` |
+| **Env var** | (default) | `LIBTRAILS_DB=v2` |
+| **Pipeline** | Single-pass, gemma3:4b, no book themes | Two-pass: gemma3:27b themes + gemma3:4b/Gemini/LM Studio chunk topics |
+| **Topic style** | Single-word generic ("Security", "Wall Street") | Multi-word noun phrases ("benghazi attack timeline", "wall street trading practices of the 1920s") |
+| **Status** | All 927 books indexed (V1 pipeline) | 338+ books indexed (V2 pipeline), will become primary |
+
+To switch databases, set the environment variable:
+```bash
+# Use V2 database
+LIBTRAILS_DB=v2 uv run libtrails status
+
+# Use V1 database (default)
+uv run libtrails status
+```
+
+The `LIBTRAILS_DB` env var is read in `config.py` and controls `IPAD_DB_PATH`.
+
+---
+
 ## Configuration
 
 Edit `src/libtrails/config.py`:
@@ -356,7 +381,7 @@ Edit `src/libtrails/config.py`:
 # Paths
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
-IPAD_DB_PATH = DATA_DIR / "ipad_library.db"
+IPAD_DB_PATH = DATA_DIR / "ipad_library.db"  # or ipad_library_v2.db via LIBTRAILS_DB=v2
 
 # Calibre library (read-only)
 CALIBRE_LIBRARY_PATH = Path.home() / "Calibre_Main_Library"
@@ -463,6 +488,17 @@ First run downloads ~130MB model. Subsequent runs use local cache in `models/`.
 ---
 
 ## Safety Guidelines
+
+### Tool Usage — Serena Stale Cache Risk
+- **NEVER use Serena's `replace_content` or `replace_symbol_body` for file edits.** Serena's language server can cache stale file versions, and `replace_content` may operate on the cached version rather than the actual file on disk. This has caused silent data loss (388 lines deleted from `topic_extractor.py` in Feb 2025).
+- **Always use the `Edit` tool** (Claude Code's native tool) for all file modifications — it reads directly from disk.
+- **Always use the `Read` tool** to verify file contents before editing — never trust Serena's `find_symbol` body output as ground truth for what's on disk.
+- Serena's `find_symbol`, `get_symbols_overview`, and `find_referencing_symbols` are safe for **navigation and discovery** (finding symbol names, locations, references), but always confirm bodies with `Read` before editing.
+
+### Rich Progress Bars and Background Processes
+- **Rich's `Progress` with `SpinnerColumn` deadlocks when stdout is not a TTY** (e.g. `nohup > file`). The live-rendering thread blocks on terminal operations.
+- For background/headless runs, use `screen` + `script` to provide a proper PTY, or disable Rich progress bars entirely.
+- When adding new Progress bars, consider TTY-safe fallbacks for non-interactive use.
 
 ### Process Management
 - **NEVER use broad `pkill -f` patterns** - they can match system processes
