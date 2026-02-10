@@ -109,6 +109,7 @@ TOPIC_STOPLIST = frozenset({
     "change", "future", "communication", "conflict", "loss", "survival",
     "identity", "freedom", "control", "trust", "fear", "growth",
     "knowledge", "science", "culture", "politics", "art", "history",
+    "topics",  # LM Studio 4b echoes the prompt's "Topics:" label
 })
 
 # Universe visualization
