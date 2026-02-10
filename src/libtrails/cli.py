@@ -6,6 +6,7 @@ import time
 from collections import Counter
 
 import click
+from dotenv import load_dotenv
 from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TextColumn
 from rich.table import Table
@@ -13,25 +14,46 @@ from rich.tree import Tree
 
 from . import __version__
 from .chunker import chunk_text
-from .config import CHUNK_TARGET_WORDS, DEFAULT_MODEL
+from .config import BATCH_SIZE, CHUNK_MODEL, CHUNK_TARGET_WORDS, DEFAULT_MODEL, THEME_MODEL
 from .database import (
     get_all_books,
     get_book,
     get_book_by_title,
     get_book_path,
+    get_calibre_book_metadata,
     get_indexing_status,
     get_topics_without_embeddings,
     init_chunks_table,
     migrate_raw_topics_to_normalized,
+    save_book_themes,
     save_chunk_topics,
     save_chunks,
     save_topic_embedding,
 )
 from .document_parser import extract_text
 from .stats import refresh_all_stats
-from .topic_extractor import check_ollama_available, extract_topics_batch, get_available_models
+from .topic_extractor import (
+    check_ollama_available,
+    extract_book_themes,
+    extract_topics_batch,
+    extract_topics_batched,
+    extract_topics_single_optimized_parallel,
+    get_available_models,
+)
 
-console = Console()
+# Load .env for Gemini API key (if using API-based models)
+load_dotenv()
+
+
+class _FlushConsole(Console):
+    """Console that flushes after every print for real-time output."""
+
+    def print(self, *args, **kwargs):
+        super().print(*args, **kwargs)
+        self.file.flush()
+
+
+console = _FlushConsole()
 
 
 def _refresh_and_report_stats() -> None:
@@ -178,16 +200,30 @@ def sync(ipad: str, dry_run: bool, skip_index: bool, model: str, save_url: bool)
 
 @main.command()
 @click.argument("book_id", type=int, required=False)
+@click.option("--id", "book_ids", type=int, multiple=True, help="Book ID(s) to index (repeatable)")
 @click.option("--title", "-t", help="Search by title")
 @click.option("--all", "index_all", is_flag=True, help="Index all books")
-@click.option("--model", "-m", default=DEFAULT_MODEL, help="Ollama model to use")
+@click.option("--model", "-m", default=None, help="Ollama model (sets both theme and chunk model)")
+@click.option(
+    "--theme-model", default=THEME_MODEL, help=f"Model for book themes (default: {THEME_MODEL})"
+)
+@click.option(
+    "--chunk-model", default=CHUNK_MODEL, help=f"Model for chunk topics (default: {CHUNK_MODEL})"
+)
+@click.option(
+    "--batch-size", type=int, default=BATCH_SIZE, help=f"Chunks per batch (default: {BATCH_SIZE})"
+)
+@click.option(
+    "--legacy", is_flag=True, help="Use legacy single-call extraction (no themes, no batching)"
+)
 @click.option("--dry-run", is_flag=True, help="Parse and chunk without topic extraction")
 @click.option("--reindex", is_flag=True, help="Re-index books that are already indexed")
 @click.option(
     "--max-words", type=int, default=None, help="Skip books with more than N words (e.g., 500000)"
 )
 @click.option(
-    "--chunk-size",
+    "--chunk-size-words",
+    "chunk_size",
     type=int,
     default=None,
     help="Target words per chunk (default: 500, use 2000-3000 for large books)",
@@ -195,22 +231,114 @@ def sync(ipad: str, dry_run: bool, skip_index: bool, model: str, save_url: bool)
 @click.option(
     "--min-battery", type=int, default=15, help="Pause if battery drops below this % (default: 15)"
 )
+@click.option(
+    "--parallel", is_flag=True, help="Use parallel single-chunk DSPy extraction (best with Gemini)"
+)
+@click.option(
+    "--workers",
+    type=int,
+    default=30,
+    help="Max concurrent workers for parallel extraction (default: 30)",
+)
+@click.option(
+    "--extended-prompt",
+    is_flag=True,
+    help="Use extended 9-demo prompt (enables Gemini context caching)",
+)
 def index(
     book_id: int,
+    book_ids: tuple[int, ...],
     title: str,
     index_all: bool,
     model: str,
+    theme_model: str,
+    chunk_model: str,
+    batch_size: int,
+    legacy: bool,
     dry_run: bool,
     reindex: bool,
     max_words: int,
     chunk_size: int,
     min_battery: int,
+    parallel: bool,
+    workers: int,
+    extended_prompt: bool,
 ):
-    """Index a book (parse, chunk, extract topics)."""
+    """Index a book (parse, chunk, extract topics).
+
+    Two-pass extraction (default):
+      Pass 1: gemma3:27b extracts 5-8 book-level themes (1 call/book)
+      Pass 2: gemma3:4b extracts chunk topics in batches, contextualized with themes
+
+    Use --legacy for old single-call extraction per chunk.
+    """
     init_chunks_table()
 
+    # If --model is set, use it for both theme and chunk model
+    if model:
+        theme_model = model
+        chunk_model = model
+
     if index_all:
-        _index_all_books(model, dry_run, reindex, max_words, chunk_size, min_battery)
+        _index_all_books(
+            theme_model,
+            chunk_model,
+            batch_size,
+            legacy,
+            dry_run,
+            reindex,
+            max_words,
+            chunk_size,
+            min_battery,
+            parallel=parallel,
+            workers=workers,
+            extended_prompt=extended_prompt,
+        )
+        return
+
+    # Handle --id flag (multiple book IDs)
+    if book_ids:
+        total_start = time.time()
+        total_chunks = 0
+        for i, bid in enumerate(book_ids, 1):
+            book = get_book(bid)
+            if not book:
+                console.print(f"[red]Book {bid} not found — skipping[/red]")
+                continue
+            console.print(f"\n[bold]({i}/{len(book_ids)})[/bold]")
+            book_start = time.time()
+            _index_single_book(
+                book,
+                theme_model,
+                chunk_model,
+                batch_size,
+                legacy,
+                dry_run,
+                chunk_size=chunk_size,
+                parallel=parallel,
+                workers=workers,
+                extended_prompt=extended_prompt,
+            )
+            book_elapsed = time.time() - book_start
+            # Count chunks for this book
+            from .database import get_db
+
+            with get_db() as conn:
+                n_chunks = conn.execute(
+                    "SELECT COUNT(*) FROM chunks WHERE book_id = ?", (book["id"],)
+                ).fetchone()[0]
+            total_chunks += n_chunks
+            console.print(
+                f"[bold cyan]Book done: {book_elapsed:.1f}s "
+                f"({n_chunks} chunks, {book_elapsed / max(n_chunks, 1):.2f}s/chunk)[/bold cyan]",
+            )
+        elapsed = time.time() - total_start
+        console.print(f"\n[bold green]{'─' * 50}[/bold green]")
+        console.print(
+            f"[bold green]Indexed {len(book_ids)} books, {total_chunks} chunks "
+            f"in {int(elapsed // 60)}m {int(elapsed % 60)}s "
+            f"({elapsed / max(total_chunks, 1):.2f}s/chunk avg)[/bold green]"
+        )
         return
 
     # Find the book
@@ -224,11 +352,32 @@ def index(
         console.print("[red]Book not found[/red]")
         return
 
-    _index_single_book(book, model, dry_run, chunk_size=chunk_size)
+    _index_single_book(
+        book,
+        theme_model,
+        chunk_model,
+        batch_size,
+        legacy,
+        dry_run,
+        chunk_size=chunk_size,
+        parallel=parallel,
+        workers=workers,
+        extended_prompt=extended_prompt,
+    )
 
 
 def _index_single_book(
-    book: dict, model: str, dry_run: bool, max_words: int = None, chunk_size: int = None
+    book: dict,
+    theme_model: str,
+    chunk_model: str,
+    batch_size: int,
+    legacy: bool,
+    dry_run: bool,
+    max_words: int = None,
+    chunk_size: int = None,
+    parallel: bool = False,
+    workers: int = 30,
+    extended_prompt: bool = False,
 ):
     """Index a single book. Raises exception on failure. Returns 'skipped' if over max_words."""
     console.print(f"[bold]Indexing:[/bold] {book['title'][:60]}")
@@ -282,12 +431,12 @@ def _index_single_book(
             console.print(chunks[0][:500] + "...")
         return
 
-    # Extract topics
-    if not check_ollama_available(model):
-        console.print(f"[red]Model {model} not available in Ollama[/red]")
+    # Check Ollama availability (skip for Gemini API and LM Studio models)
+    if not chunk_model.startswith(("gemini/", "lm_studio/")) and not check_ollama_available(
+        chunk_model
+    ):
+        console.print(f"[red]Model {chunk_model} not available in Ollama[/red]")
         return
-
-    console.print(f"\n[bold]Extracting topics with {model}...[/bold]")
 
     from .database import get_db
 
@@ -298,26 +447,114 @@ def _index_single_book(
         )
         chunk_ids = [row[0] for row in cursor.fetchall()]
 
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-        console=console,
-    ) as progress:
-        task = progress.add_task("Processing chunks", total=len(chunks))
+    book_themes = []
 
-        def update_progress(completed: int, total: int):
-            progress.update(task, completed=completed)
+    if legacy:
+        # Legacy mode: single-call extraction, no context
+        console.print(f"\n[bold]Extracting topics with {chunk_model} (legacy mode)...[/bold]")
 
-        # Extract topics in parallel (4 workers)
-        topics_per_chunk = extract_topics_batch(chunks, model, progress_callback=update_progress)
+        with Progress(
+            SpinnerColumn(),
+            TextColumn("[progress.description]{task.description}"),
+            BarColumn(),
+            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+            console=console,
+        ) as progress:
+            task = progress.add_task("Processing chunks", total=len(chunks))
 
-        all_topics = []
-        for chunk_id, topics in zip(chunk_ids, topics_per_chunk):
-            if topics:
-                save_chunk_topics(chunk_id, topics)
-                all_topics.extend(topics)
+            def update_progress(completed: int, total: int):
+                progress.update(task, completed=completed)
+
+            topics_per_chunk = extract_topics_batch(
+                chunks, chunk_model, progress_callback=update_progress
+            )
+    else:
+        # Two-pass extraction
+        # Pass 1: Book-level themes
+        console.print(f"\n[bold]Pass 1: Extracting book themes with {theme_model}...[/bold]")
+
+        calibre_meta = get_calibre_book_metadata(book["calibre_id"])
+        sample_text = text[:5000]
+
+        with console.status("Extracting book themes..."):
+            book_themes = extract_book_themes(
+                title=book["title"],
+                author=book.get("author", "Unknown"),
+                tags=calibre_meta.get("tags"),
+                description=calibre_meta.get("description"),
+                sample_text=sample_text,
+                model=theme_model,
+            )
+
+        if book_themes:
+            save_book_themes(book["id"], book_themes)
+            console.print(f"[green]Book themes:[/green] {', '.join(book_themes)}")
+        else:
+            console.print("[yellow]No book themes extracted (continuing without context)[/yellow]")
+
+        # Pass 2: Chunk topic extraction
+        if parallel:
+            console.print(
+                f"\n[bold]Pass 2: Extracting chunk topics with {chunk_model} "
+                f"(parallel, {workers} workers)...[/bold]"
+            )
+
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+                console=console,
+            ) as progress:
+                task = progress.add_task("Processing chunks", total=len(chunks))
+
+                def update_progress(completed: int, total: int):
+                    progress.update(task, completed=completed)
+
+                topics_per_chunk = extract_topics_single_optimized_parallel(
+                    chunks,
+                    book_title=book["title"],
+                    author=book.get("author", "Unknown"),
+                    book_themes=book_themes,
+                    model=chunk_model,
+                    max_workers=workers,
+                    progress_callback=update_progress,
+                    use_extended_prompt=extended_prompt,
+                )
+        else:
+            console.print(
+                f"\n[bold]Pass 2: Extracting chunk topics with {chunk_model} "
+                f"(batches of {batch_size})...[/bold]"
+            )
+
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+                console=console,
+            ) as progress:
+                task = progress.add_task("Processing chunks", total=len(chunks))
+
+                def update_progress(completed: int, total: int):
+                    progress.update(task, completed=completed)
+
+                topics_per_chunk = extract_topics_batched(
+                    chunks,
+                    book_title=book["title"],
+                    author=book.get("author", "Unknown"),
+                    book_themes=book_themes,
+                    model=chunk_model,
+                    batch_size=batch_size,
+                    progress_callback=update_progress,
+                )
+
+    # Save topics
+    all_topics = []
+    for chunk_id, topics in zip(chunk_ids, topics_per_chunk):
+        if topics:
+            save_chunk_topics(chunk_id, topics)
+            all_topics.extend(topics)
 
     unique_topics = set(all_topics)
     console.print(f"\n[green]Extracted {len(unique_topics)} unique topics[/green]")
@@ -344,34 +581,56 @@ def _get_battery_level() -> int | None:
 
 
 def _index_all_books(
-    model: str,
+    theme_model: str,
+    chunk_model: str,
+    batch_size: int,
+    legacy: bool,
     dry_run: bool,
     reindex: bool = False,
     max_words: int = None,
     chunk_size: int = None,
     min_battery: int = 15,
+    parallel: bool = False,
+    workers: int = 30,
+    extended_prompt: bool = False,
 ):
     """Index all books with Calibre matches, with resume support."""
     from .database import get_book_path, get_db
 
     books = get_all_books(with_calibre_match=True)
 
+    mode_desc = "legacy" if legacy else f"two-pass ({theme_model} + {chunk_model})"
+    if parallel:
+        mode_desc += f" [parallel, {workers} workers]"
+    console.print(f"[dim]Extraction mode: {mode_desc}[/dim]")
     if max_words:
         console.print(f"[dim]Skipping books with more than {max_words:,} words[/dim]")
     if chunk_size:
         console.print(f"[dim]Using {chunk_size:,} words per chunk[/dim]")
     console.print(f"[dim]Will pause if battery drops below {min_battery}%[/dim]")
 
-    # Get already indexed book IDs
+    # Get already indexed book IDs (have chunks)
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT DISTINCT book_id FROM chunks")
         indexed_ids = {row[0] for row in cursor.fetchall()}
 
+        # Get books that already have topics extracted (for reindex resume)
+        cursor.execute(
+            "SELECT DISTINCT c.book_id FROM chunks c JOIN chunk_topics ct ON c.id = ct.chunk_id"
+        )
+        has_topics_ids = {row[0] for row in cursor.fetchall()}
+
     # Filter books to process
     if reindex:
-        to_process = books
-        console.print(f"[bold]Re-indexing all {len(books)} books...[/bold]")
+        # Skip books that already have topics (resume support)
+        to_process = [b for b in books if b["id"] not in has_topics_ids]
+        already_done = len(has_topics_ids)
+        if already_done > 0:
+            console.print(
+                f"[dim]Skipping {already_done} books already re-indexed with topics[/dim]"
+            )
+        console.print(f"[bold]Re-indexing {len(to_process)} remaining books...[/bold]")
     else:
         to_process = [b for b in books if b["id"] not in indexed_ids]
         skipped = len(books) - len(to_process)
@@ -435,7 +694,19 @@ def _index_all_books(
                     break
 
         try:
-            result = _index_single_book(book, model, dry_run, max_words, chunk_size)
+            result = _index_single_book(
+                book,
+                theme_model,
+                chunk_model,
+                batch_size,
+                legacy,
+                dry_run,
+                max_words,
+                chunk_size,
+                parallel=parallel,
+                workers=workers,
+                extended_prompt=extended_prompt,
+            )
             if result == "skipped":
                 skipped_large += 1
                 continue
@@ -1745,6 +2016,209 @@ def refresh_stats():
     console.print(f"  [green]clusters with stats: {result['clusters_with_stats']:,}[/green]")
     console.print(f"  [green]domains with stats: {result['domains_with_stats']:,}[/green]")
     console.print(f"  [dim]Completed in {result['elapsed_seconds']:.1f}s[/dim]")
+
+
+@main.command("backfill")
+@click.option(
+    "--chunk-model", default="gemini/gemini-2.5-flash-lite", help="Model for topic extraction"
+)
+@click.option("--workers", type=int, default=20, help="Max concurrent workers (default: 20)")
+@click.option(
+    "--extended-prompt",
+    is_flag=True,
+    help="Use extended 9-demo prompt (enables Gemini context caching)",
+)
+@click.option("--dry-run", is_flag=True, help="Show what would be backfilled without doing it")
+def backfill(chunk_model: str, workers: int, extended_prompt: bool, dry_run: bool):
+    """Re-extract topics for chunks that have none (from failed API calls).
+
+    Finds chunks in already-processed books that are missing topics
+    (e.g., from 503 errors) and re-runs extraction on just those chunks.
+    """
+    import json as _json
+    from collections import Counter, defaultdict
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    from rich.progress import Progress
+
+    from .database import get_db
+    from .topic_extractor import (
+        _filter_topics,
+        extract_topics_single_optimized,
+    )
+
+    with get_db() as conn:
+        # Find chunks missing topics in books that have SOME topics
+        missing = conn.execute("""
+            SELECT c.id, c.book_id, b.title, b.author, b.book_themes, c.text, c.chunk_index
+            FROM chunks c
+            JOIN books b ON c.book_id = b.id
+            LEFT JOIN chunk_topics ct ON c.id = ct.chunk_id
+            WHERE ct.chunk_id IS NULL
+            AND c.book_id IN (
+                SELECT DISTINCT c2.book_id FROM chunks c2
+                JOIN chunk_topics ct2 ON c2.id = ct2.chunk_id
+            )
+            ORDER BY c.book_id, c.chunk_index
+        """).fetchall()
+
+    if not missing:
+        console.print("[green]No chunks need backfilling — all chunks have topics.[/green]")
+        return
+
+    book_ids = set(r[1] for r in missing)
+    console.print(
+        f"[bold]Found {len(missing)} chunks missing topics across {len(book_ids)} books[/bold]"
+    )
+
+    if dry_run:
+        by_book = Counter(r[2] for r in missing)
+        for title, count in by_book.most_common(20):
+            console.print(f"  {count:>4} chunks: {title[:60]}")
+        if len(by_book) > 20:
+            console.print(f"  ... and {len(by_book) - 20} more books")
+        return
+
+    # Group by book for context
+    by_book = defaultdict(list)
+    for chunk_id, book_id, title, author, themes_json, text, idx in missing:
+        by_book[book_id].append((chunk_id, title, author, themes_json, text, idx))
+
+    total_fixed = 0
+    total_failed = 0
+
+    with Progress(console=console) as progress:
+        task = progress.add_task("Backfilling", total=len(missing))
+
+        for book_id, chunks_data in by_book.items():
+            title = chunks_data[0][1]
+            author = chunks_data[0][2] or "Unknown"
+            themes_json = chunks_data[0][3]
+            book_themes = _json.loads(themes_json) if themes_json else []
+
+            context_parts = [f"Book: {title} by {author}"]
+            if book_themes:
+                context_parts.append(f"Book themes: {', '.join(book_themes)}")
+            context = "\n".join(context_parts)
+
+            # Process chunks in parallel
+            def process_one(chunk_info):
+                chunk_id, _, _, _, text, _ = chunk_info
+                raw = extract_topics_single_optimized(
+                    text,
+                    context,
+                    chunk_model,
+                    use_extended_prompt=extended_prompt,
+                )
+                return chunk_id, _filter_topics(raw)
+
+            with ThreadPoolExecutor(max_workers=min(workers, len(chunks_data))) as executor:
+                futures = {executor.submit(process_one, c): c for c in chunks_data}
+                for future in as_completed(futures):
+                    chunk_id, topics = future.result()
+                    if topics:
+                        with get_db() as conn:
+                            for topic_str in topics:
+                                conn.execute(
+                                    "INSERT OR IGNORE INTO chunk_topics (chunk_id, topic) VALUES (?, ?)",
+                                    (chunk_id, topic_str),
+                                )
+                            conn.commit()
+                        total_fixed += 1
+                    else:
+                        total_failed += 1
+                    progress.update(task, advance=1)
+
+    console.print("\n[bold green]Backfill complete:[/bold green]")
+    console.print(f"  Fixed: {total_fixed} chunks")
+    console.print(f"  Still failed: {total_failed} chunks")
+
+
+@main.command("prepare-v2")
+def prepare_v2():
+    """Prepare a v2 database for topic extraction experiments.
+
+    Copies the current database, clears all topic-related tables,
+    and keeps books + chunks intact (no need to re-parse EPUBs).
+
+    Usage:
+        uv run libtrails prepare-v2
+        LIBTRAILS_DB=v2 uv run libtrails index --title "Siddhartha"
+        LIBTRAILS_DB=v2 uv run libtrails process
+    """
+    import shutil
+
+    from .config import DATA_DIR
+
+    source = DATA_DIR / "ipad_library.db"
+    dest = DATA_DIR / "ipad_library_v2.db"
+
+    if not source.exists():
+        console.print(f"[red]Source database not found: {source}[/red]")
+        return
+
+    if dest.exists():
+        console.print(f"[yellow]v2 database already exists: {dest}[/yellow]")
+        console.print("[dim]Delete it manually to recreate.[/dim]")
+        return
+
+    # Copy database
+    console.print("[bold]Copying database...[/bold]")
+    console.print(f"  {source} → {dest}")
+    shutil.copy2(source, dest)
+
+    # Clear topic-related tables
+    import sqlite3
+
+    conn = sqlite3.connect(dest)
+    cursor = conn.cursor()
+
+    tables_to_clear = [
+        "chunk_topics",
+        "chunk_topic_links",
+        "topics",
+        "topic_cooccurrences",
+        "topic_cluster_memberships",
+        "cluster_labels",
+        "cluster_books",
+        "cluster_stats",
+        "domain_stats",
+        "domains",
+        "cluster_domains",
+    ]
+
+    console.print("\n[bold]Clearing topic tables...[/bold]")
+    for table in tables_to_clear:
+        try:
+            cursor.execute(f"DELETE FROM {table}")
+            count = cursor.rowcount
+            if count > 0:
+                console.print(f"  [dim]{table}: cleared {count:,} rows[/dim]")
+        except sqlite3.OperationalError:
+            pass  # Table doesn't exist
+
+    # Drop and recreate topic_vectors virtual table
+    try:
+        cursor.execute("DROP TABLE IF EXISTS topic_vectors")
+        console.print("  [dim]topic_vectors: dropped[/dim]")
+    except sqlite3.OperationalError:
+        pass
+
+    # Add book_themes column if missing
+    cursor.execute("PRAGMA table_info(books)")
+    columns = [row[1] for row in cursor.fetchall()]
+    if "book_themes" not in columns:
+        cursor.execute("ALTER TABLE books ADD COLUMN book_themes TEXT")
+        console.print("  [dim]Added book_themes column[/dim]")
+
+    conn.commit()
+    conn.close()
+
+    console.print(f"\n[green]v2 database ready: {dest}[/green]")
+    console.print("\n[bold]Next steps:[/bold]")
+    console.print("  [cyan]LIBTRAILS_DB=v2 uv run libtrails index --title 'Siddhartha'[/cyan]")
+    console.print("  [cyan]LIBTRAILS_DB=v2 uv run libtrails process[/cyan]")
+    console.print("  [cyan]LIBTRAILS_DB=v2 uv run libtrails serve --port 8001[/cyan]")
 
 
 @main.command()

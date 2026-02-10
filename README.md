@@ -6,7 +6,7 @@ Inspired by [Pieter Maes' "Reading Across Books" project](https://pieterma.es/sy
 
 ## What is this?
 
-libtrails helps you discover conceptual connections across your book collection. It extracts topics from your EPUBs using a local LLM, generates semantic embeddings, and builds a hierarchical topic graph — all stored locally in SQLite.
+libtrails helps you discover conceptual connections across your book collection. It extracts topics from your EPUBs using LLMs (local or cloud), generates semantic embeddings, and builds a hierarchical topic graph — all stored locally in SQLite.
 
 **Use cases:**
 - Find books that discuss similar themes
@@ -27,7 +27,7 @@ Explore topic clusters with semantic search. Each card shows stacked book covers
 ![Clusters Page](docs/screenshots/clusters.png)
 
 ### Themes Browser
-Browse 29 broad themes (super-clusters) with a two-panel interface. Click a theme to see its top clusters and featured books.
+Browse broad themes (super-clusters) with a two-panel interface. Click a theme to see its top clusters and featured books.
 
 ![Themes Page](docs/images/themes-page.png)
 
@@ -43,16 +43,17 @@ graph LR
         CAL[(Calibre metadata.db)]
     end
 
-    subgraph "Indexing Pipeline"
+    subgraph "Topic Extraction Pipeline"
         PARSE[Parse & Extract Text]
-        CHUNK[Chunk ~500 words]
-        LLM[Topic Extraction<br/>Ollama gemma3:27b]
+        CHUNK[Recursive Chunker<br/>paragraphs → sentences → words]
+        THEMES[Pass 1: Book Themes<br/>gemma3:27b · 1 call/book]
+        TOPICS[Pass 2: Chunk Topics<br/>gemma3:4b · batches of 5]
     end
 
-    subgraph "Post-Processing Pipeline"
+    subgraph "Graph & Clustering Pipeline"
         EMB[Embed Topics<br/>BGE-small-en-v1.5]
-        DEDUP[Deduplicate<br/>cosine > 0.85]
-        GRAPH[Build KNN Graph<br/>co-occurrence + embeddings]
+        DEDUP[Two-Tier Dedup<br/>>0.95 unconditional<br/>0.85–0.95 + book overlap]
+        GRAPH[KNN Graph<br/>co-occurrence × book boost<br/>+ embedding neighbors]
         CLUSTER[Leiden Clustering<br/>CPM partition]
         DOMAIN[Super-Clusters<br/>K-means on centroids]
         LABEL[Domain Labeling<br/>LLM + human refinement]
@@ -72,10 +73,10 @@ graph LR
 
     EPUB --> PARSE
     PDF --> PARSE
-    CAL --> PARSE
-    PARSE --> CHUNK --> LLM
+    CAL --> THEMES
+    PARSE --> CHUNK --> THEMES --> TOPICS
 
-    LLM --> EMB --> DEDUP --> GRAPH --> CLUSTER --> DOMAIN --> LABEL
+    TOPICS --> EMB --> DEDUP --> GRAPH --> CLUSTER --> DOMAIN --> LABEL
 
     CLUSTER --> UMAP --> JSON
     LABEL --> PCA --> JSON
@@ -87,60 +88,84 @@ graph LR
 
 ## Pipelines in Detail
 
-### 1. Indexing Pipeline
+### 1. Topic Extraction Pipeline
 
-Converts raw books into chunked text with extracted topics.
+Converts raw books into chunked text with extracted topics using a two-pass LLM strategy. See [full documentation](docs/topic-extraction-pipeline.md).
 
 ```mermaid
 flowchart TD
     A[EPUB / PDF file] --> B{Format?}
-    B -->|EPUB| C[selectolax HTML parser<br/>Extract XHTML in reading order]
-    B -->|PDF| D[docling layout-aware parser<br/>Export as markdown]
-    C --> E[Plain text]
+    B -->|EPUB| C[selectolax HTML parser<br/>Block tags → paragraph breaks]
+    B -->|PDF| D[docling layout-aware parser]
+    C --> E[Structured text]
     D --> E
 
-    E --> F[Sentence-boundary chunking<br/>~500 words per chunk<br/>min 100 words]
-    F --> G["Ollama topic extraction<br/>5 topics per chunk (4 parallel workers)"]
-    G --> H[(SQLite: chunks + chunk_topics)]
+    E --> F[Recursive chunker<br/>paragraphs → sentences → words<br/>~500 words per chunk]
+    F --> G[Pass 1: Book Themes<br/>gemma3:27b · 1 call/book<br/>+ Calibre metadata]
+    G --> H[Pass 2: Chunk Topics<br/>gemma3:4b · batches of 5<br/>contextualized with themes]
+    H --> I[Normalize + stoplist filter]
+    I --> J[(SQLite: chunks + topics)]
 
     style A fill:#2d3748,stroke:#4a5568,color:#e2e8f0
-    style H fill:#1a365d,stroke:#2b6cb0,color:#e2e8f0
+    style J fill:#1a365d,stroke:#2b6cb0,color:#e2e8f0
 ```
+
+**Key features:**
+- **Two-pass extraction**: Larger model extracts book-level themes, smaller model extracts chunk topics contextualized with those themes
+- **Multi-provider LLM support**: Ollama (local), Gemini API (cloud), or LM Studio (local MLX)
+- **Paragraph-preserving parser**: Block-level HTML tags converted to `\n\n` paragraph breaks
+- **Recursive chunker**: Splits at paragraphs first, sentences second, words as last resort
+- **Metadata enrichment**: Calibre tags (cleaned), descriptions (HTML-stripped), and series info feed into theme extraction
+- **Structured output**: JSON schema enforcement across all providers
 
 **CLI:**
 ```bash
 uv run libtrails index --title "Siddhartha"   # Single book
-uv run libtrails index --all                   # All 927 books
+uv run libtrails index --all                   # All books
+uv run libtrails index --dry-run              # Parse/chunk only, skip LLM
+
+# Multi-provider support
+uv run libtrails index --all --parallel \
+  --theme-model gemini/gemini-2.5-flash \
+  --chunk-model gemini/gemini-2.5-flash-lite   # Gemini API
+
+uv run libtrails index --all --parallel \
+  --theme-model lm_studio/google/gemma-3-27b \
+  --chunk-model lm_studio/google/gemma-3-4b    # LM Studio (local MLX)
 ```
 
-### 2. Post-Processing Pipeline
+### 2. Graph & Clustering Pipeline
 
-Transforms raw topics into a clustered, searchable topic graph.
+Transforms raw topics into a clustered, searchable topic graph. See [full documentation](docs/graph-clustering-pipeline.md).
 
 ```mermaid
 flowchart TD
-    A[(Raw topics<br/>~187k)] --> B[Normalize<br/>lowercase, strip, collapse spaces]
-    B --> C[Generate embeddings<br/>BGE-small-en-v1.5, 384 dims]
-    C --> D[(sqlite-vec index<br/>cosine distance)]
+    A[(Raw topics)] --> B[Embed<br/>BGE-small-en-v1.5, 384 dims]
+    B --> C[(sqlite-vec index)]
 
-    C --> E[Deduplicate<br/>Union-Find, cosine > 0.85]
-    E --> F[(Normalized topics<br/>~153k)]
+    B --> D[Two-tier dedup<br/>>0.95 unconditional<br/>0.85–0.95 + book overlap]
+    D --> E[(Deduplicated topics)]
 
-    F --> G[Build KNN graph<br/>co-occurrence edges + PMI weighting<br/>+ top-10 embedding neighbors]
-    G --> H[Hub removal<br/>95th percentile degree nodes]
-    H --> I[Leiden clustering<br/>CPM partition, resolution=0.001]
-    I --> J[(~1,284 Leiden clusters)]
+    E --> F[Co-occurrence<br/>chunk pairs + PMI + book_count]
+    F --> G[KNN graph<br/>co-occurrence × book boost<br/>+ top-10 embedding neighbors]
+    G --> H[Hub removal + Leiden clustering<br/>CPM, resolution=0.001]
+    H --> I[(Leiden clusters)]
 
-    J --> K[K-means on cluster centroids<br/>→ 29 super-clusters]
-    K --> L[LLM auto-labeling +<br/>human-refined domain names]
-    L --> M[(domains + cluster_domains)]
+    I --> J[K-means → super-clusters<br/>+ domain labeling]
+    J --> K[(domains)]
 
     style A fill:#2d3748,stroke:#4a5568,color:#e2e8f0
-    style D fill:#1a365d,stroke:#2b6cb0,color:#e2e8f0
-    style F fill:#1a365d,stroke:#2b6cb0,color:#e2e8f0
-    style J fill:#1a365d,stroke:#2b6cb0,color:#e2e8f0
-    style M fill:#1a365d,stroke:#2b6cb0,color:#e2e8f0
+    style C fill:#1a365d,stroke:#2b6cb0,color:#e2e8f0
+    style E fill:#1a365d,stroke:#2b6cb0,color:#e2e8f0
+    style I fill:#1a365d,stroke:#2b6cb0,color:#e2e8f0
+    style K fill:#1a365d,stroke:#2b6cb0,color:#e2e8f0
 ```
+
+**Key features:**
+- **Two-tier deduplication**: High-confidence merges (>0.95) are unconditional; lower-confidence (0.85–0.95) require shared books to prevent cross-domain conflation
+- **Co-book edge weighting**: Topic pairs sharing multiple books get boosted graph weights via `PMI × (1 + log(1 + book_count))`
+- **KNN similarity floor**: Embedding edges require cosine similarity ≥ 0.65 to prevent connecting unrelated topics
+- **PMI threshold**: Only genuinely surprising co-occurrences (PMI ≥ 1.0) create graph edges
 
 **CLI:**
 ```bash
@@ -158,11 +183,11 @@ Projects clusters into 3D space and assigns semantically meaningful colors.
 
 ```mermaid
 flowchart TD
-    A[(1,284 Leiden clusters)] --> B[Compute robust centroid per cluster<br/>weighted avg of top-15 topic embeddings]
+    A[(Leiden clusters)] --> B[Compute robust centroid per cluster<br/>weighted avg of top-15 topic embeddings]
     B --> C[UMAP 3D projection<br/>n_neighbors=15, min_dist=0.3<br/>cosine metric]
     C --> D["Normalize coords to [-1, 1]"]
 
-    B --> E[Average centroids per domain<br/>→ 29 domain embeddings]
+    B --> E[Average centroids per domain<br/>→ domain embeddings]
     E --> F[PCA → 1D semantic axis]
     F --> G["Map position to hue [0°–330°]<br/>avoids red wrap-back"]
 
@@ -187,14 +212,16 @@ uv run libtrails generate-universe             # Generate 3D coordinates + color
 
 ## Features
 
+- **Two-Pass Topic Extraction**: Book-level themes contextualize chunk-level topics for domain-specific results
+- **Multi-Provider LLM**: Ollama (local), Gemini API (cloud), or LM Studio (local MLX) — swap with a CLI flag
 - **3D Galaxy Visualization**: Interactive Three.js universe with semantic domain colors (PCA on embeddings → hue mapping)
-- **100% Local**: All processing on your machine (Ollama + local embeddings)
-- **Calibre Integration**: Reads metadata from your Calibre library
+- **Calibre Integration**: Reads metadata (tags, descriptions, series) to enrich extraction
 - **Semantic Search**: Find topics by meaning, not just keywords (sqlite-vec cosine)
+- **Two-Tier Deduplication**: High-confidence merges unconditionally; lower-confidence merges require shared books to prevent cross-domain conflation
+- **Co-Book Edge Weighting**: Topic pairs sharing multiple books get stronger graph connections
 - **Topic Clustering**: Leiden algorithm with hub removal for clean communities
-- **29 Domains**: Super-clusters with LLM-generated + human-refined labels
+- **Domain Labels**: Super-clusters with LLM-generated + human-refined labels
 - **Web Interface**: Astro + React Three Fiber + FastAPI
-- **Co-occurrence Analysis**: Discover topics that appear together (PMI-weighted)
 - **SQLite Storage**: Everything in one portable database file
 
 ---
@@ -213,9 +240,17 @@ uv venv
 uv pip install -r requirements.txt
 uv pip install -e .
 
-# Install Ollama for topic extraction
+# Install an LLM provider for topic extraction (pick one):
+
+# Option 1: Ollama (local, free)
 # See: https://ollama.ai
-ollama pull gemma3:27b
+ollama pull gemma3:27b && ollama pull gemma3:4b
+
+# Option 2: LM Studio (local MLX, free)
+# See: https://lmstudio.ai — load gemma-3-27b and gemma-3-4b
+
+# Option 3: Gemini API (cloud, ~$1 per 300 books)
+# Set GEMINI_API_KEY in .env
 ```
 
 ### Configuration
@@ -261,7 +296,7 @@ cd web && npm install && npm run dev
 
 **Navigation:**
 - **Universe** (`/`): 3D galaxy visualization of all clusters
-- **Themes** (`/themes`): Browse 29 domains with two-panel browser
+- **Themes** (`/themes`): Browse domains with two-panel browser
 - **Clusters** (`/clusters`): Explore topic clusters with semantic search
 - **Books** (`/books`): Browse all indexed books
 
@@ -276,7 +311,12 @@ cd web && npm install && npm run dev
 | `libtrails status` | Show library stats and indexing progress |
 | `libtrails index <id>` | Index a book by database ID |
 | `libtrails index --title "Name"` | Index a book by title |
+| `libtrails index --id 123 --id 456` | Index specific books by ID |
 | `libtrails index --all` | Index all books |
+| `libtrails index --parallel` | Use parallel single-chunk extraction (for Gemini/LM Studio) |
+| `libtrails index --theme-model X` | Override theme extraction model |
+| `libtrails index --chunk-model X` | Override chunk topic extraction model |
+| `libtrails index --reindex` | Force re-extraction of already-indexed books |
 | `libtrails index --dry-run` | Parse and chunk without topic extraction |
 | `libtrails topics <id>` | Show extracted topics for a book |
 | `libtrails models` | List available Ollama models |
@@ -384,6 +424,7 @@ erDiagram
         int topic2_id FK
         int count
         real pmi
+        int book_count
     }
     topic_cluster_memberships {
         int topic_id FK
@@ -418,6 +459,8 @@ CREATE VIRTUAL TABLE topic_vectors USING vec0(
 |---------|---------|
 | `selectolax` | Fast EPUB/HTML parsing |
 | `docling` | Layout-aware PDF extraction |
+| `pypdf` | Lightweight PDF text extraction |
+| `litellm` | Unified LLM API (Gemini, LM Studio, OpenAI) |
 | `sentence-transformers` | BGE-small-en-v1.5 embeddings (384 dims) |
 | `sqlite-vec` | Vector similarity search in SQLite |
 | `python-igraph` | Graph construction |
@@ -428,20 +471,6 @@ CREATE VIRTUAL TABLE topic_vectors USING vec0(
 | `fastapi` + `uvicorn` | REST API server |
 | `astro` | Frontend framework (SSG) |
 | `@react-three/fiber` + `drei` | 3D galaxy visualization |
-
----
-
-## Current Stats
-
-| Metric | Value |
-|--------|-------|
-| Indexed books | 927 |
-| Text chunks | 301,661 |
-| Normalized topics | 153,040 |
-| Leiden clusters | 1,284 |
-| Domains (super-clusters) | 29 |
-| Embedding model | BGE-small-en-v1.5 (384 dims) |
-| Clustering | Leiden CPM, resolution=0.001 |
 
 ---
 
@@ -474,10 +503,17 @@ Books with matching topics:
 ## Roadmap
 
 ### Completed
-- [x] EPUB + PDF parsing and chunking
-- [x] Topic extraction via Ollama (gemma3:27b)
+- [x] EPUB parsing with paragraph-preserving HTML extraction
+- [x] Recursive text chunking (paragraphs → sentences → words)
+- [x] Two-pass topic extraction (themes + contextualized chunk topics)
+- [x] Multi-provider LLM support (Ollama, Gemini API, LM Studio)
+- [x] Parallel extraction with configurable workers
+- [x] Metadata enrichment (Calibre tags, descriptions, series)
+- [x] Structured LLM output (JSON schema enforcement across providers)
+- [x] Topic stoplist filtering
 - [x] Semantic embeddings with BGE-small-en-v1.5
-- [x] Topic deduplication (Union-Find, cosine > 0.85)
+- [x] Two-tier deduplication (0.95 unconditional, 0.85 + book overlap)
+- [x] Co-book edge weighting in topic graph
 - [x] Leiden clustering with hub removal
 - [x] Super-cluster generation (K-means on centroids)
 - [x] LLM-generated + human-refined domain labels

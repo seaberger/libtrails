@@ -5,9 +5,26 @@ description = "Trail-finding across a Calibre book library"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
-    "selectolax>=0.3.21",
+    # CLI
     "click>=8.1.0",
     "rich>=13.0.0",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.2.1",
+    # Document parsing
+    "selectolax>=0.3.21",
+    "pypdf>=4.0",
+    # LLM providers
+    "httpx>=0.27.0",
+    "litellm>=1.50.0",
+    # Embeddings & vector ops
+    "numpy>=1.24.0",
+    "sentence-transformers>=2.2.0",
+    "sqlite-vec>=0.1.0",
+    "faiss-cpu>=1.7.0",
+    # Graph & clustering
+    "python-igraph>=0.11.0",
+    "leidenalg>=0.10.0",
+    "scikit-learn>=1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -17,11 +34,16 @@ dev = [
     "ruff>=0.4.0",
     "mypy>=1.0.0",
     "types-PyYAML>=6.0.0",
+    "dspy>=3.1.3",
 ]
 api = [
     "fastapi>=0.109.0",
     "uvicorn[standard]>=0.27.0",
     "pydantic>=2.0.0",
+]
+viz = [
+    "umap-learn>=0.5.6",
+    "numba>=0.59.0",
 ]
 
 [project.scripts]

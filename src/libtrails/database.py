@@ -1,5 +1,6 @@
 """Database operations for libtrails."""
 
+import json
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
@@ -28,6 +29,71 @@ def get_calibre_db():
         yield conn
     finally:
         conn.close()
+
+
+def get_calibre_book_metadata(calibre_id: int) -> dict:
+    """
+    Fetch tags, description, and series from Calibre metadata.db.
+
+    Returns dict with keys: tags, description, series (all may be None/empty).
+    """
+    result = {"tags": [], "description": None, "series": None}
+
+    with get_calibre_db() as conn:
+        cursor = conn.cursor()
+
+        # Tags
+        cursor.execute(
+            """
+            SELECT t.name FROM tags t
+            JOIN books_tags_link btl ON btl.tag = t.id
+            WHERE btl.book = ?
+            """,
+            (calibre_id,),
+        )
+        result["tags"] = [row[0] for row in cursor.fetchall()]
+
+        # Description
+        cursor.execute("SELECT text FROM comments WHERE book = ?", (calibre_id,))
+        row = cursor.fetchone()
+        if row:
+            result["description"] = row[0]
+
+        # Series
+        cursor.execute(
+            """
+            SELECT s.name FROM series s
+            JOIN books_series_link bsl ON bsl.series = s.id
+            WHERE bsl.book = ?
+            """,
+            (calibre_id,),
+        )
+        row = cursor.fetchone()
+        if row:
+            result["series"] = row[0]
+
+    return result
+
+
+def save_book_themes(book_id: int, themes: list[str]):
+    """Save book-level themes as JSON in the books table."""
+    with get_db() as conn:
+        conn.execute(
+            "UPDATE books SET book_themes = ? WHERE id = ?",
+            (json.dumps(themes), book_id),
+        )
+        conn.commit()
+
+
+def get_book_themes(book_id: int) -> list[str]:
+    """Get book-level themes for a book. Returns empty list if none."""
+    with get_db() as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT book_themes FROM books WHERE id = ?", (book_id,))
+        row = cursor.fetchone()
+        if row and row[0]:
+            return json.loads(row[0])
+    return []
 
 
 def get_book(book_id: int) -> Optional[dict]:
@@ -172,6 +238,7 @@ def init_chunks_table():
                 topic2_id INTEGER REFERENCES topics(id),
                 count INTEGER DEFAULT 0,
                 pmi REAL,
+                book_count INTEGER DEFAULT 0,
                 PRIMARY KEY (topic1_id, topic2_id)
             );
 
@@ -252,6 +319,12 @@ def init_chunks_table():
         if "topics_json" not in columns:
             conn.execute("ALTER TABLE chunks ADD COLUMN topics_json TEXT")
 
+        # Migration: add book_themes column to books table
+        cursor.execute("PRAGMA table_info(books)")
+        book_columns = [row[1] for row in cursor.fetchall()]
+        if "book_themes" not in book_columns:
+            conn.execute("ALTER TABLE books ADD COLUMN book_themes TEXT")
+
         conn.commit()
 
 
@@ -279,8 +352,6 @@ def save_chunks(book_id: int, chunks: list[str]):
 
 def save_chunk_topics(chunk_id: int, topics: list[str]):
     """Save topics for a chunk (both normalized table and JSON column)."""
-    import json
-
     cleaned_topics = [t.strip() for t in topics if t.strip()]
 
     with get_db() as conn:
@@ -423,7 +494,13 @@ def update_topic_cluster(topic_id: int, cluster_id: int, parent_id: Optional[int
         conn.commit()
 
 
-def save_cooccurrence(topic1_id: int, topic2_id: int, count: int, pmi: Optional[float] = None):
+def save_cooccurrence(
+    topic1_id: int,
+    topic2_id: int,
+    count: int,
+    pmi: Optional[float] = None,
+    book_count: int = 0,
+):
     """Save or update topic co-occurrence data."""
     # Ensure consistent ordering
     if topic1_id > topic2_id:
@@ -432,13 +509,14 @@ def save_cooccurrence(topic1_id: int, topic2_id: int, count: int, pmi: Optional[
     with get_db() as conn:
         conn.execute(
             """
-            INSERT INTO topic_cooccurrences (topic1_id, topic2_id, count, pmi)
-            VALUES (?, ?, ?, ?)
+            INSERT INTO topic_cooccurrences (topic1_id, topic2_id, count, pmi, book_count)
+            VALUES (?, ?, ?, ?, ?)
             ON CONFLICT(topic1_id, topic2_id) DO UPDATE SET
                 count = excluded.count,
-                pmi = excluded.pmi
+                pmi = excluded.pmi,
+                book_count = excluded.book_count
         """,
-            (topic1_id, topic2_id, count, pmi),
+            (topic1_id, topic2_id, count, pmi, book_count),
         )
         conn.commit()
 
@@ -476,8 +554,14 @@ def migrate_raw_topics_to_normalized():
         from .topic_extractor import normalize_topic
 
         migrated = 0
+        filtered = 0
         for (topic,) in raw_topics:
             normalized = normalize_topic(topic)
+
+            # Skip topics that normalize to None (stoplist matches)
+            if normalized is None:
+                filtered += 1
+                continue
 
             # Get or create the normalized topic (with initial count of 0)
             cursor.execute("SELECT id FROM topics WHERE label = ?", (normalized,))
@@ -518,8 +602,6 @@ def load_domains_from_json(json_path: Path):
 
     This clears existing domain data and reloads from the JSON.
     """
-    import json
-
     with open(json_path) as f:
         domains = json.load(f)
 

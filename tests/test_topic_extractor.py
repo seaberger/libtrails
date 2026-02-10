@@ -150,9 +150,9 @@ class TestExtractTopicsBatch:
         chunks = ["Chunk 1", "Chunk 2", "Chunk 3"]
         results = extract_topics_batch(chunks, model="gemma3:4b")
 
-        assert results[0] == ["Topic 1"]
-        assert results[1] == ["Topic 2"]
-        assert results[2] == ["Topic 3"]
+        assert results[0] == ["topic 1"]
+        assert results[1] == ["topic 2"]
+        assert results[2] == ["topic 3"]
 
     @patch("libtrails.topic_extractor.extract_topics")
     def test_batch_progress_callback(self, mock_extract):
@@ -184,6 +184,6 @@ class TestExtractTopicsBatch:
         results = extract_topics_batch(chunks, model="gemma3:4b")
 
         assert len(results) == 3
-        assert results[0] == ["Topic 1"]
+        assert results[0] == ["topic 1"]
         assert results[1] == []
-        assert results[2] == ["Topic 3"]
+        assert results[2] == ["topic 3"]
