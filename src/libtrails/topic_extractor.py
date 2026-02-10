@@ -108,6 +108,8 @@ def _call_litellm(
     """
     import litellm
 
+    litellm.suppress_debug_info = True
+
     messages = []
     if system_prompt:
         if cache_system_prompt:
