@@ -176,17 +176,18 @@ def index_book(
             skip_reason="Dry run - skipped topic extraction",
         )
 
-    # Determine model to check based on mode
-    model_to_check = chunk_model if not legacy else chunk_model
-
-    # Check Ollama availability
-    if not check_ollama_available(model_to_check):
-        return IndexingResult(
-            book_id=book_id,
-            word_count=word_count,
-            chunk_count=len(chunks),
-            error=f"Model {model_to_check} not available in Ollama",
-        )
+    # Check model availability (skip for non-Ollama models like Gemini/LM Studio)
+    models_to_check = [chunk_model] if legacy else [theme_model, chunk_model]
+    for model_to_check in models_to_check:
+        if model_to_check.startswith(("gemini/", "lm_studio/")):
+            continue
+        if not check_ollama_available(model_to_check):
+            return IndexingResult(
+                book_id=book_id,
+                word_count=word_count,
+                chunk_count=len(chunks),
+                error=f"Model {model_to_check} not available in Ollama",
+            )
 
     # Get chunk IDs for saving topics
     with get_db() as conn:
@@ -233,8 +234,7 @@ def index_book(
         # Pass 2: Batched chunk extraction with context
         if progress_callback:
             progress_callback(
-                f"  Pass 2: Extracting chunk topics with {chunk_model} "
-                f"(batches of {batch_size})..."
+                f"  Pass 2: Extracting chunk topics with {chunk_model} (batches of {batch_size})..."
             )
 
         topics_per_chunk = extract_topics_batched(

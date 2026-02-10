@@ -204,10 +204,18 @@ def sync(ipad: str, dry_run: bool, skip_index: bool, model: str, save_url: bool)
 @click.option("--title", "-t", help="Search by title")
 @click.option("--all", "index_all", is_flag=True, help="Index all books")
 @click.option("--model", "-m", default=None, help="Ollama model (sets both theme and chunk model)")
-@click.option("--theme-model", default=THEME_MODEL, help=f"Model for book themes (default: {THEME_MODEL})")
-@click.option("--chunk-model", default=CHUNK_MODEL, help=f"Model for chunk topics (default: {CHUNK_MODEL})")
-@click.option("--batch-size", type=int, default=BATCH_SIZE, help=f"Chunks per batch (default: {BATCH_SIZE})")
-@click.option("--legacy", is_flag=True, help="Use legacy single-call extraction (no themes, no batching)")
+@click.option(
+    "--theme-model", default=THEME_MODEL, help=f"Model for book themes (default: {THEME_MODEL})"
+)
+@click.option(
+    "--chunk-model", default=CHUNK_MODEL, help=f"Model for chunk topics (default: {CHUNK_MODEL})"
+)
+@click.option(
+    "--batch-size", type=int, default=BATCH_SIZE, help=f"Chunks per batch (default: {BATCH_SIZE})"
+)
+@click.option(
+    "--legacy", is_flag=True, help="Use legacy single-call extraction (no themes, no batching)"
+)
 @click.option("--dry-run", is_flag=True, help="Parse and chunk without topic extraction")
 @click.option("--reindex", is_flag=True, help="Re-index books that are already indexed")
 @click.option(
@@ -223,9 +231,20 @@ def sync(ipad: str, dry_run: bool, skip_index: bool, model: str, save_url: bool)
 @click.option(
     "--min-battery", type=int, default=15, help="Pause if battery drops below this % (default: 15)"
 )
-@click.option("--parallel", is_flag=True, help="Use parallel single-chunk DSPy extraction (best with Gemini)")
-@click.option("--workers", type=int, default=30, help="Max concurrent workers for parallel extraction (default: 30)")
-@click.option("--extended-prompt", is_flag=True, help="Use extended 9-demo prompt (enables Gemini context caching)")
+@click.option(
+    "--parallel", is_flag=True, help="Use parallel single-chunk DSPy extraction (best with Gemini)"
+)
+@click.option(
+    "--workers",
+    type=int,
+    default=30,
+    help="Max concurrent workers for parallel extraction (default: 30)",
+)
+@click.option(
+    "--extended-prompt",
+    is_flag=True,
+    help="Use extended 9-demo prompt (enables Gemini context caching)",
+)
 def index(
     book_id: int,
     book_ids: tuple[int, ...],
@@ -262,9 +281,17 @@ def index(
 
     if index_all:
         _index_all_books(
-            theme_model, chunk_model, batch_size, legacy,
-            dry_run, reindex, max_words, chunk_size, min_battery,
-            parallel=parallel, workers=workers,
+            theme_model,
+            chunk_model,
+            batch_size,
+            legacy,
+            dry_run,
+            reindex,
+            max_words,
+            chunk_size,
+            min_battery,
+            parallel=parallel,
+            workers=workers,
             extended_prompt=extended_prompt,
         )
         return
@@ -281,9 +308,15 @@ def index(
             console.print(f"\n[bold]({i}/{len(book_ids)})[/bold]")
             book_start = time.time()
             _index_single_book(
-                book, theme_model, chunk_model, batch_size, legacy,
-                dry_run, chunk_size=chunk_size,
-                parallel=parallel, workers=workers,
+                book,
+                theme_model,
+                chunk_model,
+                batch_size,
+                legacy,
+                dry_run,
+                chunk_size=chunk_size,
+                parallel=parallel,
+                workers=workers,
                 extended_prompt=extended_prompt,
             )
             book_elapsed = time.time() - book_start
@@ -297,14 +330,14 @@ def index(
             total_chunks += n_chunks
             console.print(
                 f"[bold cyan]Book done: {book_elapsed:.1f}s "
-                f"({n_chunks} chunks, {book_elapsed/max(n_chunks,1):.2f}s/chunk)[/bold cyan]",
+                f"({n_chunks} chunks, {book_elapsed / max(n_chunks, 1):.2f}s/chunk)[/bold cyan]",
             )
         elapsed = time.time() - total_start
         console.print(f"\n[bold green]{'─' * 50}[/bold green]")
         console.print(
             f"[bold green]Indexed {len(book_ids)} books, {total_chunks} chunks "
             f"in {int(elapsed // 60)}m {int(elapsed % 60)}s "
-            f"({elapsed/max(total_chunks,1):.2f}s/chunk avg)[/bold green]"
+            f"({elapsed / max(total_chunks, 1):.2f}s/chunk avg)[/bold green]"
         )
         return
 
@@ -320,13 +353,17 @@ def index(
         return
 
     _index_single_book(
-        book, theme_model, chunk_model, batch_size, legacy,
-        dry_run, chunk_size=chunk_size,
-        parallel=parallel, workers=workers,
+        book,
+        theme_model,
+        chunk_model,
+        batch_size,
+        legacy,
+        dry_run,
+        chunk_size=chunk_size,
+        parallel=parallel,
+        workers=workers,
         extended_prompt=extended_prompt,
     )
-
-
 
 
 def _index_single_book(
@@ -395,7 +432,9 @@ def _index_single_book(
         return
 
     # Check Ollama availability (skip for Gemini API and LM Studio models)
-    if not chunk_model.startswith(("gemini/", "lm_studio/")) and not check_ollama_available(chunk_model):
+    if not chunk_model.startswith(("gemini/", "lm_studio/")) and not check_ollama_available(
+        chunk_model
+    ):
         console.print(f"[red]Model {chunk_model} not available in Ollama[/red]")
         return
 
@@ -578,8 +617,7 @@ def _index_all_books(
 
         # Get books that already have topics extracted (for reindex resume)
         cursor.execute(
-            "SELECT DISTINCT c.book_id FROM chunks c "
-            "JOIN chunk_topics ct ON c.id = ct.chunk_id"
+            "SELECT DISTINCT c.book_id FROM chunks c JOIN chunk_topics ct ON c.id = ct.chunk_id"
         )
         has_topics_ids = {row[0] for row in cursor.fetchall()}
 
@@ -657,9 +695,16 @@ def _index_all_books(
 
         try:
             result = _index_single_book(
-                book, theme_model, chunk_model, batch_size, legacy,
-                dry_run, max_words, chunk_size,
-                parallel=parallel, workers=workers,
+                book,
+                theme_model,
+                chunk_model,
+                batch_size,
+                legacy,
+                dry_run,
+                max_words,
+                chunk_size,
+                parallel=parallel,
+                workers=workers,
                 extended_prompt=extended_prompt,
             )
             if result == "skipped":
@@ -1974,9 +2019,15 @@ def refresh_stats():
 
 
 @main.command("backfill")
-@click.option("--chunk-model", default="gemini/gemini-2.5-flash-lite", help="Model for topic extraction")
+@click.option(
+    "--chunk-model", default="gemini/gemini-2.5-flash-lite", help="Model for topic extraction"
+)
 @click.option("--workers", type=int, default=20, help="Max concurrent workers (default: 20)")
-@click.option("--extended-prompt", is_flag=True, help="Use extended 9-demo prompt (enables Gemini context caching)")
+@click.option(
+    "--extended-prompt",
+    is_flag=True,
+    help="Use extended 9-demo prompt (enables Gemini context caching)",
+)
 @click.option("--dry-run", is_flag=True, help="Show what would be backfilled without doing it")
 def backfill(chunk_model: str, workers: int, extended_prompt: bool, dry_run: bool):
     """Re-extract topics for chunks that have none (from failed API calls).
@@ -1984,6 +2035,12 @@ def backfill(chunk_model: str, workers: int, extended_prompt: bool, dry_run: boo
     Finds chunks in already-processed books that are missing topics
     (e.g., from 503 errors) and re-runs extraction on just those chunks.
     """
+    import json as _json
+    from collections import Counter, defaultdict
+    from concurrent.futures import ThreadPoolExecutor, as_completed
+
+    from rich.progress import Progress
+
     from .database import get_db
     from .topic_extractor import (
         _filter_topics,
@@ -2010,10 +2067,11 @@ def backfill(chunk_model: str, workers: int, extended_prompt: bool, dry_run: boo
         return
 
     book_ids = set(r[1] for r in missing)
-    console.print(f"[bold]Found {len(missing)} chunks missing topics across {len(book_ids)} books[/bold]")
+    console.print(
+        f"[bold]Found {len(missing)} chunks missing topics across {len(book_ids)} books[/bold]"
+    )
 
     if dry_run:
-        from collections import Counter
         by_book = Counter(r[2] for r in missing)
         for title, count in by_book.most_common(20):
             console.print(f"  {count:>4} chunks: {title[:60]}")
@@ -2022,15 +2080,12 @@ def backfill(chunk_model: str, workers: int, extended_prompt: bool, dry_run: boo
         return
 
     # Group by book for context
-    from collections import defaultdict
     by_book = defaultdict(list)
     for chunk_id, book_id, title, author, themes_json, text, idx in missing:
         by_book[book_id].append((chunk_id, title, author, themes_json, text, idx))
 
     total_fixed = 0
     total_failed = 0
-
-    from rich.progress import Progress
 
     with Progress(console=console) as progress:
         task = progress.add_task("Backfilling", total=len(missing))
@@ -2039,8 +2094,6 @@ def backfill(chunk_model: str, workers: int, extended_prompt: bool, dry_run: boo
             title = chunks_data[0][1]
             author = chunks_data[0][2] or "Unknown"
             themes_json = chunks_data[0][3]
-
-            import json as _json
             book_themes = _json.loads(themes_json) if themes_json else []
 
             context_parts = [f"Book: {title} by {author}"]
@@ -2049,12 +2102,12 @@ def backfill(chunk_model: str, workers: int, extended_prompt: bool, dry_run: boo
             context = "\n".join(context_parts)
 
             # Process chunks in parallel
-            from concurrent.futures import ThreadPoolExecutor, as_completed
-
             def process_one(chunk_info):
                 chunk_id, _, _, _, text, _ = chunk_info
                 raw = extract_topics_single_optimized(
-                    text, context, chunk_model,
+                    text,
+                    context,
+                    chunk_model,
                     use_extended_prompt=extended_prompt,
                 )
                 return chunk_id, _filter_topics(raw)

@@ -4,12 +4,8 @@ import json
 import re
 import subprocess
 import time
-
-
-class ContentFilterError(Exception):
-    """Raised when Gemini's content filter blocks a response."""
 from concurrent.futures import ThreadPoolExecutor, as_completed
-from typing import Optional
+from typing import Callable, Optional
 
 import httpx
 
@@ -22,6 +18,11 @@ from .config import (
     TOPIC_STOPLIST,
     TOPICS_PER_CHUNK,
 )
+
+
+class ContentFilterError(Exception):
+    """Raised when Gemini's content filter blocks a response."""
+
 
 # Ollama API endpoint
 OLLAMA_API_URL = "http://localhost:11434/api/generate"
@@ -113,16 +114,18 @@ def _call_litellm(
     messages = []
     if system_prompt:
         if cache_system_prompt:
-            messages.append({
-                "role": "system",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": system_prompt,
-                        "cache_control": {"type": "ephemeral"},
-                    }
-                ],
-            })
+            messages.append(
+                {
+                    "role": "system",
+                    "content": [
+                        {
+                            "type": "text",
+                            "text": system_prompt,
+                            "cache_control": {"type": "ephemeral"},
+                        }
+                    ],
+                }
+            )
         else:
             messages.append({"role": "system", "content": system_prompt})
     messages.append({"role": "user", "content": prompt})
@@ -171,12 +174,11 @@ def _call_litellm(
     return content
 
 
-
 def extract_topics_batch(
     chunks: list[str],
     model: str = DEFAULT_MODEL,
     num_topics: int = TOPICS_PER_CHUNK,
-    progress_callback: Optional[callable] = None,
+    progress_callback: Optional[Callable] = None,
 ) -> list[list[str]]:
     """
     Extract topics from multiple chunks in parallel (legacy single-call mode).
@@ -203,7 +205,6 @@ def extract_topics_batch(
     return results
 
 
-
 def _unwrap_topic(t) -> str:
     """Extract a string from a topic that may be a dict or other type.
 
@@ -218,6 +219,7 @@ def _unwrap_topic(t) -> str:
     # Use regex extraction instead of eval for safety
     if s.startswith("{") and s.endswith("}"):
         import re
+
         # Extract value after the colon — handles apostrophes in values
         # Matches: {'any key': 'value with apostrophe's'} or {"key": "value"}
         m = re.search(r""":\s*['"](.+)['"]\s*\}$""", s)
@@ -309,17 +311,20 @@ def strip_html(html: str) -> str:
 
 
 # Tags to remove entirely — pure noise with no topical signal
-_NOISE_TAGS = frozenset({
-    "general", "fiction", "unknown", "adult", "non-fiction", "nonfiction",
-})
+_NOISE_TAGS = frozenset(
+    {
+        "general",
+        "fiction",
+        "unknown",
+        "adult",
+        "non-fiction",
+        "nonfiction",
+    }
+)
 
 # Patterns for compound tag variants
-_PREFIX_RE = re.compile(
-    r"^(?:fiction|general|non-fiction)\s*[-–/]\s*", re.IGNORECASE
-)
-_SUFFIX_RE = re.compile(
-    r"\s*[-–/]\s*(?:general|fiction)$", re.IGNORECASE
-)
+_PREFIX_RE = re.compile(r"^(?:fiction|general|non-fiction)\s*[-–/]\s*", re.IGNORECASE)
+_SUFFIX_RE = re.compile(r"\s*[-–/]\s*(?:general|fiction)$", re.IGNORECASE)
 
 
 def clean_calibre_tags(tags: list[str]) -> list[str]:
@@ -405,7 +410,7 @@ def extract_book_themes(
 
     book_info = "\n".join(parts)
 
-    prompt = f'''You are a librarian categorizing a book. Based on the information below, extract 5 to 8 high-level themes that describe what this book is about.
+    prompt = f"""You are a librarian categorizing a book. Based on the information below, extract 5 to 8 high-level themes that describe what this book is about.
 
 Rules:
 - Use specific multi-word noun phrases (e.g., "epic fantasy worldbuilding", "algorithmic trading strategies")
@@ -413,7 +418,7 @@ Rules:
 - Each theme should be specific enough to distinguish this book from unrelated books
 - Include the book's genre/domain as the first theme
 
-{book_info}'''
+{book_info}"""
 
     schema = {
         "type": "object",
@@ -468,7 +473,7 @@ def extract_topics_batched(
     model: str = CHUNK_MODEL,
     batch_size: int = BATCH_SIZE,
     num_topics: int = TOPICS_PER_CHUNK,
-    progress_callback: Optional[callable] = None,
+    progress_callback: Optional[Callable] = None,
 ) -> list[list[str]]:
     """
     Extract topics from chunks in batches, contextualized with book metadata.
@@ -497,9 +502,7 @@ def extract_topics_batched(
         batch_end = min(batch_start + batch_size, len(chunks))
         batch_chunks = chunks[batch_start:batch_end]
 
-        batch_results = _extract_batch(
-            batch_chunks, context, model, num_topics, batch_start
-        )
+        batch_results = _extract_batch(batch_chunks, context, model, num_topics, batch_start)
 
         if batch_results is not None:
             batch_successes += 1
@@ -509,9 +512,7 @@ def extract_topics_batched(
             # Fallback: extract individually
             batch_fallbacks += 1
             for i, chunk in enumerate(batch_chunks):
-                topics = _extract_single_contextualized(
-                    chunk, context, model, num_topics
-                )
+                topics = _extract_single_contextualized(chunk, context, model, num_topics)
                 results[batch_start + i] = _filter_topics(topics)
 
         completed += len(batch_chunks)
@@ -705,11 +706,11 @@ _DSPY_INSTRUCTION_EXTENDED = (
     "- Topics should be specific to this passage, not generic labels.\n"
     "- Avoid single-word topics or vague terms like 'conflict' or 'emotion'.\n"
     "- Ground topics in the passage's concrete details: names, places, events.\n"
-    "- Return topics as a JSON object: {\"topics\": [\"topic1\", \"topic2\", ...]}.\n"
+    '- Return topics as a JSON object: {"topics": ["topic1", "topic2", ...]}.\n'
     "- Each topic must be a plain string, never a dict or nested object.\n"
     "- Use the book context to disambiguate: 'river journey' in Siddhartha\n"
     "  is spiritual, in Huckleberry Finn is geographical.\n"
-    "- Do not wrap topics in dicts like {\"topic\": \"value\"}. Return plain strings only.\n"
+    '- Do not wrap topics in dicts like {"topic": "value"}. Return plain strings only.\n'
 )
 
 _DSPY_DEMOS = [
@@ -992,8 +993,10 @@ def extract_topics_single_optimized(
                 system_prompt = f"{instruction}\n\n{demos_text}"
                 user_prompt = f"---\nPassage: {text}\n\nBook Context: {context}\n\nTopics:"
                 output = _call_litellm(
-                    user_prompt, model,
-                    response_schema=schema, timeout=60.0,
+                    user_prompt,
+                    model,
+                    response_schema=schema,
+                    timeout=60.0,
                     system_prompt=system_prompt,
                     cache_system_prompt=use_extended_prompt,
                 )
@@ -1027,7 +1030,7 @@ def extract_topics_single_optimized(
             return []  # Don't retry — content filter is deterministic
         except Exception:
             if attempt < max_retries - 1:
-                time.sleep(2 ** attempt)  # 1s, 2s backoff
+                time.sleep(2**attempt)  # 1s, 2s backoff
                 continue
             return []
 
@@ -1040,7 +1043,7 @@ def extract_topics_single_optimized_parallel(
     model: str = CHUNK_MODEL,
     num_topics: int = TOPICS_PER_CHUNK,
     max_workers: int = 30,
-    progress_callback: Optional[callable] = None,
+    progress_callback: Optional[Callable] = None,
     use_extended_prompt: bool = False,
 ) -> list[list[str]]:
     """
@@ -1065,16 +1068,16 @@ def extract_topics_single_optimized_parallel(
 
     def process_chunk(idx: int, text: str) -> tuple[int, list[str]]:
         raw = extract_topics_single_optimized(
-            text, context, model, num_topics,
+            text,
+            context,
+            model,
+            num_topics,
             use_extended_prompt=use_extended_prompt,
         )
         return idx, _filter_topics(raw)
 
     with ThreadPoolExecutor(max_workers=max_workers) as executor:
-        futures = {
-            executor.submit(process_chunk, i, chunk): i
-            for i, chunk in enumerate(chunks)
-        }
+        futures = {executor.submit(process_chunk, i, chunk): i for i, chunk in enumerate(chunks)}
 
         for future in as_completed(futures):
             idx, topics = future.result()

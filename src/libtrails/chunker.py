@@ -15,13 +15,43 @@ import re
 from .config import CHUNK_MIN_WORDS, CHUNK_TARGET_WORDS
 
 # Common abbreviations that end with a period but aren't sentence endings
-_ABBREVIATIONS = frozenset({
-    "mr", "mrs", "ms", "dr", "prof", "sr", "jr", "st",
-    "vs", "etc", "inc", "ltd", "co", "corp", "dept",
-    "gen", "gov", "sgt", "cpl", "pvt", "capt", "col", "maj",
-    "rev", "hon", "pres", "approx", "vol", "no", "fig",
-    "ed", "trans", "repr",
-})
+_ABBREVIATIONS = frozenset(
+    {
+        "mr",
+        "mrs",
+        "ms",
+        "dr",
+        "prof",
+        "sr",
+        "jr",
+        "st",
+        "vs",
+        "etc",
+        "inc",
+        "ltd",
+        "co",
+        "corp",
+        "dept",
+        "gen",
+        "gov",
+        "sgt",
+        "cpl",
+        "pvt",
+        "capt",
+        "col",
+        "maj",
+        "rev",
+        "hon",
+        "pres",
+        "approx",
+        "vol",
+        "no",
+        "fig",
+        "ed",
+        "trans",
+        "repr",
+    }
+)
 
 
 def chunk_text(text: str, target_words: int = CHUNK_TARGET_WORDS) -> list[str]:

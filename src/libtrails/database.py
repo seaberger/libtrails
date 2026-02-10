@@ -1,5 +1,6 @@
 """Database operations for libtrails."""
 
+import json
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
@@ -76,8 +77,6 @@ def get_calibre_book_metadata(calibre_id: int) -> dict:
 
 def save_book_themes(book_id: int, themes: list[str]):
     """Save book-level themes as JSON in the books table."""
-    import json
-
     with get_db() as conn:
         conn.execute(
             "UPDATE books SET book_themes = ? WHERE id = ?",
@@ -88,8 +87,6 @@ def save_book_themes(book_id: int, themes: list[str]):
 
 def get_book_themes(book_id: int) -> list[str]:
     """Get book-level themes for a book. Returns empty list if none."""
-    import json
-
     with get_db() as conn:
         cursor = conn.cursor()
         cursor.execute("SELECT book_themes FROM books WHERE id = ?", (book_id,))
@@ -355,8 +352,6 @@ def save_chunks(book_id: int, chunks: list[str]):
 
 def save_chunk_topics(chunk_id: int, topics: list[str]):
     """Save topics for a chunk (both normalized table and JSON column)."""
-    import json
-
     cleaned_topics = [t.strip() for t in topics if t.strip()]
 
     with get_db() as conn:
@@ -607,8 +602,6 @@ def load_domains_from_json(json_path: Path):
 
     This clears existing domain data and reloads from the JSON.
     """
-    import json
-
     with open(json_path) as f:
         domains = json.load(f)
 

@@ -9,11 +9,11 @@ import numpy as np
 from rich.console import Console
 from rich.progress import BarColumn, Progress, SpinnerColumn, TaskProgressColumn, TextColumn
 
-console = Console()
-
 from .config import DEDUP_HIGH_CONFIDENCE_THRESHOLD, IPAD_DB_PATH
 from .database import get_db
 from .embeddings import bytes_to_embedding
+
+console = Console()
 
 
 class UnionFind:
@@ -442,7 +442,9 @@ def merge_groups_batch(groups: list[list[dict]], commit_every: int = 100) -> dic
         groups_processed += 1
 
     total_topics_merged = len(dup_to_canonical)
-    console.print(f"  Merging {total_topics_merged:,} duplicate topics from {groups_processed:,} groups...")
+    console.print(
+        f"  Merging {total_topics_merged:,} duplicate topics from {groups_processed:,} groups..."
+    )
 
     # Step 1: Create temp mapping table
     cursor.execute("CREATE TEMP TABLE dup_map (dup_id INTEGER PRIMARY KEY, canonical_id INTEGER)")

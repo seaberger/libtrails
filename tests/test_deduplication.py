@@ -18,8 +18,9 @@ class TestFindDuplicateGroupsNumpy:
     loads all embeddings into memory for fast batch processing.
     """
 
+    @patch("libtrails.deduplication.get_db")
     @patch("libtrails.deduplication.sqlite3")
-    def test_no_duplicates_when_topics_orthogonal(self, mock_sqlite3):
+    def test_no_duplicates_when_topics_orthogonal(self, mock_sqlite3, mock_get_db):
         """Test when no topics are similar (orthogonal embeddings)."""
         # Create 3 orthogonal unit vectors (no similarity)
         emb1 = np.array([1.0, 0.0, 0.0], dtype=np.float32).tobytes()
@@ -45,13 +46,23 @@ class TestFindDuplicateGroupsNumpy:
         mock_conn.cursor.return_value = mock_cursor
         mock_sqlite3.connect.return_value = mock_conn
 
+        # Mock get_db for chunk_topic_links query (book-overlap gate)
+        mock_db_conn = MagicMock()
+        mock_db_cursor = MagicMock()
+        mock_db_cursor.fetchall.return_value = []
+        mock_db_conn.cursor.return_value = mock_db_cursor
+        mock_db_conn.__enter__ = MagicMock(return_value=mock_db_conn)
+        mock_db_conn.__exit__ = MagicMock(return_value=False)
+        mock_get_db.return_value = mock_db_conn
+
         groups = find_duplicate_groups_numpy(threshold=0.9, show_progress=False)
 
         # No groups should be returned when no topics are similar
         assert groups == []
 
+    @patch("libtrails.deduplication.get_db")
     @patch("libtrails.deduplication.sqlite3")
-    def test_finds_similar_topics(self, mock_sqlite3):
+    def test_finds_similar_topics(self, mock_sqlite3, mock_get_db):
         """Test finding similar topics."""
         # Two similar embeddings (1 and 2), one different (3)
         emb1 = np.array([1.0, 0.0, 0.0], dtype=np.float32).tobytes()
@@ -85,14 +96,24 @@ class TestFindDuplicateGroupsNumpy:
         mock_conn.cursor.return_value = mock_cursor
         mock_sqlite3.connect.return_value = mock_conn
 
+        # Mock get_db — both topics share book 1 (needed for two-tier dedup)
+        mock_db_conn = MagicMock()
+        mock_db_cursor = MagicMock()
+        mock_db_cursor.fetchall.return_value = [(1, 1), (2, 1)]
+        mock_db_conn.cursor.return_value = mock_db_cursor
+        mock_db_conn.__enter__ = MagicMock(return_value=mock_db_conn)
+        mock_db_conn.__exit__ = MagicMock(return_value=False)
+        mock_get_db.return_value = mock_db_conn
+
         groups = find_duplicate_groups_numpy(threshold=0.9, show_progress=False)
 
         # Should find one group with topics 1 and 2
         assert len(groups) == 1
         assert len(groups[0]) == 2
 
+    @patch("libtrails.deduplication.get_db")
     @patch("libtrails.deduplication.sqlite3")
-    def test_canonical_is_most_frequent(self, mock_sqlite3):
+    def test_canonical_is_most_frequent(self, mock_sqlite3, mock_get_db):
         """Test that canonical topic has highest occurrence count."""
         # Two identical embeddings
         emb = np.array([1.0, 0.0, 0.0], dtype=np.float32).tobytes()
@@ -119,6 +140,15 @@ class TestFindDuplicateGroupsNumpy:
         ]
         mock_conn.cursor.return_value = mock_cursor
         mock_sqlite3.connect.return_value = mock_conn
+
+        # Mock get_db — both topics share book 1
+        mock_db_conn = MagicMock()
+        mock_db_cursor = MagicMock()
+        mock_db_cursor.fetchall.return_value = [(1, 1), (2, 1)]
+        mock_db_conn.cursor.return_value = mock_db_cursor
+        mock_db_conn.__enter__ = MagicMock(return_value=mock_db_conn)
+        mock_db_conn.__exit__ = MagicMock(return_value=False)
+        mock_get_db.return_value = mock_db_conn
 
         groups = find_duplicate_groups_numpy(threshold=0.9, show_progress=False)
 

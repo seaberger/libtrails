@@ -10,7 +10,9 @@ DATA_DIR = PROJECT_ROOT / "data"
 
 # DB variant toggle: set LIBTRAILS_DB=v2 to use ipad_library_v2.db
 _db_variant = os.environ.get("LIBTRAILS_DB", "")
-IPAD_DB_PATH = DATA_DIR / f"ipad_library_{_db_variant}.db" if _db_variant else DATA_DIR / "ipad_library.db"
+IPAD_DB_PATH = (
+    DATA_DIR / f"ipad_library_{_db_variant}.db" if _db_variant else DATA_DIR / "ipad_library.db"
+)
 
 # User config directory
 USER_CONFIG_DIR = Path.home() / ".libtrails"
@@ -103,14 +105,41 @@ BATCH_SIZE = int(os.environ.get("LIBTRAILS_BATCH_SIZE", "5"))
 OLLAMA_NUM_CTX = 8192
 
 # Generic topic stoplist — filtered during normalization
-TOPIC_STOPLIST = frozenset({
-    "manipulation", "relationships", "technology", "society", "nature",
-    "life", "death", "love", "power", "time", "people", "world",
-    "change", "future", "communication", "conflict", "loss", "survival",
-    "identity", "freedom", "control", "trust", "fear", "growth",
-    "knowledge", "science", "culture", "politics", "art", "history",
-    "topics",  # LM Studio 4b echoes the prompt's "Topics:" label
-})
+TOPIC_STOPLIST = frozenset(
+    {
+        "manipulation",
+        "relationships",
+        "technology",
+        "society",
+        "nature",
+        "life",
+        "death",
+        "love",
+        "power",
+        "time",
+        "people",
+        "world",
+        "change",
+        "future",
+        "communication",
+        "conflict",
+        "loss",
+        "survival",
+        "identity",
+        "freedom",
+        "control",
+        "trust",
+        "fear",
+        "growth",
+        "knowledge",
+        "science",
+        "culture",
+        "politics",
+        "art",
+        "history",
+        "topics",  # LM Studio 4b echoes the prompt's "Topics:" label
+    }
+)
 
 # Universe visualization
 UNIVERSE_JSON_PATH = DATA_DIR / "universe_coords.json"

@@ -119,7 +119,6 @@ def extract_text_from_pdf(pdf_path: Path) -> str:
     return "\n\n".join(pages)
 
 
-
 # Block-level HTML elements that should produce paragraph breaks
 _BLOCK_TAG_RE = re.compile(
     r"</?(?:p|div|h[1-6]|li|blockquote|tr|table|section|article"
@@ -140,7 +139,7 @@ def _html_to_structured_text(html: str) -> str:
     # Convert <br> to single newline
     text = re.sub(r"<br\s*/?>", "\n", html, flags=re.IGNORECASE)
     # Convert <hr> to paragraph break
-    text = re.sub(r"<hr\s*/?>", "\n\n", html, flags=re.IGNORECASE)
+    text = re.sub(r"<hr\s*/?>", "\n\n", text, flags=re.IGNORECASE)
     # Convert block-level tags to paragraph breaks
     text = _BLOCK_TAG_RE.sub("\n\n", text)
     # Strip remaining HTML tags (inline: <em>, <strong>, <span>, <a>, etc.)
