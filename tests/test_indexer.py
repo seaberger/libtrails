@@ -419,12 +419,13 @@ class TestModelAvailabilityChecks:
         mock_chunk.return_value = ["chunk"]
         mock_ollama.return_value = True
 
-        # Use gemini prefix for both models
+        # Use gemini prefix for both models — dry_run to avoid DB access after model check
         index_book(
             1,
             legacy=False,
             theme_model="gemini/flash",
             chunk_model="gemini/flash-lite",
+            dry_run=True,
         )
 
         # check_ollama_available should NOT be called for gemini models
@@ -454,11 +455,13 @@ class TestModelAvailabilityChecks:
         mock_chunk.return_value = ["chunk"]
         mock_ollama.return_value = True
 
+        # dry_run to avoid DB access after model check
         index_book(
             1,
             legacy=False,
             theme_model="lm_studio/qwen",
             chunk_model="lm_studio/gemma",
+            dry_run=True,
         )
 
         mock_ollama.assert_not_called()

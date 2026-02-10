@@ -14,6 +14,18 @@ from libtrails.deduplication import (
 )
 
 
+def _make_row(data):
+    """Create a dict-like row that also supports integer indexing."""
+
+    class Row(dict):
+        def __getitem__(self, key):
+            if isinstance(key, str):
+                return super().__getitem__(key)
+            return list(self.values())[key]
+
+    return Row(data)
+
+
 class TestFindDuplicateGroupsNumpy:
     """Tests for finding duplicate topic groups using numpy batch operations.
 
@@ -30,21 +42,12 @@ class TestFindDuplicateGroupsNumpy:
         emb2 = np.array([0.0, 1.0, 0.0], dtype=np.float32).tobytes()
         emb3 = np.array([0.0, 0.0, 1.0], dtype=np.float32).tobytes()
 
-        def make_row(data):
-            class Row(dict):
-                def __getitem__(self, key):
-                    if isinstance(key, str):
-                        return super().__getitem__(key)
-                    return list(self.values())[key]
-
-            return Row(data)
-
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
         mock_cursor.fetchall.return_value = [
-            make_row({"id": 1, "label": "topic1", "occurrence_count": 10, "embedding": emb1}),
-            make_row({"id": 2, "label": "topic2", "occurrence_count": 5, "embedding": emb2}),
-            make_row({"id": 3, "label": "topic3", "occurrence_count": 3, "embedding": emb3}),
+            _make_row({"id": 1, "label": "topic1", "occurrence_count": 10, "embedding": emb1}),
+            _make_row({"id": 2, "label": "topic2", "occurrence_count": 5, "embedding": emb2}),
+            _make_row({"id": 3, "label": "topic3", "occurrence_count": 3, "embedding": emb3}),
         ]
         mock_conn.cursor.return_value = mock_cursor
         mock_sqlite3.connect.return_value = mock_conn
@@ -72,24 +75,15 @@ class TestFindDuplicateGroupsNumpy:
         emb2 = np.array([0.99, 0.14, 0.0], dtype=np.float32).tobytes()  # Similar to 1
         emb3 = np.array([0.0, 1.0, 0.0], dtype=np.float32).tobytes()  # Different
 
-        def make_row(data):
-            class Row(dict):
-                def __getitem__(self, key):
-                    if isinstance(key, str):
-                        return super().__getitem__(key)
-                    return list(self.values())[key]
-
-            return Row(data)
-
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
 
         # First call: load all topics
         # Second call: get topic details for group members
         mock_cursor.fetchall.return_value = [
-            make_row({"id": 1, "label": "philosophy", "occurrence_count": 10, "embedding": emb1}),
-            make_row({"id": 2, "label": "Philosophy", "occurrence_count": 5, "embedding": emb2}),
-            make_row({"id": 3, "label": "science", "occurrence_count": 3, "embedding": emb3}),
+            _make_row({"id": 1, "label": "philosophy", "occurrence_count": 10, "embedding": emb1}),
+            _make_row({"id": 2, "label": "Philosophy", "occurrence_count": 5, "embedding": emb2}),
+            _make_row({"id": 3, "label": "science", "occurrence_count": 3, "embedding": emb3}),
         ]
         # For fetchone calls when building groups
         mock_cursor.fetchone.side_effect = [
@@ -121,20 +115,11 @@ class TestFindDuplicateGroupsNumpy:
         # Two identical embeddings
         emb = np.array([1.0, 0.0, 0.0], dtype=np.float32).tobytes()
 
-        def make_row(data):
-            class Row(dict):
-                def __getitem__(self, key):
-                    if isinstance(key, str):
-                        return super().__getitem__(key)
-                    return list(self.values())[key]
-
-            return Row(data)
-
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
         mock_cursor.fetchall.return_value = [
-            make_row({"id": 1, "label": "topic1", "occurrence_count": 5, "embedding": emb}),
-            make_row({"id": 2, "label": "topic2", "occurrence_count": 10, "embedding": emb}),
+            _make_row({"id": 1, "label": "topic1", "occurrence_count": 5, "embedding": emb}),
+            _make_row({"id": 2, "label": "topic2", "occurrence_count": 10, "embedding": emb}),
         ]
         # Topic 2 has higher count (10 > 5)
         mock_cursor.fetchone.side_effect = [
@@ -376,20 +361,11 @@ class TestTwoTierDedup:
         emb1 = np.array([1.0, 0.0, 0.0], dtype=np.float32).tobytes()
         emb2 = np.array([0.999, 0.04, 0.0], dtype=np.float32).tobytes()
 
-        def make_row(data):
-            class Row(dict):
-                def __getitem__(self, key):
-                    if isinstance(key, str):
-                        return super().__getitem__(key)
-                    return list(self.values())[key]
-
-            return Row(data)
-
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
         mock_cursor.fetchall.return_value = [
-            make_row({"id": 1, "label": "topic1", "occurrence_count": 10, "embedding": emb1}),
-            make_row({"id": 2, "label": "topic2", "occurrence_count": 5, "embedding": emb2}),
+            _make_row({"id": 1, "label": "topic1", "occurrence_count": 10, "embedding": emb1}),
+            _make_row({"id": 2, "label": "topic2", "occurrence_count": 5, "embedding": emb2}),
         ]
         mock_cursor.fetchone.side_effect = [
             (1, "topic1", 10),
@@ -418,20 +394,11 @@ class TestTwoTierDedup:
         emb1 = np.array([1.0, 0.0, 0.0], dtype=np.float32).tobytes()
         emb2 = np.array([0.90, 0.436, 0.0], dtype=np.float32).tobytes()
 
-        def make_row(data):
-            class Row(dict):
-                def __getitem__(self, key):
-                    if isinstance(key, str):
-                        return super().__getitem__(key)
-                    return list(self.values())[key]
-
-            return Row(data)
-
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
         mock_cursor.fetchall.return_value = [
-            make_row({"id": 1, "label": "topic1", "occurrence_count": 10, "embedding": emb1}),
-            make_row({"id": 2, "label": "topic2", "occurrence_count": 5, "embedding": emb2}),
+            _make_row({"id": 1, "label": "topic1", "occurrence_count": 10, "embedding": emb1}),
+            _make_row({"id": 2, "label": "topic2", "occurrence_count": 5, "embedding": emb2}),
         ]
         # fetchone is called when building group details
         mock_cursor.fetchone.side_effect = [
@@ -464,20 +431,11 @@ class TestTwoTierDedup:
         emb1 = np.array([1.0, 0.0, 0.0], dtype=np.float32).tobytes()
         emb2 = np.array([0.7, 0.71, 0.0], dtype=np.float32).tobytes()
 
-        def make_row(data):
-            class Row(dict):
-                def __getitem__(self, key):
-                    if isinstance(key, str):
-                        return super().__getitem__(key)
-                    return list(self.values())[key]
-
-            return Row(data)
-
         mock_conn = MagicMock()
         mock_cursor = MagicMock()
         mock_cursor.fetchall.return_value = [
-            make_row({"id": 1, "label": "topic1", "occurrence_count": 10, "embedding": emb1}),
-            make_row({"id": 2, "label": "topic2", "occurrence_count": 5, "embedding": emb2}),
+            _make_row({"id": 1, "label": "topic1", "occurrence_count": 10, "embedding": emb1}),
+            _make_row({"id": 2, "label": "topic2", "occurrence_count": 5, "embedding": emb2}),
         ]
         mock_conn.cursor.return_value = mock_cursor
         mock_sqlite3.connect.return_value = mock_conn

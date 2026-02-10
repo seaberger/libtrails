@@ -118,8 +118,6 @@ class TestExtractTopics:
     @patch("libtrails.topic_extractor._get_client")
     def test_extract_topics_timeout(self, mock_get_client):
         """Test handling of timeout."""
-        import httpx
-
         mock_client = MagicMock()
         mock_client.post.side_effect = httpx.TimeoutException("Timeout")
         mock_get_client.return_value = mock_client
@@ -526,9 +524,9 @@ class TestExtractBookThemes:
         )
         assert "Science Fiction" in prompt
         # "General" should be filtered out by clean_calibre_tags
-        assert (
-            "General" not in prompt.split("Tags:")[1].split("\n")[0] if "Tags:" in prompt else True
-        )
+        assert "Tags:" in prompt, "Expected 'Tags:' section in prompt"
+        tags_section = prompt.split("Tags:")[1].split("\n")[0]
+        assert "General" not in tags_section
 
     @patch("libtrails.topic_extractor._get_client")
     def test_timeout_returns_empty(self, mock_get_client):
