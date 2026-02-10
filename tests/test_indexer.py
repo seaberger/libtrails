@@ -329,3 +329,136 @@ class TestIndexBooksBatch:
 
         assert result["skipped"] == 2
         assert result["successful"] == 0
+
+
+class TestModelAvailabilityChecks:
+    """Tests for model availability checking in index_book."""
+
+    @patch("libtrails.indexer.check_ollama_available")
+    @patch("libtrails.indexer.save_chunks")
+    @patch("libtrails.indexer.chunk_text")
+    @patch("libtrails.indexer.extract_text")
+    @patch("libtrails.indexer.get_book_path")
+    @patch("libtrails.indexer.get_book")
+    @patch("libtrails.indexer.init_chunks_table")
+    def test_legacy_checks_only_chunk_model(
+        self,
+        mock_init,
+        mock_get_book,
+        mock_get_path,
+        mock_extract,
+        mock_chunk,
+        mock_save,
+        mock_ollama,
+    ):
+        """Legacy mode only checks chunk_model availability."""
+        mock_get_book.return_value = {"id": 1, "title": "Test", "calibre_id": 123}
+        mock_get_path.return_value = Path("/fake/book.epub")
+        mock_extract.return_value = " ".join(["word"] * 500)
+        mock_chunk.return_value = ["chunk"]
+        mock_ollama.return_value = False
+
+        result = index_book(1, legacy=True, theme_model="gemma3:27b", chunk_model="bad:model")
+
+        assert result.success is False
+        assert "bad:model" in result.error
+        # Only chunk_model checked in legacy mode
+        mock_ollama.assert_called_once_with("bad:model")
+
+    @patch("libtrails.indexer.check_ollama_available")
+    @patch("libtrails.indexer.save_chunks")
+    @patch("libtrails.indexer.chunk_text")
+    @patch("libtrails.indexer.extract_text")
+    @patch("libtrails.indexer.get_book_path")
+    @patch("libtrails.indexer.get_book")
+    @patch("libtrails.indexer.init_chunks_table")
+    def test_non_legacy_checks_both_models(
+        self,
+        mock_init,
+        mock_get_book,
+        mock_get_path,
+        mock_extract,
+        mock_chunk,
+        mock_save,
+        mock_ollama,
+    ):
+        """Non-legacy mode checks both theme and chunk models."""
+        mock_get_book.return_value = {"id": 1, "title": "Test", "calibre_id": 123}
+        mock_get_path.return_value = Path("/fake/book.epub")
+        mock_extract.return_value = " ".join(["word"] * 500)
+        mock_chunk.return_value = ["chunk"]
+        mock_ollama.return_value = False
+
+        result = index_book(1, legacy=False, theme_model="gemma3:27b", chunk_model="gemma3:4b")
+
+        assert result.success is False
+        # Should check theme_model first (it's first in the list)
+        mock_ollama.assert_called_once_with("gemma3:27b")
+
+    @patch("libtrails.indexer.check_ollama_available")
+    @patch("libtrails.indexer.save_chunks")
+    @patch("libtrails.indexer.chunk_text")
+    @patch("libtrails.indexer.extract_text")
+    @patch("libtrails.indexer.get_book_path")
+    @patch("libtrails.indexer.get_book")
+    @patch("libtrails.indexer.init_chunks_table")
+    def test_gemini_prefix_skips_ollama_check(
+        self,
+        mock_init,
+        mock_get_book,
+        mock_get_path,
+        mock_extract,
+        mock_chunk,
+        mock_save,
+        mock_ollama,
+    ):
+        """Models with gemini/ prefix skip Ollama check."""
+        mock_get_book.return_value = {"id": 1, "title": "Test", "calibre_id": 123}
+        mock_get_path.return_value = Path("/fake/book.epub")
+        mock_extract.return_value = " ".join(["word"] * 500)
+        mock_chunk.return_value = ["chunk"]
+        mock_ollama.return_value = True
+
+        # Use gemini prefix for both models
+        index_book(
+            1,
+            legacy=False,
+            theme_model="gemini/flash",
+            chunk_model="gemini/flash-lite",
+        )
+
+        # check_ollama_available should NOT be called for gemini models
+        mock_ollama.assert_not_called()
+
+    @patch("libtrails.indexer.check_ollama_available")
+    @patch("libtrails.indexer.save_chunks")
+    @patch("libtrails.indexer.chunk_text")
+    @patch("libtrails.indexer.extract_text")
+    @patch("libtrails.indexer.get_book_path")
+    @patch("libtrails.indexer.get_book")
+    @patch("libtrails.indexer.init_chunks_table")
+    def test_lm_studio_prefix_skips_ollama_check(
+        self,
+        mock_init,
+        mock_get_book,
+        mock_get_path,
+        mock_extract,
+        mock_chunk,
+        mock_save,
+        mock_ollama,
+    ):
+        """Models with lm_studio/ prefix skip Ollama check."""
+        mock_get_book.return_value = {"id": 1, "title": "Test", "calibre_id": 123}
+        mock_get_path.return_value = Path("/fake/book.epub")
+        mock_extract.return_value = " ".join(["word"] * 500)
+        mock_chunk.return_value = ["chunk"]
+        mock_ollama.return_value = True
+
+        index_book(
+            1,
+            legacy=False,
+            theme_model="lm_studio/qwen",
+            chunk_model="lm_studio/gemma",
+        )
+
+        mock_ollama.assert_not_called()

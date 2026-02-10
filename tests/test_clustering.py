@@ -66,20 +66,20 @@ class TestClusterTopics:
         mock_partition.membership = [0, 0, 1, 1, 1]
         mock_partition.quality.return_value = 0.4
         mock_leidenalg.find_partition.return_value = mock_partition
-        mock_leidenalg.ModularityVertexPartition = MagicMock()
+        mock_leidenalg.RBConfigurationVertexPartition = MagicMock()
         mock_leidenalg.SurpriseVertexPartition = MagicMock()
         mock_leidenalg.CPMVertexPartition = MagicMock()
 
-        # Test modularity (default)
-        result = cluster_topics(partition_type="modularity")
+        # Test modularity — explicitly use cooccurrence mode
+        result = cluster_topics(mode="cooccurrence", partition_type="modularity")
         assert result["partition_type"] == "modularity"
 
         # Test surprise
-        result = cluster_topics(partition_type="surprise")
+        result = cluster_topics(mode="cooccurrence", partition_type="surprise")
         assert result["partition_type"] == "surprise"
 
         # Test CPM with resolution
-        result = cluster_topics(partition_type="cpm", resolution=0.5)
+        result = cluster_topics(mode="cooccurrence", partition_type="cpm", resolution=0.5)
         assert result["partition_type"] == "cpm"
 
     @patch("libtrails.clustering.update_topic_cluster")
@@ -147,7 +147,7 @@ class TestClusterTopics:
         mock_graph.es["type"] = ["cooccurrence"]
         mock_build_graph.return_value = mock_graph
 
-        result = cluster_topics(partition_type="invalid_partition")
+        result = cluster_topics(mode="cooccurrence", partition_type="invalid_partition")
 
         assert "error" in result
         assert "Unknown partition type" in result["error"]
