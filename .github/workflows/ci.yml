@@ -44,9 +44,11 @@ jobs:
             --cov=libtrails.chunker \
             --cov=libtrails.topic_extractor \
             --cov=libtrails.indexer \
+            --cov=libtrails.document_parser \
+            --cov=libtrails.deduplication \
             --cov-report=xml \
             --cov-report=term-missing \
-            --cov-fail-under=40
+            --cov-fail-under=50
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4

@@ -1,14 +1,18 @@
 """Tests for document parsing functionality."""
 
 import zipfile
-from unittest.mock import patch
+from pathlib import Path
+from unittest.mock import MagicMock, patch
 
 import pytest
 
 from libtrails.document_parser import (
     _clean_markdown,
+    _html_to_structured_text,
     extract_text,
     extract_text_from_epub,
+    extract_text_from_pdf,
+    get_book_metadata_from_epub,
 )
 
 
@@ -168,3 +172,177 @@ class TestCleanMarkdown:
 
         # Links are preserved in current implementation
         assert "[here]" in result
+
+
+class TestHtmlToStructuredText:
+    """Tests for _html_to_structured_text()."""
+
+    def test_p_tags_create_paragraph_breaks(self):
+        """<p> tags become \\n\\n."""
+        html = "<p>First paragraph.</p><p>Second paragraph.</p>"
+        result = _html_to_structured_text(html)
+        assert "First paragraph." in result
+        assert "Second paragraph." in result
+        # Should have paragraph break between them
+        assert "\n\n" in result
+
+    def test_br_creates_newline(self):
+        """<br> becomes single newline."""
+        html = "Line one.<br>Line two."
+        result = _html_to_structured_text(html)
+        assert "Line one." in result
+        assert "Line two." in result
+        assert "\n" in result
+
+    def test_hr_creates_paragraph_break(self):
+        """<hr> becomes double newline."""
+        html = "Before.<hr>After."
+        result = _html_to_structured_text(html)
+        assert "Before." in result
+        assert "After." in result
+
+    def test_div_creates_paragraph_break(self):
+        """<div> creates paragraph break."""
+        html = "<div>Block one.</div><div>Block two.</div>"
+        result = _html_to_structured_text(html)
+        assert "Block one." in result
+        assert "Block two." in result
+        assert "\n\n" in result
+
+    def test_heading_tags_create_breaks(self):
+        """<h1>-<h6> create paragraph breaks."""
+        html = "<h1>Title</h1><p>Content here.</p>"
+        result = _html_to_structured_text(html)
+        assert "Title" in result
+        assert "Content here." in result
+
+    def test_strips_inline_tags(self):
+        """Inline tags (<em>, <strong>, <span>, <a>) are stripped."""
+        html = "<p>Some <em>emphasized</em> and <strong>bold</strong> text.</p>"
+        result = _html_to_structured_text(html)
+        assert "Some" in result
+        assert "emphasized" in result
+        assert "bold" in result
+        assert "<em>" not in result
+        assert "<strong>" not in result
+
+    def test_preserves_text_content(self):
+        """All text content is preserved."""
+        html = "<div><p>Hello <span>world</span>!</p></div>"
+        result = _html_to_structured_text(html)
+        assert "Hello" in result
+        assert "world" in result
+
+    def test_decodes_html_entities(self):
+        """Decodes common HTML entities."""
+        html = "<p>A &amp; B &lt; C &gt; D &quot;E&quot;</p>"
+        result = _html_to_structured_text(html)
+        assert "A & B" in result
+        assert "< C" in result
+        assert "> D" in result
+
+    def test_collapses_excessive_newlines(self):
+        """3+ consecutive newlines collapse to 2."""
+        html = "<p>A</p><p></p><p></p><p>B</p>"
+        result = _html_to_structured_text(html)
+        assert "\n\n\n" not in result
+
+    def test_empty_html(self):
+        """Empty HTML returns empty string."""
+        assert _html_to_structured_text("") == ""
+
+    def test_nbsp_handling(self):
+        """Non-breaking spaces are converted to regular spaces."""
+        html = "<p>Word&nbsp;word</p>"
+        result = _html_to_structured_text(html)
+        assert "Word word" in result
+
+
+class TestExtractTextFromPdf:
+    """Tests for extract_text_from_pdf()."""
+
+    @patch("libtrails.document_parser.PdfReader")
+    def test_extracts_text(self, mock_reader_cls):
+        """Extracts text from PDF pages."""
+        mock_page1 = MagicMock()
+        mock_page1.extract_text.return_value = "Page one content."
+        mock_page2 = MagicMock()
+        mock_page2.extract_text.return_value = "Page two content."
+
+        mock_reader = MagicMock()
+        mock_reader.pages = [mock_page1, mock_page2]
+        mock_reader_cls.return_value = mock_reader
+
+        result = extract_text_from_pdf(Path("/fake/book.pdf"))
+        assert "Page one content." in result
+        assert "Page two content." in result
+        assert "\n\n" in result
+
+    @patch("libtrails.document_parser.PdfReader")
+    def test_skips_empty_pages(self, mock_reader_cls):
+        """Skips pages with no text."""
+        mock_page1 = MagicMock()
+        mock_page1.extract_text.return_value = "Content."
+        mock_page2 = MagicMock()
+        mock_page2.extract_text.return_value = ""
+        mock_page3 = MagicMock()
+        mock_page3.extract_text.return_value = "More content."
+
+        mock_reader = MagicMock()
+        mock_reader.pages = [mock_page1, mock_page2, mock_page3]
+        mock_reader_cls.return_value = mock_reader
+
+        result = extract_text_from_pdf(Path("/fake/book.pdf"))
+        assert "Content." in result
+        assert "More content." in result
+        # Empty page should not leave extra whitespace
+        parts = [p for p in result.split("\n\n") if p.strip()]
+        assert len(parts) == 2
+
+
+class TestGetBookMetadataFromEpub:
+    """Tests for get_book_metadata_from_epub()."""
+
+    def test_extracts_title_and_author(self, tmp_path):
+        """Extracts title and author from OPF file."""
+        epub_path = tmp_path / "test.epub"
+        opf_content = """<?xml version="1.0"?>
+        <package>
+            <metadata>
+                <title>Siddhartha</title>
+                <creator>Hermann Hesse</creator>
+            </metadata>
+        </package>"""
+
+        with zipfile.ZipFile(epub_path, "w") as zf:
+            zf.writestr("content.opf", opf_content)
+
+        metadata = get_book_metadata_from_epub(epub_path)
+        assert metadata.get("title") == "Siddhartha"
+        assert metadata.get("author") == "Hermann Hesse"
+
+    def test_handles_missing_metadata(self, tmp_path):
+        """Returns empty dict when no OPF file exists."""
+        epub_path = tmp_path / "test.epub"
+        with zipfile.ZipFile(epub_path, "w") as zf:
+            zf.writestr("chapter1.xhtml", "<html><body>Content</body></html>")
+
+        metadata = get_book_metadata_from_epub(epub_path)
+        assert metadata == {}
+
+    def test_handles_partial_metadata(self, tmp_path):
+        """Returns available fields when some are missing."""
+        epub_path = tmp_path / "test.epub"
+        opf_content = """<?xml version="1.0"?>
+        <package>
+            <metadata>
+                <title>Only Title</title>
+            </metadata>
+        </package>"""
+
+        with zipfile.ZipFile(epub_path, "w") as zf:
+            zf.writestr("content.opf", opf_content)
+
+        metadata = get_book_metadata_from_epub(epub_path)
+        assert "title" in metadata
+        assert "author" not in metadata
