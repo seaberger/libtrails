@@ -142,10 +142,11 @@ def _call_litellm(
         kwargs["api_base"] = "http://localhost:1234/v1"
     if response_schema is not None:
         if is_lm_studio:
-            # LM Studio rejects json_object; use json_schema (non-strict) instead
+            # LM Studio rejects json_object; use json_schema with strict mode
+            # to activate Outlines regex-based token masking for MLX models
             kwargs["response_format"] = {
                 "type": "json_schema",
-                "json_schema": {"name": "response", "schema": response_schema},
+                "json_schema": {"name": "response", "strict": True, "schema": response_schema},
             }
         else:
             kwargs["response_format"] = {"type": "json_object"}
@@ -166,7 +167,7 @@ def _call_litellm(
 
     content = content.strip()
 
-    # LM Studio models return unstructured text (no response_format enforcement).
+    # LM Studio strict mode may still produce malformed JSON in edge cases.
     # Extract JSON from: code fences, embedded JSON, or plain-text lists.
     if is_lm_studio and response_schema is not None:
         content = _extract_json_from_text(content)
@@ -458,7 +459,11 @@ Rules:
 
         parsed = json.loads(output)
         if isinstance(parsed, dict) and "themes" in parsed:
-            return [_unwrap_topic(t).strip().lower() for t in parsed["themes"] if t]
+            return [
+                _unwrap_topic(t).strip().lower()
+                for t in parsed["themes"]
+                if t and _unwrap_topic(t).strip().lower() != "themes"
+            ]
         # Fallback to generic parsing
         themes = _parse_topics(output)
         return [t.strip().lower() for t in themes if t.strip()]
@@ -632,7 +637,7 @@ Return a JSON object mapping passage numbers to topic arrays."""
                 topics = [str(t).strip() for t in parsed[key] if t]
                 batch_results.append(topics[:num_topics])
             else:
-                batch_results.append([])
+                return None  # incomplete batch — trigger per-chunk fallback
 
         return batch_results
 

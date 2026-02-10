@@ -626,10 +626,18 @@ def _index_all_books(
         cursor.execute("SELECT DISTINCT book_id FROM chunks")
         indexed_ids = {row[0] for row in cursor.fetchall()}
 
-        # Get books that already have topics extracted (for reindex resume)
-        cursor.execute(
-            "SELECT DISTINCT c.book_id FROM chunks c JOIN chunk_topics ct ON c.id = ct.chunk_id"
-        )
+        # Get books where ALL chunks have topics (for reindex resume)
+        # Books with partial topic coverage are NOT skipped — they need reprocessing
+        cursor.execute("""
+            SELECT book_id FROM (
+                SELECT c.book_id,
+                       COUNT(c.id) as total,
+                       COUNT(ct.chunk_id) as with_topics
+                FROM chunks c
+                LEFT JOIN chunk_topics ct ON c.id = ct.chunk_id
+                GROUP BY c.book_id
+            ) WHERE total = with_topics AND total > 0
+        """)
         has_topics_ids = {row[0] for row in cursor.fetchall()}
 
     # Filter books to process
