@@ -545,8 +545,7 @@ def _index_single_book(
         # No existing chunks — fresh book
         chunks = chunk_text(text, target_words)
         console.print(
-            f"[green]Created {len(chunks)} chunks[/green] "
-            f"[dim](~{target_words} words/chunk)[/dim]"
+            f"[green]Created {len(chunks)} chunks[/green] [dim](~{target_words} words/chunk)[/dim]"
         )
         save_chunks(book["id"], chunks)
 
@@ -564,9 +563,7 @@ def _index_single_book(
     if dry_run:
         console.print("[yellow]Dry run - skipping topic extraction[/yellow]")
         if pending_chunks:
-            console.print(
-                f"\n[bold]Sample chunk ({len(pending_chunks[0].split())} words):[/bold]"
-            )
+            console.print(f"\n[bold]Sample chunk ({len(pending_chunks[0].split())} words):[/bold]")
             console.print(pending_chunks[0][:500] + "...")
         return
 
@@ -601,9 +598,7 @@ def _index_single_book(
         if book_themes:
             console.print(f"[cyan]Using existing book themes:[/cyan] {', '.join(book_themes)}")
         else:
-            console.print(
-                f"\n[bold]Pass 1: Extracting book themes with {theme_model}...[/bold]"
-            )
+            console.print(f"\n[bold]Pass 1: Extracting book themes with {theme_model}...[/bold]")
 
             calibre_meta = get_calibre_book_metadata(book["calibre_id"])
             sample_text = text[:5000]
@@ -633,9 +628,7 @@ def _index_single_book(
                 f"(parallel, {workers} workers)...[/bold]"
             )
 
-            with _progress_tracker(
-                "Processing chunks", len(pending_chunks)
-            ) as update_progress:
+            with _progress_tracker("Processing chunks", len(pending_chunks)) as update_progress:
                 topics_per_chunk = extract_topics_single_optimized_parallel(
                     pending_chunks,
                     book_title=book["title"],
@@ -653,9 +646,7 @@ def _index_single_book(
                 f"(batches of {batch_size})...[/bold]"
             )
 
-            with _progress_tracker(
-                "Processing chunks", len(pending_chunks)
-            ) as update_progress:
+            with _progress_tracker("Processing chunks", len(pending_chunks)) as update_progress:
                 topics_per_chunk = extract_topics_batched(
                     pending_chunks,
                     book_title=book["title"],
