@@ -21,6 +21,7 @@ from .database import (
     get_book,
     get_book_by_title,
     get_book_path,
+    get_book_themes,
     get_calibre_book_metadata,
     get_indexing_status,
     get_topics_without_embeddings,
@@ -473,22 +474,97 @@ def _index_single_book(
 
     console.print(f"[green]Extracted {word_count:,} words[/green]")
 
-    # Chunk
+    # Chunk target
     target_words = chunk_size if chunk_size else CHUNK_TARGET_WORDS
-    chunks = chunk_text(text, target_words)
-    console.print(
-        f"[green]Created {len(chunks)} chunks[/green] [dim](~{target_words} words/chunk)[/dim]"
-    )
 
-    # Save chunks
-    save_chunks(book["id"], chunks)
+    # Check for existing chunks (resume support for interrupted runs)
+    from .database import get_db
+
+    resuming = False
+    with get_db() as conn:
+        existing = conn.execute(
+            "SELECT id, chunk_index FROM chunks WHERE book_id = ? ORDER BY chunk_index",
+            (book["id"],),
+        ).fetchall()
+
+    if existing:
+        chunk_ids = [r[0] for r in existing]
+
+        # Check which chunks already have topics
+        with get_db() as conn:
+            done_ids = {
+                r[0]
+                for r in conn.execute(
+                    "SELECT DISTINCT chunk_id FROM chunk_topics WHERE chunk_id IN ({})".format(
+                        ",".join("?" * len(chunk_ids))
+                    ),
+                    chunk_ids,
+                ).fetchall()
+            }
+
+        completed_count = sum(1 for cid in chunk_ids if cid in done_ids)
+
+        if completed_count == len(chunk_ids):
+            console.print("[green]All chunks already have topics — skipping[/green]")
+            return
+
+        if completed_count > 0:
+            # Partial progress exists — resume from where we left off
+            console.print(
+                f"[cyan]Resuming: {completed_count}/{len(chunk_ids)} chunks already done, "
+                f"{len(chunk_ids) - completed_count} remaining[/cyan]"
+            )
+            # Read chunk text for pending chunks only
+            pending_chunk_ids = [cid for cid in chunk_ids if cid not in done_ids]
+            with get_db() as conn:
+                pending_chunks = []
+                for cid in pending_chunk_ids:
+                    row = conn.execute("SELECT text FROM chunks WHERE id = ?", (cid,)).fetchone()
+                    pending_chunks.append(row[0])
+
+            resuming = True
+        else:
+            # Chunks exist but no topics at all — delete and re-chunk (fresh start)
+            # This handles the case where chunk size changed between runs
+            pending_chunks = chunk_text(text, target_words)
+            save_chunks(book["id"], pending_chunks)
+            with get_db() as conn:
+                chunk_ids = [
+                    r[0]
+                    for r in conn.execute(
+                        "SELECT id FROM chunks WHERE book_id = ? ORDER BY chunk_index",
+                        (book["id"],),
+                    ).fetchall()
+                ]
+            pending_chunk_ids = chunk_ids
+            console.print(
+                f"[green]Created {len(pending_chunks)} chunks[/green] "
+                f"[dim](~{target_words} words/chunk)[/dim]"
+            )
+    else:
+        # No existing chunks — fresh book
+        chunks = chunk_text(text, target_words)
+        console.print(
+            f"[green]Created {len(chunks)} chunks[/green] [dim](~{target_words} words/chunk)[/dim]"
+        )
+        save_chunks(book["id"], chunks)
+
+        with get_db() as conn:
+            chunk_ids = [
+                r[0]
+                for r in conn.execute(
+                    "SELECT id FROM chunks WHERE book_id = ? ORDER BY chunk_index",
+                    (book["id"],),
+                ).fetchall()
+            ]
+        pending_chunk_ids = chunk_ids
+        pending_chunks = chunks
 
     if dry_run:
         console.print("[yellow]Dry run - skipping topic extraction[/yellow]")
-        # Show sample chunk
-        if chunks:
-            console.print(f"\n[bold]Sample chunk ({len(chunks[0].split())} words):[/bold]")
-            console.print(chunks[0][:500] + "...")
+        if pending_chunks:
+            console.print(f"\n[bold]Sample chunk ({len(pending_chunks[0].split())} words):[/bold]")
+            console.print(pending_chunks[0][:500] + "...")
         return
 
     # Check Ollama availability (skip for Gemini API and LM Studio models)
@@ -498,67 +574,63 @@ def _index_single_book(
         console.print(f"[red]Model {chunk_model} not available in Ollama[/red]")
         return
 
-    from .database import get_db
-
-    with get_db() as conn:
-        cursor = conn.cursor()
-        cursor.execute(
-            "SELECT id FROM chunks WHERE book_id = ? ORDER BY chunk_index", (book["id"],)
-        )
-        chunk_ids = [row[0] for row in cursor.fetchall()]
-
-    book_themes = []
-
-    # Save callback: persists each chunk's topics to DB immediately
+    # Save callback: maps pending-chunk index → actual chunk_id
     def on_chunk_done(idx, topics):
         if topics:
-            save_chunk_topics(chunk_ids[idx], topics)
+            save_chunk_topics(pending_chunk_ids[idx], topics)
 
     if legacy:
         # Legacy mode: single-call extraction, no context
         console.print(f"\n[bold]Extracting topics with {chunk_model} (legacy mode)...[/bold]")
 
-        with _progress_tracker("Processing chunks", len(chunks)) as update_progress:
+        with _progress_tracker("Processing chunks", len(pending_chunks)) as update_progress:
             topics_per_chunk = extract_topics_batch(
-                chunks,
+                pending_chunks,
                 chunk_model,
                 progress_callback=update_progress,
                 save_callback=on_chunk_done,
             )
     else:
         # Two-pass extraction
-        # Pass 1: Book-level themes
-        console.print(f"\n[bold]Pass 1: Extracting book themes with {theme_model}...[/bold]")
-
-        calibre_meta = get_calibre_book_metadata(book["calibre_id"])
-        sample_text = text[:5000]
-
-        with console.status("Extracting book themes..."):
-            book_themes = extract_book_themes(
-                title=book["title"],
-                author=book.get("author", "Unknown"),
-                tags=calibre_meta.get("tags"),
-                description=calibre_meta.get("description"),
-                sample_text=sample_text,
-                model=theme_model,
-            )
+        # Pass 1: Book-level themes (skip if already extracted during a prior run)
+        book_themes = get_book_themes(book["id"]) if resuming else []
 
         if book_themes:
-            save_book_themes(book["id"], book_themes)
-            console.print(f"[green]Book themes:[/green] {', '.join(book_themes)}")
+            console.print(f"[cyan]Using existing book themes:[/cyan] {', '.join(book_themes)}")
         else:
-            console.print("[yellow]No book themes extracted (continuing without context)[/yellow]")
+            console.print(f"\n[bold]Pass 1: Extracting book themes with {theme_model}...[/bold]")
 
-        # Pass 2: Chunk topic extraction
+            calibre_meta = get_calibre_book_metadata(book["calibre_id"])
+            sample_text = text[:5000]
+
+            with console.status("Extracting book themes..."):
+                book_themes = extract_book_themes(
+                    title=book["title"],
+                    author=book.get("author", "Unknown"),
+                    tags=calibre_meta.get("tags"),
+                    description=calibre_meta.get("description"),
+                    sample_text=sample_text,
+                    model=theme_model,
+                )
+
+            if book_themes:
+                save_book_themes(book["id"], book_themes)
+                console.print(f"[green]Book themes:[/green] {', '.join(book_themes)}")
+            else:
+                console.print(
+                    "[yellow]No book themes extracted (continuing without context)[/yellow]"
+                )
+
+        # Pass 2: Chunk topic extraction (pending chunks only)
         if parallel:
             console.print(
                 f"\n[bold]Pass 2: Extracting chunk topics with {chunk_model} "
                 f"(parallel, {workers} workers)...[/bold]"
             )
 
-            with _progress_tracker("Processing chunks", len(chunks)) as update_progress:
+            with _progress_tracker("Processing chunks", len(pending_chunks)) as update_progress:
                 topics_per_chunk = extract_topics_single_optimized_parallel(
-                    chunks,
+                    pending_chunks,
                     book_title=book["title"],
                     author=book.get("author", "Unknown"),
                     book_themes=book_themes,
@@ -574,9 +646,9 @@ def _index_single_book(
                 f"(batches of {batch_size})...[/bold]"
             )
 
-            with _progress_tracker("Processing chunks", len(chunks)) as update_progress:
+            with _progress_tracker("Processing chunks", len(pending_chunks)) as update_progress:
                 topics_per_chunk = extract_topics_batched(
-                    chunks,
+                    pending_chunks,
                     book_title=book["title"],
                     author=book.get("author", "Unknown"),
                     book_themes=book_themes,
@@ -593,7 +665,13 @@ def _index_single_book(
             all_topics.extend(topics)
 
     unique_topics = set(all_topics)
-    console.print(f"\n[green]Extracted {len(unique_topics)} unique topics[/green]")
+    if resuming:
+        console.print(
+            f"\n[green]Extracted {len(unique_topics)} unique topics "
+            f"({completed_count} chunks previously done)[/green]"
+        )
+    else:
+        console.print(f"\n[green]Extracted {len(unique_topics)} unique topics[/green]")
 
     # Show top topics
     if unique_topics:
@@ -654,14 +732,10 @@ def _index_all_books(
         if chunk_model.startswith("lm_studio/"):
             console.print(f"[dim]Chunk API: {_get_lm_studio_api_base(chunk_model)}[/dim]")
 
-    # Get already indexed book IDs (have chunks)
+    # Get books where ALL chunks have topics — only these are fully done
+    # Books with partial topic coverage are NOT skipped — they need chunk-level resume
     with get_db() as conn:
         cursor = conn.cursor()
-        cursor.execute("SELECT DISTINCT book_id FROM chunks")
-        indexed_ids = {row[0] for row in cursor.fetchall()}
-
-        # Get books where ALL chunks have topics (for reindex resume)
-        # Books with partial topic coverage are NOT skipped — they need reprocessing
         cursor.execute("""
             SELECT book_id FROM (
                 SELECT c.book_id,
@@ -685,8 +759,9 @@ def _index_all_books(
             )
         console.print(f"[bold]Re-indexing {len(to_process)} remaining books...[/bold]")
     else:
-        to_process = [b for b in books if b["id"] not in indexed_ids]
-        skipped = len(books) - len(to_process)
+        # Only skip books where ALL chunks have topics (allows resume of partial books)
+        to_process = [b for b in books if b["id"] not in has_topics_ids]
+        skipped = len(has_topics_ids)
         if skipped > 0:
             console.print(f"[dim]Skipping {skipped} already indexed books[/dim]")
         console.print(f"[bold]Indexing {len(to_process)} books...[/bold]")

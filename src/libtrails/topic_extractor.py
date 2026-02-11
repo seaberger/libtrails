@@ -279,7 +279,10 @@ def normalize_topic(topic: str) -> Optional[str]:
 
     # Truncate JSON schema leaks: model sometimes appends 'reason': or 'passage context':
     # Keep the topic portion before the leaked key
-    trunc_match = re.search(r"""['"]\s*,\s*['"](?:reason|details|passage[_ ]?(?:context|quote|relevance)|text[_ ]content|relevance)""", normalized)
+    trunc_match = re.search(
+        r"""['"]\s*,\s*['"](?:reason|details|passage[_ ]?(?:context|quote|relevance)|text[_ ]content|relevance)""",
+        normalized,
+    )
     if trunc_match:
         normalized = normalized[: trunc_match.start()].strip().strip("'\"").strip()
         if not normalized or len(normalized) < 3:
@@ -294,7 +297,7 @@ def normalize_topic(topic: str) -> Optional[str]:
         return None
 
     # Filter JSON/schema fragments
-    if re.search(r'[{}\[\]]', normalized):
+    if re.search(r"[{}\[\]]", normalized):
         return None
 
     # Filter excessively long topics (>100 chars after truncation)
