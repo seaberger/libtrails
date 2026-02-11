@@ -261,18 +261,44 @@ def normalize_topic(topic: str) -> Optional[str]:
     """
     Normalize a topic label for deduplication.
 
-    Returns None for stoplist matches (generic single-word topics).
+    Returns None for:
+    - Stoplist matches (generic single-word topics)
+    - Artifacts: timestamps, HTML fragments, JSON schema leaks, too short/long
     """
     normalized = topic.strip().lower().replace("_", " ")
     # Collapse multiple spaces
     while "  " in normalized:
         normalized = normalized.replace("  ", " ")
 
-    if not normalized:
+    if not normalized or len(normalized) < 3:
         return None
 
     # Filter out generic single-word topics from stoplist
     if normalized in TOPIC_STOPLIST:
+        return None
+
+    # Truncate JSON schema leaks: model sometimes appends 'reason': or 'passage context':
+    # Keep the topic portion before the leaked key
+    trunc_match = re.search(r"""['"]\s*,\s*['"](?:reason|details|passage[_ ]?(?:context|quote|relevance)|text[_ ]content|relevance)""", normalized)
+    if trunc_match:
+        normalized = normalized[: trunc_match.start()].strip().strip("'\"").strip()
+        if not normalized or len(normalized) < 3:
+            return None
+
+    # Filter timestamps (ISO 8601)
+    if re.match(r"\d{4}-\d{2}-\d{2}[t ]", normalized):
+        return None
+
+    # Filter HTML artifacts
+    if re.search(r"</?[a-z]|</div|</body|&amp;|&lt;|&gt;|/>", normalized):
+        return None
+
+    # Filter JSON/schema fragments
+    if re.search(r'[{}\[\]]', normalized):
+        return None
+
+    # Filter excessively long topics (>100 chars after truncation)
+    if len(normalized) > 100:
         return None
 
     return normalized
