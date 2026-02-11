@@ -13,6 +13,8 @@ from .config import (
     BATCH_SIZE,
     CHUNK_MODEL,
     DEFAULT_MODEL,
+    LM_STUDIO_CHUNK_API_BASE,
+    LM_STUDIO_THEME_API_BASE,
     OLLAMA_NUM_CTX,
     THEME_MODEL,
     TOPIC_STOPLIST,
@@ -33,6 +35,36 @@ _client: Optional[httpx.Client] = None
 # Number of parallel workers for topic extraction
 # Ollama queues requests, but parallelism helps with HTTP overhead
 NUM_WORKERS = 4
+
+# Per-model LM Studio API base URL overrides (e.g., for routing to a remote GPU)
+# Keys are model strings like "lm_studio/google/gemma-3-12b"
+# Initialized from ~/.libtrails/config.yaml and env vars; CLI flags can override.
+_lm_studio_api_bases: dict[str, str] = {}
+
+# Seed defaults from config — theme and chunk models may use different hosts
+if THEME_MODEL.startswith("lm_studio/"):
+    _lm_studio_api_bases[THEME_MODEL] = LM_STUDIO_THEME_API_BASE.rstrip("/") + "/v1"
+if CHUNK_MODEL.startswith("lm_studio/"):
+    _lm_studio_api_bases[CHUNK_MODEL] = LM_STUDIO_CHUNK_API_BASE.rstrip("/") + "/v1"
+
+
+def set_lm_studio_api_base(model: str, api_base: str) -> None:
+    """Register a custom LM Studio API base URL for a specific model.
+
+    Allows routing different models to different LM Studio instances,
+    e.g., theme model on local Mac, chunk model on a remote GPU.
+
+    The api_base should be the server root (e.g., http://192.168.1.36:1234).
+    The /v1 suffix is added automatically.
+    """
+    if not api_base.endswith("/v1"):
+        api_base = api_base.rstrip("/") + "/v1"
+    _lm_studio_api_bases[model] = api_base
+
+
+def _get_lm_studio_api_base(model: str) -> str:
+    """Look up the API base URL for an LM Studio model."""
+    return _lm_studio_api_bases.get(model, "http://localhost:1234/v1")
 
 
 def _is_litellm_model(model: str) -> bool:
@@ -139,7 +171,7 @@ def _call_litellm(
     }
     is_lm_studio = model.startswith("lm_studio/")
     if is_lm_studio:
-        kwargs["api_base"] = "http://localhost:1234/v1"
+        kwargs["api_base"] = _get_lm_studio_api_base(model)
     if response_schema is not None:
         if is_lm_studio:
             # LM Studio rejects json_object; use json_schema with strict mode

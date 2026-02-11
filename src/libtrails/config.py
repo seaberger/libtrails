@@ -65,6 +65,21 @@ CALIBRE_DB_PATH = CALIBRE_LIBRARY_PATH / "metadata.db"
 DEFAULT_MODEL = "gemma3:27b"
 OLLAMA_HOST = "http://localhost:11434"
 
+# LM Studio API hosts — configurable per model role via ~/.libtrails/config.yaml
+# YAML example:
+#   lm_studio:
+#     theme_api_base: http://localhost:1234
+#     chunk_api_base: http://192.168.1.36:1234
+_user_cfg = get_user_config()
+LM_STUDIO_THEME_API_BASE = os.environ.get(
+    "LM_STUDIO_THEME_API_BASE",
+    _user_cfg.get("lm_studio", {}).get("theme_api_base", "http://localhost:1234"),
+)
+LM_STUDIO_CHUNK_API_BASE = os.environ.get(
+    "LM_STUDIO_CHUNK_API_BASE",
+    _user_cfg.get("lm_studio", {}).get("chunk_api_base", "http://localhost:1234"),
+)
+
 # Chunking settings
 CHUNK_TARGET_WORDS = 500
 CHUNK_MIN_WORDS = 100

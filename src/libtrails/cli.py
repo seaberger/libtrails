@@ -280,6 +280,16 @@ def sync(ipad: str, dry_run: bool, skip_index: bool, model: str, save_url: bool)
     is_flag=True,
     help="Use extended 9-demo prompt (enables Gemini context caching)",
 )
+@click.option(
+    "--theme-api-base",
+    default=None,
+    help="LM Studio API base URL for theme model (e.g., http://192.168.1.36:1234)",
+)
+@click.option(
+    "--chunk-api-base",
+    default=None,
+    help="LM Studio API base URL for chunk model (e.g., http://192.168.1.36:1234)",
+)
 def index(
     book_id: int,
     book_ids: tuple[int, ...],
@@ -298,6 +308,8 @@ def index(
     parallel: bool,
     workers: int,
     extended_prompt: bool,
+    theme_api_base: str,
+    chunk_api_base: str,
 ):
     """Index a book (parse, chunk, extract topics).
 
@@ -313,6 +325,16 @@ def index(
     if model:
         theme_model = model
         chunk_model = model
+
+    # Register custom LM Studio API base URLs (CLI flags override config/env)
+    if theme_api_base and theme_model.startswith("lm_studio/"):
+        from .topic_extractor import set_lm_studio_api_base
+
+        set_lm_studio_api_base(theme_model, theme_api_base)
+    if chunk_api_base and chunk_model.startswith("lm_studio/"):
+        from .topic_extractor import set_lm_studio_api_base
+
+        set_lm_studio_api_base(chunk_model, chunk_api_base)
 
     if index_all:
         _index_all_books(
