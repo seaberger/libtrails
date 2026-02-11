@@ -1,0 +1,120 @@
+# Extraction Log Monitoring
+
+Quick reference for monitoring long-running `libtrails index --all` extraction runs.
+
+## Log File Location
+
+When running via Claude Code background tasks:
+```bash
+# Set a shorthand
+export LOGS=/private/tmp/claude-501/-Users-seanbergman-Repositories-calibre-lib/tasks/<task-id>.output
+```
+
+## Useful Commands
+
+### Live monitoring
+```bash
+# Watch output in real time
+tail -f $LOGS
+
+# Live filtered view (books + progress only)
+tail -f $LOGS | grep -E "(Indexing:|Processing chunks:|Book done|Resuming:|Skipping:|ETA:)"
+```
+
+### Summary queries
+```bash
+# Completed books with timing
+grep "Book done" $LOGS
+
+# Count completed books
+grep -c "Book done" $LOGS
+
+# Latest ETA
+grep "ETA:" $LOGS | tail -1
+
+# Books that were resumed (chunk-level resume)
+grep "Resuming:" $LOGS
+
+# Books skipped (too large or errors)
+grep -E "(Skipping:|Error indexing)" $LOGS
+
+# Current book + latest progress
+grep -E "(Indexing:|Processing chunks:|Book done|Resuming:)" $LOGS | tail -10
+```
+
+### Extraction stats
+```bash
+# Average chunk rate from all completed books
+grep "Book done" $LOGS | grep -oE "[0-9.]+s/chunk avg" | tail -1
+
+# Per-book timing breakdown
+grep "Book done" $LOGS | grep -oE "[0-9.]+s \([0-9]+ chunks"
+
+# Total chunks processed
+grep "Book done" $LOGS | tail -1 | grep -oE "[0-9,]+ chunks,"
+```
+
+## Dashboard Script
+
+`utils/monitor.py` provides a compact dashboard showing current book, progress, timing, and recent completions. It auto-discovers the latest extraction log if no path is given.
+
+```bash
+python3 utils/monitor.py              # one-shot dashboard (auto-detects log)
+python3 utils/monitor.py --watch      # live refresh every 5s
+python3 utils/monitor.py -w -n 3      # live refresh every 3s
+python3 utils/monitor.py <logfile>    # use a specific log file
+```
+
+Example output:
+```
+  LIBTRAILS EXTRACTION MONITOR
+  ==================================================
+
+  Now:    Sailing Alone Around the World
+          by Joshua Slocum
+          [====================          ] 130/189 chunks (68%)
+
+  Books:  [                              ] 8/514 (1%)
+          4 extracted, 4 skipped, 4 resumed
+
+  Chunks: 1,517 processed
+  Topics: 2,986 extracted
+
+  Rate:    0.40s/chunk avg
+  Elapsed: 10m 4s
+  ETA:     21.3h
+
+  Recent books:
+    The Collected Stories Of Saul Bellow         540 chunks    14.8s  (0.03s/ch)
+    The Audacity of Hope                         269 chunks   264.2s  (0.98s/ch)
+    The Unreal and the Real: Selected Stories    250 chunks    93.7s  (0.37s/ch)
+```
+
+## Log Format Reference
+
+The extraction log follows this pattern per book:
+
+```
+(N/TOTAL) ETA: XXXm XXs
+Indexing: Book Title
+Author: Author Name
+EPUB: filename.epub
+Extracted XX,XXX words
+Created XXX chunks (~500 words/chunk)      # fresh book
+Resuming: X/Y chunks already done, Z remaining  # resumed book
+Using existing book themes: ...             # resumed book
+
+Pass 1: Extracting book themes with model...
+Book themes: theme1, theme2, ...
+
+Pass 2: Extracting chunk topics with model...
+  Processing chunks: X/Y (Z%)
+  ...
+
+Extracted XXX unique topics (N chunks previously done)
+
+Top topics:
+  topic_name (count)
+  ...
+Book done: XXXs (YYY chunks, Z.ZZs/chunk) | Total: N/TOTAL books, XXXX chunks, Z.ZZs/chunk avg
+```
