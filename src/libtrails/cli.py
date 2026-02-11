@@ -2195,13 +2195,7 @@ def backfill(chunk_model: str, workers: int, extended_prompt: bool, dry_run: boo
                 for future in as_completed(futures):
                     chunk_id, topics = future.result()
                     if topics:
-                        with get_db() as conn:
-                            for topic_str in topics:
-                                conn.execute(
-                                    "INSERT OR IGNORE INTO chunk_topics (chunk_id, topic) VALUES (?, ?)",
-                                    (chunk_id, topic_str),
-                                )
-                            conn.commit()
+                        save_chunk_topics(chunk_id, topics)
                         total_fixed += 1
                     else:
                         total_failed += 1
