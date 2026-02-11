@@ -13,8 +13,6 @@ from .config import (
     BATCH_SIZE,
     CHUNK_MODEL,
     DEFAULT_MODEL,
-    LM_STUDIO_CHUNK_API_BASE,
-    LM_STUDIO_THEME_API_BASE,
     OLLAMA_NUM_CTX,
     THEME_MODEL,
     TOPIC_STOPLIST,
@@ -38,14 +36,8 @@ NUM_WORKERS = 4
 
 # Per-model LM Studio API base URL overrides (e.g., for routing to a remote GPU)
 # Keys are model strings like "lm_studio/google/gemma-3-12b"
-# Initialized from ~/.libtrails/config.yaml and env vars; CLI flags can override.
+# Registered at runtime by CLI from config/env/flags via set_lm_studio_api_base().
 _lm_studio_api_bases: dict[str, str] = {}
-
-# Seed defaults from config — theme and chunk models may use different hosts
-if THEME_MODEL.startswith("lm_studio/"):
-    _lm_studio_api_bases[THEME_MODEL] = LM_STUDIO_THEME_API_BASE.rstrip("/") + "/v1"
-if CHUNK_MODEL.startswith("lm_studio/"):
-    _lm_studio_api_bases[CHUNK_MODEL] = LM_STUDIO_CHUNK_API_BASE.rstrip("/") + "/v1"
 
 
 def set_lm_studio_api_base(model: str, api_base: str) -> None:

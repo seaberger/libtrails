@@ -326,15 +326,18 @@ def index(
         theme_model = model
         chunk_model = model
 
-    # Register custom LM Studio API base URLs (CLI flags override config/env)
-    if theme_api_base and theme_model.startswith("lm_studio/"):
+    # Register LM Studio API base URLs for model routing
+    # CLI flags override config.yaml/env defaults
+    if theme_model.startswith("lm_studio/"):
+        from .config import LM_STUDIO_THEME_API_BASE
         from .topic_extractor import set_lm_studio_api_base
 
-        set_lm_studio_api_base(theme_model, theme_api_base)
-    if chunk_api_base and chunk_model.startswith("lm_studio/"):
+        set_lm_studio_api_base(theme_model, theme_api_base or LM_STUDIO_THEME_API_BASE)
+    if chunk_model.startswith("lm_studio/"):
+        from .config import LM_STUDIO_CHUNK_API_BASE
         from .topic_extractor import set_lm_studio_api_base
 
-        set_lm_studio_api_base(chunk_model, chunk_api_base)
+        set_lm_studio_api_base(chunk_model, chunk_api_base or LM_STUDIO_CHUNK_API_BASE)
 
     if index_all:
         _index_all_books(
