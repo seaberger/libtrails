@@ -652,6 +652,7 @@ def _extract_batch(
     prompt = f"""{context}
 
 Extract {num_topics} specific topic labels from EACH passage below. Topics should be multi-word noun phrases specific to the content, NOT generic words.
+Ignore boilerplate like copyright notices, publisher info, or legal disclaimers — do not extract topics like "book rights and permissions", "publisher's legal disclaimer", or "hachette book group branding".
 
 {passages_text}
 
@@ -710,6 +711,7 @@ def _extract_single_contextualized(
     prompt = f'''{context}
 
 Extract {num_topics} specific topic labels from this passage. Use multi-word noun phrases, NOT generic single words.
+Ignore boilerplate like copyright notices, publisher info, or legal disclaimers — do not extract topics like "book rights and permissions", "publisher's legal disclaimer", or "hachette book group branding".
 
 Passage: "{text}"'''
 
@@ -762,7 +764,10 @@ _DSPY_INSTRUCTION = (
     "Extract specific topic labels from a book passage.\n\n"
     "Given a passage from a book along with the book's title, author, and\n"
     "high-level themes, extract exactly 5 topic labels that capture the\n"
-    "key concepts discussed in this specific passage."
+    "key concepts discussed in this specific passage.\n\n"
+    "Ignore boilerplate like copyright notices, publisher info, or legal disclaimers — "
+    'do not extract topics like "book rights and permissions", '
+    '"publisher\'s legal disclaimer", or "hachette book group branding".'
 )
 
 # Extended instruction with quality guidelines for the cached prompt variant.
@@ -781,6 +786,9 @@ _DSPY_INSTRUCTION_EXTENDED = (
     "- Use the book context to disambiguate: 'river journey' in Siddhartha\n"
     "  is spiritual, in Huckleberry Finn is geographical.\n"
     '- Do not wrap topics in dicts like {"topic": "value"}. Return plain strings only.\n'
+    "- Ignore boilerplate like copyright notices, publisher info, or legal disclaimers — "
+    'do not extract topics like "book rights and permissions", '
+    '"publisher\'s legal disclaimer", or "hachette book group branding".\n'
 )
 
 _DSPY_DEMOS = [
