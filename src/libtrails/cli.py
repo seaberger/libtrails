@@ -645,6 +645,15 @@ def _index_all_books(
         console.print(f"[dim]Using {chunk_size:,} words per chunk[/dim]")
     console.print(f"[dim]Will pause if battery drops below {min_battery}%[/dim]")
 
+    # Show API routing for LM Studio models
+    if theme_model.startswith("lm_studio/") or chunk_model.startswith("lm_studio/"):
+        from .topic_extractor import _get_lm_studio_api_base
+
+        if theme_model.startswith("lm_studio/"):
+            console.print(f"[dim]Theme API: {_get_lm_studio_api_base(theme_model)}[/dim]")
+        if chunk_model.startswith("lm_studio/"):
+            console.print(f"[dim]Chunk API: {_get_lm_studio_api_base(chunk_model)}[/dim]")
+
     # Get already indexed book IDs (have chunks)
     with get_db() as conn:
         cursor = conn.cursor()
@@ -701,6 +710,7 @@ def _index_all_books(
     # Process books
     successful = 0
     skipped_large = 0
+    total_chunks = 0
     failed = []
     start_time = time.time()
 
@@ -738,6 +748,7 @@ def _index_all_books(
                     break
 
         try:
+            book_start = time.time()
             result = _index_single_book(
                 book,
                 theme_model,
@@ -755,6 +766,20 @@ def _index_all_books(
                 skipped_large += 1
                 continue
             successful += 1
+            book_elapsed = time.time() - book_start
+            with get_db() as conn:
+                n_chunks = conn.execute(
+                    "SELECT COUNT(*) FROM chunks WHERE book_id = ?", (book["id"],)
+                ).fetchone()[0]
+            total_chunks += n_chunks
+            total_elapsed = time.time() - start_time
+            console.print(
+                f"[bold cyan]Book done: {book_elapsed:.1f}s "
+                f"({n_chunks} chunks, {book_elapsed / max(n_chunks, 1):.2f}s/chunk) "
+                f"| Total: {successful}/{len(processable)} books, "
+                f"{total_chunks:,} chunks, "
+                f"{total_elapsed / max(total_chunks, 1):.2f}s/chunk avg[/bold cyan]",
+            )
         except KeyboardInterrupt:
             console.print("\n[yellow]Interrupted! Progress saved. Run again to resume.[/yellow]")
             break
