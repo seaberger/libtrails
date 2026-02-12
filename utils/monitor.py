@@ -25,7 +25,7 @@ def parse_log(path: str) -> dict:
     # or indentation, it's a continuation of the previous line
     _PREFIX = re.compile(
         r"^(\(|  |Indexing:|Author:|EPUB:|PDF:|Skipping:|Error |Extracted |Created |"
-        r"Resuming:|Using |Pass \d|Book done|Top topics|Extraction |Will |Theme |Chunk |$)"
+        r"Resuming:|Using |Pass \d|Book done|Book themes|Top topics|Extraction |Will |Theme |Chunk |Processing |$)"
     )
     lines = []
     for line in stripped_lines:
@@ -48,6 +48,7 @@ def parse_log(path: str) -> dict:
         "current_book": None,
         "current_author": None,
         "current_progress": None,
+        "current_resume": None,
         "current_number": 0,
         "completed_books": [],
         "skipped_oversize": 0,
@@ -101,10 +102,11 @@ def parse_log(path: str) -> dict:
         if m:
             last_book_number = int(m.group(1))
 
-        # Indexing: Title
+        # Indexing: Title (new book resets resume context)
         m = re.match(r"Indexing: (.+)", line)
         if m:
             last_book_title = m.group(1).strip()
+            stats["current_resume"] = None
 
         # Author: Name
         m = re.match(r"Author: (.+)", line)
@@ -125,6 +127,10 @@ def parse_log(path: str) -> dict:
         m = re.match(r"Resuming: (\d+)/(\d+) chunks already done", line)
         if m:
             stats["books_resumed"] += 1
+            stats["current_resume"] = {
+                "done": int(m.group(1)),
+                "total": int(m.group(2)),
+            }
 
         # Processing chunks (current progress)
         m = re.search(r"Processing chunks: (\d+)/(\d+) \((\d+)%\)", line)
@@ -145,7 +151,7 @@ def parse_log(path: str) -> dict:
 
         # Book done: 264.2s (269 chunks, 0.98s/chunk) | Total: 2/514 books, 809 chunks, 0.35s/chunk avg
         m = re.search(
-            r"Book done: ([\d.]+)s \((\d+) chunks, .+\) \| Total: (\d+)/(\d+) books, ([\d,]+) chunks,\s+([\d.]+)s/chunk avg",
+            r"Book done: ([\d.]+)s \((\d+) chunks, .+\) \| Total: (\d+)/(\d+) books,\s+([\d,]+)\s+chunks,\s+([\d.]+)s/chunk avg",
             line,
         )
         if m:
@@ -212,8 +218,17 @@ def dashboard(stats: dict) -> str:
             lines.append(f"          by {stats['current_author'][:45]}")
         if stats["current_progress"]:
             p = stats["current_progress"]
-            bar = render_bar(p["pct"])
-            lines.append(f"          {bar} {p['done']}/{p['total']} chunks ({p['pct']}%)")
+            r = stats["current_resume"]
+            if r:
+                # Show both resume context and pending progress
+                total_done = r["done"] + p["done"]
+                overall_pct = total_done * 100 // r["total"]
+                bar = render_bar(overall_pct)
+                lines.append(f"          {bar} {total_done}/{r['total']} chunks ({overall_pct}%)")
+                lines.append(f"          ({r['done']} previously done, {p['done']}/{p['total']} remaining)")
+            else:
+                bar = render_bar(p["pct"])
+                lines.append(f"          {bar} {p['done']}/{p['total']} chunks ({p['pct']}%)")
 
     # Overall progress
     lines.append("")
