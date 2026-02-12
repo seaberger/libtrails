@@ -19,6 +19,8 @@ from pathlib import Path
 def parse_log(path: str) -> dict:
     """Parse a libtrails extraction log file into structured stats."""
     raw_lines = Path(path).read_text(errors="replace").splitlines()
+    # Strip optional HH:MM:SS timestamp prefix from all lines first
+    stripped_lines = [re.sub(r"^\d{2}:\d{2}:\d{2}\s*", "", line) for line in raw_lines]
     # Join wrapped lines — if a line doesn't start with a known log prefix
     # or indentation, it's a continuation of the previous line
     _PREFIX = re.compile(
@@ -26,7 +28,7 @@ def parse_log(path: str) -> dict:
         r"Resuming:|Using |Pass \d|Book done|Top topics|Extraction |Will |Theme |Chunk |$)"
     )
     lines = []
-    for line in raw_lines:
+    for line in stripped_lines:
         if lines and not _PREFIX.match(line):
             lines[-1] += " " + line
         else:
@@ -49,7 +51,37 @@ def parse_log(path: str) -> dict:
         "current_number": 0,
         "completed_books": [],
         "skipped_oversize": 0,
+        "start_time": None,
+        "wall_elapsed_seconds": 0.0,
     }
+
+    # Extract wall-clock start time from first timestamp in raw log
+    from datetime import datetime
+
+    for raw_line in raw_lines:
+        m = re.match(r"^(\d{2}:\d{2}:\d{2})", raw_line)
+        if m:
+            stats["start_time"] = m.group(1)
+            break
+
+    # Compute wall-clock elapsed from first to last timestamp
+    if stats["start_time"]:
+        last_ts = None
+        for raw_line in reversed(raw_lines):
+            m = re.match(r"^(\d{2}:\d{2}:\d{2})", raw_line)
+            if m:
+                last_ts = m.group(1)
+                break
+        if last_ts:
+            try:
+                t0 = datetime.strptime(stats["start_time"], "%H:%M:%S")
+                t1 = datetime.strptime(last_ts, "%H:%M:%S")
+                delta = (t1 - t0).total_seconds()
+                if delta < 0:
+                    delta += 86400  # crossed midnight
+                stats["wall_elapsed_seconds"] = delta
+            except ValueError:
+                pass
 
     # Extract total from "Indexing N books..."
     full_text = "\n".join(lines)
@@ -125,7 +157,7 @@ def parse_log(path: str) -> dict:
             stats["avg_rate"] = float(m.group(6))
             stats["completed_books"].append(
                 {
-                    "title": last_book_title,
+                    "title": last_book_title or "Unknown",
                     "time": book_time,
                     "chunks": book_chunks,
                 }
@@ -203,7 +235,11 @@ def dashboard(stats: dict) -> str:
     # Timing
     lines.append("")
     lines.append(f"  Rate:    {stats['avg_rate']:.2f}s/chunk avg")
-    lines.append(f"  Elapsed: {format_time(stats['elapsed_seconds'])}")
+    if stats["start_time"]:
+        lines.append(f"  Started: {stats['start_time']}")
+        lines.append(f"  Elapsed: {format_time(stats['wall_elapsed_seconds'])} (wall clock)")
+    else:
+        lines.append(f"  Elapsed: {format_time(stats['elapsed_seconds'])} (extraction time)")
     if stats["eta_minutes"] > 0:
         lines.append(f"  ETA:     {format_eta(stats['eta_minutes'])}")
 
