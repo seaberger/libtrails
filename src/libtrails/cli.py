@@ -48,9 +48,15 @@ load_dotenv()
 
 
 class _FlushConsole(Console):
-    """Console that flushes after every print for real-time output."""
+    """Console that flushes after every print and prepends timestamps for log monitoring."""
 
     def print(self, *args, **kwargs):
+        from datetime import datetime
+
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        # Prepend timestamp as dim text unless caller is printing a blank line
+        if args and str(args[0]).strip():
+            args = (f"[dim]{timestamp}[/dim] {args[0]}", *args[1:])
         super().print(*args, **kwargs)
         self.file.flush()
 
