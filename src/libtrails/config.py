@@ -8,11 +8,14 @@ from typing import Optional
 PROJECT_ROOT = Path(__file__).parent.parent.parent
 DATA_DIR = PROJECT_ROOT / "data"
 
-# DB variant toggle: set LIBTRAILS_DB=v2 to use ipad_library_v2.db
+# DB variant toggle: set LIBTRAILS_DB=v2 or LIBTRAILS_DB=demo
 _db_variant = os.environ.get("LIBTRAILS_DB", "")
-IPAD_DB_PATH = (
-    DATA_DIR / f"ipad_library_{_db_variant}.db" if _db_variant else DATA_DIR / "ipad_library.db"
-)
+if _db_variant == "demo":
+    IPAD_DB_PATH = DATA_DIR / "demo_library.db"
+elif _db_variant:
+    IPAD_DB_PATH = DATA_DIR / f"ipad_library_{_db_variant}.db"
+else:
+    IPAD_DB_PATH = DATA_DIR / "ipad_library.db"
 
 # User config directory
 USER_CONFIG_DIR = Path.home() / ".libtrails"
@@ -57,8 +60,10 @@ def set_ipad_url(url: str):
     save_user_config(config)
 
 
-# Calibre library (read-only)
-CALIBRE_LIBRARY_PATH = Path.home() / "Calibre_Main_Library"
+# Calibre library (read-only) — override with CALIBRE_LIBRARY_PATH env var
+CALIBRE_LIBRARY_PATH = Path(
+    os.environ.get("CALIBRE_LIBRARY_PATH", str(Path.home() / "Calibre_Main_Library"))
+)
 CALIBRE_DB_PATH = CALIBRE_LIBRARY_PATH / "metadata.db"
 
 # LLM settings

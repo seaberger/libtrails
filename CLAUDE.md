@@ -500,6 +500,10 @@ First run downloads ~130MB model. Subsequent runs use local cache in `models/`.
 - For background/headless runs, use `screen` + `script` to provide a proper PTY, or disable Rich progress bars entirely.
 - When adding new Progress bars, consider TTY-safe fallbacks for non-interactive use.
 
+### Background Command Output
+- **NEVER pipe background Bash commands through `head`, `tail -n`, or other line-limiting filters** — this buffers all output and the output file stays empty until the filter's condition is met or the process ends, making it impossible to monitor progress.
+- Instead, run the command directly with `run_in_background: true` and use `tail` to read the output file afterwards.
+
 ### Process Management
 - **NEVER use broad `pkill -f` patterns** - they can match system processes
 - When killing processes, use specific PIDs: `kill <PID>` instead of `pkill -f "pattern"`
