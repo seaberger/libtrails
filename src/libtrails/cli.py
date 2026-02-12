@@ -374,30 +374,26 @@ def index(
                 continue
             console.print(f"\n[bold]({i}/{len(book_ids)})[/bold]")
             book_start = time.time()
-            _index_single_book(
-                book,
-                theme_model,
-                chunk_model,
-                batch_size,
-                legacy,
-                dry_run,
-                chunk_size=chunk_size,
-                parallel=parallel,
-                workers=workers,
-                extended_prompt=extended_prompt,
+            chunks_extracted = (
+                _index_single_book(
+                    book,
+                    theme_model,
+                    chunk_model,
+                    batch_size,
+                    legacy,
+                    dry_run,
+                    chunk_size=chunk_size,
+                    parallel=parallel,
+                    workers=workers,
+                    extended_prompt=extended_prompt,
+                )
+                or 0
             )
             book_elapsed = time.time() - book_start
-            # Count chunks for this book
-            from .database import get_db
-
-            with get_db() as conn:
-                n_chunks = conn.execute(
-                    "SELECT COUNT(*) FROM chunks WHERE book_id = ?", (book["id"],)
-                ).fetchone()[0]
-            total_chunks += n_chunks
+            total_chunks += chunks_extracted
             console.print(
                 f"[bold cyan]Book done: {book_elapsed:.1f}s "
-                f"({n_chunks} chunks, {book_elapsed / max(n_chunks, 1):.2f}s/chunk)[/bold cyan]",
+                f"({chunks_extracted} chunks, {book_elapsed / max(chunks_extracted, 1):.2f}s/chunk)[/bold cyan]",
             )
         elapsed = time.time() - total_start
         console.print(f"\n[bold green]{'─' * 50}[/bold green]")
@@ -686,6 +682,8 @@ def _index_single_book(
         for topic, count in topic_counts.most_common(10):
             console.print(f"  {topic} ({count})")
 
+    return len(pending_chunks)
+
 
 def _get_battery_level() -> int | None:
     """Get current battery percentage on macOS. Returns None if not on battery/not macOS."""
@@ -846,17 +844,14 @@ def _index_all_books(
             if result == "skipped":
                 skipped_large += 1
                 continue
+            chunks_extracted = result or 0
             successful += 1
             book_elapsed = time.time() - book_start
-            with get_db() as conn:
-                n_chunks = conn.execute(
-                    "SELECT COUNT(*) FROM chunks WHERE book_id = ?", (book["id"],)
-                ).fetchone()[0]
-            total_chunks += n_chunks
+            total_chunks += chunks_extracted
             total_elapsed = time.time() - start_time
             console.print(
                 f"[bold cyan]Book done: {book_elapsed:.1f}s "
-                f"({n_chunks} chunks, {book_elapsed / max(n_chunks, 1):.2f}s/chunk) "
+                f"({chunks_extracted} chunks, {book_elapsed / max(chunks_extracted, 1):.2f}s/chunk) "
                 f"| Total: {successful}/{len(processable)} books, "
                 f"{total_chunks:,} chunks, "
                 f"{total_elapsed / max(total_chunks, 1):.2f}s/chunk avg[/bold cyan]",
