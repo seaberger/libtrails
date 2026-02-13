@@ -802,6 +802,20 @@ def _index_all_books(
     if no_file:
         console.print(f"[yellow]Skipping {len(no_file)} books without EPUB/PDF[/yellow]")
 
+    # Query total chunks needing extraction across all processable books
+    processable_ids = [b["id"] for b in processable]
+    with get_db() as conn:
+        placeholders = ",".join("?" * len(processable_ids))
+        row = conn.execute(
+            f"""SELECT COUNT(*) FROM chunks c
+                WHERE c.book_id IN ({placeholders})
+                AND NOT EXISTS (
+                    SELECT 1 FROM chunk_topics ct WHERE ct.chunk_id = c.id
+                )""",
+            processable_ids,
+        ).fetchone()
+        grand_total_chunks = row[0] if row else 0
+
     # Process books
     successful = 0
     skipped_large = 0
@@ -811,9 +825,10 @@ def _index_all_books(
 
     for i, book in enumerate(processable, 1):
         elapsed = time.time() - start_time
-        if successful > 0:
-            avg_time = elapsed / successful
-            remaining = avg_time * (len(processable) - i + 1)
+        if total_chunks > 0:
+            secs_per_chunk = elapsed / total_chunks
+            remaining_chunks = grand_total_chunks - total_chunks
+            remaining = secs_per_chunk * remaining_chunks
             eta = f"ETA: {int(remaining // 60)}m {int(remaining % 60)}s"
         else:
             eta = ""
