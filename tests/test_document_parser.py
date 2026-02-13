@@ -261,36 +261,42 @@ class TestHtmlToStructuredText:
 class TestExtractTextFromPdf:
     """Tests for extract_text_from_pdf()."""
 
-    @patch("libtrails.document_parser.PdfReader")
-    def test_extracts_text(self, mock_reader_cls):
+    @patch("libtrails.document_parser.fitz")
+    def test_extracts_text(self, mock_fitz):
         """Extracts text from PDF pages."""
+        # Text must be >= 100 words to avoid docling OCR fallback
+        page1_text = "Page one content. " + " ".join(f"word{i}" for i in range(60))
+        page2_text = "Page two content. " + " ".join(f"word{i}" for i in range(60))
         mock_page1 = MagicMock()
-        mock_page1.extract_text.return_value = "Page one content."
+        mock_page1.get_text.return_value = page1_text
         mock_page2 = MagicMock()
-        mock_page2.extract_text.return_value = "Page two content."
+        mock_page2.get_text.return_value = page2_text
 
-        mock_reader = MagicMock()
-        mock_reader.pages = [mock_page1, mock_page2]
-        mock_reader_cls.return_value = mock_reader
+        mock_doc = MagicMock()
+        mock_doc.__iter__ = lambda self: iter([mock_page1, mock_page2])
+        mock_fitz.open.return_value = mock_doc
 
         result = extract_text_from_pdf(Path("/fake/book.pdf"))
         assert "Page one content." in result
         assert "Page two content." in result
         assert "\n\n" in result
 
-    @patch("libtrails.document_parser.PdfReader")
-    def test_skips_empty_pages(self, mock_reader_cls):
+    @patch("libtrails.document_parser.fitz")
+    def test_skips_empty_pages(self, mock_fitz):
         """Skips pages with no text."""
+        # Text must be >= 100 words to avoid docling OCR fallback
+        page1_text = "Content. " + " ".join(f"word{i}" for i in range(60))
+        page3_text = "More content. " + " ".join(f"word{i}" for i in range(60))
         mock_page1 = MagicMock()
-        mock_page1.extract_text.return_value = "Content."
+        mock_page1.get_text.return_value = page1_text
         mock_page2 = MagicMock()
-        mock_page2.extract_text.return_value = ""
+        mock_page2.get_text.return_value = ""
         mock_page3 = MagicMock()
-        mock_page3.extract_text.return_value = "More content."
+        mock_page3.get_text.return_value = page3_text
 
-        mock_reader = MagicMock()
-        mock_reader.pages = [mock_page1, mock_page2, mock_page3]
-        mock_reader_cls.return_value = mock_reader
+        mock_doc = MagicMock()
+        mock_doc.__iter__ = lambda self: iter([mock_page1, mock_page2, mock_page3])
+        mock_fitz.open.return_value = mock_doc
 
         result = extract_text_from_pdf(Path("/fake/book.pdf"))
         assert "Content." in result

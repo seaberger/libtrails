@@ -3,6 +3,7 @@
 import json
 import re
 import subprocess
+import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from typing import Callable, Optional
@@ -537,6 +538,7 @@ def extract_topics_batched(
     num_topics: int = TOPICS_PER_CHUNK,
     progress_callback: Optional[Callable] = None,
     save_callback: Optional[Callable[[int, list[str]], None]] = None,
+    workers: int = 1,
 ) -> list[list[str]]:
     """
     Extract topics from chunks in batches, contextualized with book metadata.
@@ -544,6 +546,9 @@ def extract_topics_batched(
     Groups consecutive chunks into batches of `batch_size` and asks for
     per-chunk topic arrays in a single call. Falls back to individual
     extraction if JSON parsing fails for a batch.
+
+    When workers > 1, submits batches concurrently via ThreadPoolExecutor
+    to saturate multiple GPU slots (e.g. LM Studio's continuous batching).
 
     Topics are normalized and filtered through the stoplist before returning.
 
@@ -561,33 +566,80 @@ def extract_topics_batched(
         context_parts.append(f"Book themes: {', '.join(book_themes)}")
     context = "\n".join(context_parts)
 
-    # Process in batches
+    # Build list of (batch_start, batch_chunks) pairs
+    batch_specs = []
     for batch_start in range(0, len(chunks), batch_size):
         batch_end = min(batch_start + batch_size, len(chunks))
-        batch_chunks = chunks[batch_start:batch_end]
+        batch_specs.append((batch_start, chunks[batch_start:batch_end]))
 
-        batch_results = _extract_batch(batch_chunks, context, model, num_topics, batch_start)
+    if workers <= 1:
+        # Sequential path — no threading overhead
+        for batch_start, batch_chunks in batch_specs:
+            batch_results = _extract_batch(batch_chunks, context, model, num_topics, batch_start)
 
-        if batch_results is not None:
-            batch_successes += 1
-            for i, topics in enumerate(batch_results):
-                filtered = _filter_topics(topics)
-                results[batch_start + i] = filtered
-                if save_callback:
-                    save_callback(batch_start + i, filtered)
-        else:
-            # Fallback: extract individually
-            batch_fallbacks += 1
-            for i, chunk in enumerate(batch_chunks):
-                topics = _extract_single_contextualized(chunk, context, model, num_topics)
-                filtered = _filter_topics(topics)
-                results[batch_start + i] = filtered
-                if save_callback:
-                    save_callback(batch_start + i, filtered)
+            if batch_results is not None:
+                batch_successes += 1
+                for i, topics in enumerate(batch_results):
+                    filtered = _filter_topics(topics)
+                    results[batch_start + i] = filtered
+                    if save_callback:
+                        save_callback(batch_start + i, filtered)
+            else:
+                batch_fallbacks += 1
+                for i, chunk in enumerate(batch_chunks):
+                    topics = _extract_single_contextualized(chunk, context, model, num_topics)
+                    filtered = _filter_topics(topics)
+                    results[batch_start + i] = filtered
+                    if save_callback:
+                        save_callback(batch_start + i, filtered)
 
-        completed += len(batch_chunks)
-        if progress_callback:
-            progress_callback(completed, len(chunks))
+            completed += len(batch_chunks)
+            if progress_callback:
+                progress_callback(completed, len(chunks))
+    else:
+        # Concurrent path — keep N batches in-flight
+        lock = threading.Lock()
+
+        def process_batch(batch_start: int, batch_chunks: list[str]) -> tuple[int, list[str]]:
+            """Process one batch, returning (batch_start, batch_chunks) for bookkeeping."""
+            batch_results = _extract_batch(batch_chunks, context, model, num_topics, batch_start)
+
+            if batch_results is not None:
+                chunk_topics = []
+                for topics in batch_results:
+                    chunk_topics.append(_filter_topics(topics))
+                return batch_start, chunk_topics, len(batch_chunks), True
+            else:
+                # Fallback: extract individually (runs within this thread)
+                chunk_topics = []
+                for chunk in batch_chunks:
+                    topics = _extract_single_contextualized(chunk, context, model, num_topics)
+                    chunk_topics.append(_filter_topics(topics))
+                return batch_start, chunk_topics, len(batch_chunks), False
+
+        with ThreadPoolExecutor(max_workers=workers) as executor:
+            futures = {
+                executor.submit(process_batch, bs, bc): bs
+                for bs, bc in batch_specs
+            }
+
+            for future in as_completed(futures):
+                batch_start, chunk_topics, n_chunks, succeeded = future.result()
+
+                with lock:
+                    if succeeded:
+                        batch_successes += 1
+                    else:
+                        batch_fallbacks += 1
+
+                    for i, filtered in enumerate(chunk_topics):
+                        results[batch_start + i] = filtered
+                        if save_callback:
+                            save_callback(batch_start + i, filtered)
+
+                    completed += n_chunks
+                    if progress_callback:
+                        progress_callback(completed, len(chunks))
 
     # Log batch success/fallback ratio
     total_batches = batch_successes + batch_fallbacks

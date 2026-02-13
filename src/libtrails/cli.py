@@ -643,9 +643,10 @@ def _index_single_book(
                     use_extended_prompt=extended_prompt,
                 )
         else:
+            workers_desc = f", {workers} workers" if workers > 1 else ""
             console.print(
                 f"\n[bold]Pass 2: Extracting chunk topics with {chunk_model} "
-                f"(batches of {batch_size})...[/bold]"
+                f"(batches of {batch_size}{workers_desc})...[/bold]"
             )
 
             with _progress_tracker("Processing chunks", len(pending_chunks)) as update_progress:
@@ -658,6 +659,7 @@ def _index_single_book(
                     batch_size=batch_size,
                     progress_callback=update_progress,
                     save_callback=on_chunk_done,
+                    workers=workers,
                 )
 
     # Summarize (topics already saved per-chunk via on_chunk_done)
