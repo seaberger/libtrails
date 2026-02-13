@@ -50,23 +50,23 @@ class TestProgressTrackerNonTTY:
             assert callable(callback)
 
     @patch("libtrails.cli.console")
-    def test_prints_at_5pct_intervals(self, mock_console):
-        """Non-TTY mode prints at ~5% intervals (first threshold is 4% due to -1 start)."""
+    def test_prints_at_1pct_intervals(self, mock_console):
+        """Non-TTY mode prints at every 1% change (threshold: pct >= last_pct + 1)."""
         mock_console.is_terminal = False
         with _progress_tracker("Processing", 100) as callback:
             mock_console.print.reset_mock()
 
-            callback(3, 100)  # 3% — should NOT print (3 < -1+5=4)
-            assert mock_console.print.call_count == 0
-
-            callback(5, 100)  # 5% — should print (5 >= 4)
+            callback(1, 100)  # 1% — should print (1 >= -1+1=0)
             assert mock_console.print.call_count == 1
 
-            callback(6, 100)  # 6% — should NOT print (6 < 5+5=10)
+            callback(1, 100)  # 1% again — should NOT print (1 < 1+1=2)
             assert mock_console.print.call_count == 1
 
-            callback(10, 100)  # 10% — should print (10 >= 10)
+            callback(2, 100)  # 2% — should print (2 >= 1+1=2)
             assert mock_console.print.call_count == 2
+
+            callback(5, 100)  # 5% — should print (5 >= 2+1=3)
+            assert mock_console.print.call_count == 3
 
     @patch("libtrails.cli.console")
     def test_prints_on_completion(self, mock_console):

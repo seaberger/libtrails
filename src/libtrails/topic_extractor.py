@@ -539,6 +539,7 @@ def extract_topics_batched(
     progress_callback: Optional[Callable] = None,
     save_callback: Optional[Callable[[int, list[str]], None]] = None,
     workers: int = 1,
+    skip_batch: bool = False,
 ) -> list[list[str]]:
     """
     Extract topics from chunks in batches, contextualized with book metadata.
@@ -575,7 +576,12 @@ def extract_topics_batched(
     if workers <= 1:
         # Sequential path — no threading overhead
         for batch_start, batch_chunks in batch_specs:
-            batch_results = _extract_batch(batch_chunks, context, model, num_topics, batch_start)
+            if skip_batch:
+                batch_results = None
+            else:
+                batch_results = _extract_batch(
+                    batch_chunks, context, model, num_topics, batch_start
+                )
 
             if batch_results is not None:
                 batch_successes += 1
@@ -602,7 +608,12 @@ def extract_topics_batched(
 
         def process_batch(batch_start: int, batch_chunks: list[str]) -> tuple[int, list[str]]:
             """Process one batch, returning (batch_start, batch_chunks) for bookkeeping."""
-            batch_results = _extract_batch(batch_chunks, context, model, num_topics, batch_start)
+            if skip_batch:
+                batch_results = None
+            else:
+                batch_results = _extract_batch(
+                    batch_chunks, context, model, num_topics, batch_start
+                )
 
             if batch_results is not None:
                 chunk_topics = []
@@ -618,10 +629,7 @@ def extract_topics_batched(
                 return batch_start, chunk_topics, len(batch_chunks), False
 
         with ThreadPoolExecutor(max_workers=workers) as executor:
-            futures = {
-                executor.submit(process_batch, bs, bc): bs
-                for bs, bc in batch_specs
-            }
+            futures = {executor.submit(process_batch, bs, bc): bs for bs, bc in batch_specs}
 
             for future in as_completed(futures):
                 batch_start, chunk_topics, n_chunks, succeeded = future.result()
@@ -643,10 +651,18 @@ def extract_topics_batched(
 
     # Log batch success/fallback ratio
     total_batches = batch_successes + batch_fallbacks
-    if total_batches > 0 and batch_fallbacks > 0:
+    if total_batches > 0 and batch_fallbacks > 0 and not skip_batch:
         print(
             f"  Batch stats: {batch_successes}/{total_batches} succeeded, "
             f"{batch_fallbacks} fell back to individual extraction",
+            flush=True,
+        )
+
+    # Log failed chunks (empty results after all retries)
+    failed = sum(1 for r in results if not r)
+    if failed > 0:
+        print(
+            f"  Warning: {failed}/{len(chunks)} chunks returned no topics",
             flush=True,
         )
 
@@ -780,32 +796,38 @@ Passage: "{text}"'''
         "required": ["topics"],
     }
 
-    try:
-        if _is_litellm_model(model):
-            output = _call_litellm(prompt, model, response_schema=schema, timeout=60.0)
-        else:
-            client = _get_client()
-            response = client.post(
-                OLLAMA_API_URL,
-                json={
-                    "model": model,
-                    "prompt": prompt,
-                    "format": schema,
-                    "stream": False,
-                    "options": {"num_ctx": OLLAMA_NUM_CTX},
-                },
-                timeout=60.0,
-            )
-            response.raise_for_status()
-            output = response.json().get("response", "").strip()
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            if _is_litellm_model(model):
+                output = _call_litellm(prompt, model, response_schema=schema, timeout=60.0)
+            else:
+                client = _get_client()
+                response = client.post(
+                    OLLAMA_API_URL,
+                    json={
+                        "model": model,
+                        "prompt": prompt,
+                        "format": schema,
+                        "stream": False,
+                        "options": {"num_ctx": OLLAMA_NUM_CTX},
+                    },
+                    timeout=60.0,
+                )
+                response.raise_for_status()
+                output = response.json().get("response", "").strip()
 
-        parsed = json.loads(output)
-        if isinstance(parsed, dict) and "topics" in parsed:
-            return [_unwrap_topic(t).strip() for t in parsed["topics"] if t][:num_topics]
-        return _parse_topics(output)
+            parsed = json.loads(output)
+            if isinstance(parsed, dict) and "topics" in parsed:
+                return [_unwrap_topic(t).strip() for t in parsed["topics"] if t][:num_topics]
+            return _parse_topics(output)
 
-    except (httpx.TimeoutException, Exception):
-        return []
+        except (httpx.TimeoutException, Exception):
+            if attempt < max_retries - 1:
+                time.sleep(2**attempt)  # 1s, 2s backoff
+                continue
+            print(f"  Warning: chunk extraction failed after {max_retries} retries", flush=True)
+            return []
 
 
 # ---------------------------------------------------------------------------

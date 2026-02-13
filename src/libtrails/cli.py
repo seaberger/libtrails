@@ -288,6 +288,11 @@ def sync(ipad: str, dry_run: bool, skip_index: bool, model: str, save_url: bool)
     help="Use extended 9-demo prompt (enables Gemini context caching)",
 )
 @click.option(
+    "--no-batch/--batch",
+    default=True,
+    help="Skip batch extraction, go straight to individual (default: --no-batch)",
+)
+@click.option(
     "--theme-api-base",
     default=None,
     help="LM Studio API base URL for theme model (e.g., http://192.168.1.36:1234)",
@@ -315,6 +320,7 @@ def index(
     parallel: bool,
     workers: int,
     extended_prompt: bool,
+    no_batch: bool,
     theme_api_base: str,
     chunk_api_base: str,
 ):
@@ -360,6 +366,7 @@ def index(
             parallel=parallel,
             workers=workers,
             extended_prompt=extended_prompt,
+            no_batch=no_batch,
         )
         return
 
@@ -386,6 +393,7 @@ def index(
                     parallel=parallel,
                     workers=workers,
                     extended_prompt=extended_prompt,
+                    no_batch=no_batch,
                 )
                 or 0
             )
@@ -426,6 +434,7 @@ def index(
         parallel=parallel,
         workers=workers,
         extended_prompt=extended_prompt,
+        no_batch=no_batch,
     )
 
 
@@ -441,6 +450,8 @@ def _index_single_book(
     parallel: bool = False,
     workers: int = 4,
     extended_prompt: bool = False,
+    no_batch: bool = True,
+    verbose: bool = True,
 ):
     """Index a single book. Raises exception on failure. Returns 'skipped' if over max_words."""
     console.print(f"[bold]Indexing:[/bold] {book['title'][:60]}")
@@ -563,11 +574,11 @@ def _index_single_book(
         pending_chunks = chunks
 
     if dry_run:
-        console.print("[yellow]Dry run - skipping topic extraction[/yellow]")
-        if pending_chunks:
+        console.print(f"[yellow]Dry run - {len(pending_chunks)} chunks to extract[/yellow]")
+        if verbose and pending_chunks:
             console.print(f"\n[bold]Sample chunk ({len(pending_chunks[0].split())} words):[/bold]")
             console.print(pending_chunks[0][:500] + "...")
-        return
+        return len(pending_chunks)
 
     # Check Ollama availability (skip for Gemini API and LM Studio models)
     if not chunk_model.startswith(("gemini/", "lm_studio/")) and not check_ollama_available(
@@ -644,9 +655,10 @@ def _index_single_book(
                 )
         else:
             workers_desc = f", {workers} workers" if workers > 1 else ""
+            batch_desc = "individual" if no_batch else f"batches of {batch_size}"
             console.print(
                 f"\n[bold]Pass 2: Extracting chunk topics with {chunk_model} "
-                f"(batches of {batch_size}{workers_desc})...[/bold]"
+                f"({batch_desc}{workers_desc})...[/bold]"
             )
 
             with _progress_tracker("Processing chunks", len(pending_chunks)) as update_progress:
@@ -660,6 +672,7 @@ def _index_single_book(
                     progress_callback=update_progress,
                     save_callback=on_chunk_done,
                     workers=workers,
+                    skip_batch=no_batch,
                 )
 
     # Summarize (topics already saved per-chunk via on_chunk_done)
@@ -713,6 +726,7 @@ def _index_all_books(
     parallel: bool = False,
     workers: int = 4,
     extended_prompt: bool = False,
+    no_batch: bool = True,
 ):
     """Index all books with Calibre matches, with resume support."""
     from .database import get_book_path, get_db
@@ -842,6 +856,8 @@ def _index_all_books(
                 parallel=parallel,
                 workers=workers,
                 extended_prompt=extended_prompt,
+                no_batch=no_batch,
+                verbose=not dry_run,
             )
             if result == "skipped":
                 skipped_large += 1
@@ -850,14 +866,15 @@ def _index_all_books(
             successful += 1
             book_elapsed = time.time() - book_start
             total_chunks += chunks_extracted
-            total_elapsed = time.time() - start_time
-            console.print(
-                f"[bold cyan]Book done: {book_elapsed:.1f}s "
-                f"({chunks_extracted} chunks, {book_elapsed / max(chunks_extracted, 1):.2f}s/chunk) "
-                f"| Total: {successful}/{len(processable)} books, "
-                f"{total_chunks:,} chunks, "
-                f"{total_elapsed / max(total_chunks, 1):.2f}s/chunk avg[/bold cyan]",
-            )
+            if not dry_run:
+                total_elapsed = time.time() - start_time
+                console.print(
+                    f"[bold cyan]Book done: {book_elapsed:.1f}s "
+                    f"({chunks_extracted} chunks, {book_elapsed / max(chunks_extracted, 1):.2f}s/chunk) "
+                    f"| Total: {successful}/{len(processable)} books, "
+                    f"{total_chunks:,} chunks, "
+                    f"{total_elapsed / max(total_chunks, 1):.2f}s/chunk avg[/bold cyan]",
+                )
         except KeyboardInterrupt:
             console.print("\n[yellow]Interrupted! Progress saved. Run again to resume.[/yellow]")
             break
@@ -868,8 +885,13 @@ def _index_all_books(
     # Summary
     total_time = time.time() - start_time
     console.print(f"\n[bold]{'─' * 40}[/bold]")
-    console.print("[bold]Batch complete![/bold]")
-    console.print(f"  [green]Successful: {successful}[/green]")
+    if dry_run:
+        console.print("[bold]Pre-chunking complete![/bold]")
+        console.print(f"  [green]Books chunked: {successful}[/green]")
+        console.print(f"  [green]Total chunks: {total_chunks:,}[/green]")
+    else:
+        console.print("[bold]Batch complete![/bold]")
+        console.print(f"  [green]Successful: {successful}[/green]")
     if skipped_large:
         console.print(f"  [yellow]Skipped (too large): {skipped_large}[/yellow]")
     if failed:

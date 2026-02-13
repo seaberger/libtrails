@@ -329,7 +329,7 @@ def query_db_stats(db_path: str) -> dict:
     # Books fully done (all chunks have topics)
     books_done = conn.execute("""
         SELECT COUNT(*) FROM (
-            SELECT c.book_id, COUNT(c.id) as total, COUNT(ct.chunk_id) as done
+            SELECT c.book_id, COUNT(DISTINCT c.id) as total, COUNT(DISTINCT ct.chunk_id) as done
             FROM chunks c LEFT JOIN chunk_topics ct ON c.id = ct.chunk_id
             GROUP BY c.book_id
         ) WHERE total = done AND total > 0
@@ -341,7 +341,7 @@ def query_db_stats(db_path: str) -> dict:
     # Current in-progress book (has chunks but not all have topics)
     # Order by book_id DESC to get the most recently started book
     cur = conn.execute("""
-        SELECT b.title, b.author, COUNT(c.id) as total, COUNT(ct.chunk_id) as done
+        SELECT b.title, b.author, COUNT(DISTINCT c.id) as total, COUNT(DISTINCT ct.chunk_id) as done
         FROM chunks c
         JOIN books b ON c.book_id = b.id
         LEFT JOIN chunk_topics ct ON c.id = ct.chunk_id
@@ -353,12 +353,12 @@ def query_db_stats(db_path: str) -> dict:
 
     # Recent completed books (last 5)
     completed = conn.execute("""
-        SELECT b.title, COUNT(c.id) as chunks
+        SELECT b.title, COUNT(DISTINCT c.id) as chunks
         FROM chunks c
         JOIN books b ON c.book_id = b.id
         LEFT JOIN chunk_topics ct ON c.id = ct.chunk_id
         GROUP BY c.book_id
-        HAVING COUNT(ct.chunk_id) = COUNT(c.id) AND COUNT(c.id) > 0
+        HAVING COUNT(DISTINCT ct.chunk_id) = COUNT(DISTINCT c.id) AND COUNT(DISTINCT c.id) > 0
         ORDER BY c.book_id DESC
         LIMIT 5
     """).fetchall()
