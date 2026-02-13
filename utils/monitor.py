@@ -319,7 +319,7 @@ def query_db_stats(db_path: str) -> dict:
     """Query extraction progress directly from the database (real-time, no log parsing)."""
     import sqlite3
 
-    conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+    conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, timeout=2)
 
     total_books = conn.execute("SELECT COUNT(*) FROM books WHERE calibre_id IS NOT NULL").fetchone()[0]
     total_chunks = conn.execute("SELECT COUNT(*) FROM chunks").fetchone()[0]
@@ -339,6 +339,7 @@ def query_db_stats(db_path: str) -> dict:
     books_started = conn.execute("SELECT COUNT(DISTINCT book_id) FROM chunks").fetchone()[0]
 
     # Current in-progress book (has chunks but not all have topics)
+    # Order by book_id DESC to get the most recently started book
     cur = conn.execute("""
         SELECT b.title, b.author, COUNT(c.id) as total, COUNT(ct.chunk_id) as done
         FROM chunks c
@@ -346,7 +347,7 @@ def query_db_stats(db_path: str) -> dict:
         LEFT JOIN chunk_topics ct ON c.id = ct.chunk_id
         GROUP BY c.book_id
         HAVING done < total AND done > 0
-        ORDER BY done DESC
+        ORDER BY c.book_id DESC
         LIMIT 1
     """).fetchone()
 
@@ -362,7 +363,19 @@ def query_db_stats(db_path: str) -> dict:
         LIMIT 5
     """).fetchall()
 
+    # Estimate total chunks (including unchunked books)
+    books_not_chunked = conn.execute("""
+        SELECT COUNT(*) FROM books
+        WHERE calibre_id IS NOT NULL
+        AND id NOT IN (SELECT DISTINCT book_id FROM chunks)
+    """).fetchone()[0]
+    avg_chunks_per_book = conn.execute(
+        "SELECT AVG(cnt) FROM (SELECT COUNT(*) as cnt FROM chunks GROUP BY book_id)"
+    ).fetchone()[0] or 0
+
     conn.close()
+
+    estimated_total = total_chunks + int(books_not_chunked * avg_chunks_per_book)
 
     stats = {
         "total_books": total_books,
@@ -372,6 +385,7 @@ def query_db_stats(db_path: str) -> dict:
         "books_errored": 0,
         "total_chunks": chunks_with_topics,
         "total_topics": total_topics,
+        "estimated_total_chunks": estimated_total,
         "current_book_chunks": 0,
         "current_book_topics": 0,
         "avg_rate": 0.0,
@@ -455,13 +469,47 @@ def main():
             sys.exit(1)
 
         if args.watch:
+            prev_chunks = None
+            prev_time = None
+            rate_history = []  # rolling window of (chunks/sec) samples
             try:
                 while True:
-                    stats = query_db_stats(db_path)
+                    try:
+                        stats = query_db_stats(db_path)
+                    except Exception:
+                        time.sleep(args.interval)
+                        continue
+
+                    now = time.time()
+                    cur_chunks = stats["total_chunks"]
+
+                    # Compute rolling rate from recent samples
+                    if prev_chunks is not None and prev_time is not None:
+                        dt = now - prev_time
+                        if dt > 0 and cur_chunks > prev_chunks:
+                            sample_rate = (cur_chunks - prev_chunks) / dt
+                            rate_history.append(sample_rate)
+                            if len(rate_history) > 12:  # ~60s of history at 5s intervals
+                                rate_history.pop(0)
+
+                    prev_chunks = cur_chunks
+                    prev_time = now
+
+                    if rate_history:
+                        avg_rate = sum(rate_history) / len(rate_history)
+                        stats["avg_rate"] = 1.0 / avg_rate if avg_rate > 0 else 0
+                        remaining = stats.get("estimated_total_chunks", cur_chunks) - cur_chunks
+                        if avg_rate > 0 and remaining > 0:
+                            stats["eta_minutes"] = int(remaining / avg_rate / 60)
+
                     print("\033[2J\033[H", end="")
                     print(dashboard(stats))
                     print(f"  DB: {db_path}")
+                    est = stats.get("estimated_total_chunks", 0)
+                    if est > cur_chunks:
+                        print(f"  Est. total chunks: ~{est:,} ({est - cur_chunks:,} remaining)")
                     print(f"  Refreshing every {args.interval}s — Ctrl-C to stop")
+                    sys.stdout.flush()
                     time.sleep(args.interval)
             except KeyboardInterrupt:
                 print("\n  Stopped.")
