@@ -7,7 +7,9 @@ import urllib.parse
 import time
 import re
 
-db_path = "/Users/seanbergman/Repositories/calibre_lib/data/ipad_library.db"
+from pathlib import Path
+PROJECT_ROOT = Path(__file__).parent.parent
+db_path = str(PROJECT_ROOT / "data" / "ipad_library.db")
 conn = sqlite3.connect(db_path)
 conn.row_factory = sqlite3.Row
 cursor = conn.cursor()

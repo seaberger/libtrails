@@ -1,4 +1,4 @@
-# Calibre Library Discovery & Trail-Finding Project
+# LibTrails
 
 ## Project Vision
 
@@ -305,7 +305,7 @@ The domain system groups ~600-800 Leiden clusters into ~20-25 high-level themes:
 ## File Structure
 
 ```
-calibre_lib/
+libtrails/
 ├── CLAUDE.md                    # This file (internal dev notes)
 ├── README.md                    # Public-facing documentation
 ├── pyproject.toml               # Package config

@@ -256,7 +256,7 @@ def main() -> int:
     ap.add_argument(
         "--user-agent",
         type=str,
-        default="LibTrailsDemo/1.0 (+https://github.com/user/libtrails; polite-bot)",
+        default="LibTrailsDemo/1.0 (+https://github.com/seaberger/libtrails; polite-bot)",
         help="User-Agent header",
     )
     ap.add_argument("--limit", type=int, default=0, help="Only download first N books (0 = all)")

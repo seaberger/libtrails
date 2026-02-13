@@ -4,6 +4,7 @@ import re
 import json
 import urllib.request
 from html import unescape
+from pathlib import Path
 from urllib.parse import unquote
 import time
 
@@ -126,13 +127,14 @@ for b in books:
 print(f"Unique tags: {len(all_tags)}")
 
 # Save to JSON
-output_path = "/Users/seanbergman/Repositories/calibre_lib/data/ipad_library.json"
+PROJECT_ROOT = Path(__file__).parent.parent
+output_path = str(PROJECT_ROOT / "data" / "ipad_library.json")
 with open(output_path, 'w') as f:
     json.dump(books, f, indent=2)
 print(f"\nSaved to {output_path}")
 
 # Also save unique tags
-tags_path = "/Users/seanbergman/Repositories/calibre_lib/data/ipad_tags.json"
+tags_path = str(PROJECT_ROOT / "data" / "ipad_tags.json")
 with open(tags_path, 'w') as f:
     json.dump(sorted(list(all_tags)), f, indent=2)
 print(f"Saved tags to {tags_path}")

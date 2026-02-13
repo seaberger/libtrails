@@ -404,7 +404,7 @@ Calibre stores covers as `cover.jpg` in each book's folder.
 ## File Structure (Proposed)
 
 ```
-calibre_lib/
+libtrails/
 ├── src/libtrails/          # Existing CLI
 │   └── export.py           # NEW: JSON export for web
 ├── web/                    # NEW: Astro project

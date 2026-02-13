@@ -40,9 +40,9 @@ for sec in SECTIONS:
 print(f"\nTotal books: {len(books)}")
 
 # Save to JSON
-output_path = "/Users/seanbergman/Repositories/calibre_lib/data/ipad_library.json"
-import os
-os.makedirs(os.path.dirname(output_path), exist_ok=True)
+from pathlib import Path
+PROJECT_ROOT = Path(__file__).parent.parent
+output_path = str(PROJECT_ROOT / "data" / "ipad_library.json")
 
 with open(output_path, 'w') as f:
     json.dump(books, f, indent=2)

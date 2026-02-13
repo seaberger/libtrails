@@ -6,13 +6,15 @@ import re
 from pathlib import Path
 
 # Load enriched data
-with open("/Users/seanbergman/Repositories/calibre_lib/data/ipad_library_enriched.json") as f:
+PROJECT_ROOT = Path(__file__).parent.parent
+
+with open(str(PROJECT_ROOT / "data" / "ipad_library_enriched.json")) as f:
     enriched = json.load(f)
 
-with open("/Users/seanbergman/Repositories/calibre_lib/data/ipad_unmatched.json") as f:
+with open(str(PROJECT_ROOT / "data" / "ipad_unmatched.json")) as f:
     unmatched = json.load(f)
 
-db_path = "/Users/seanbergman/Repositories/calibre_lib/data/ipad_library.db"
+db_path = str(PROJECT_ROOT / "data" / "ipad_library.db")
 Path(db_path).unlink(missing_ok=True)  # Remove if exists
 
 conn = sqlite3.connect(db_path)

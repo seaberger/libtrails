@@ -6,7 +6,9 @@ import re
 from pathlib import Path
 
 # Load iPad library
-with open("/Users/seanbergman/Repositories/calibre_lib/data/ipad_library.json") as f:
+PROJECT_ROOT = Path(__file__).parent.parent
+
+with open(str(PROJECT_ROOT / "data" / "ipad_library.json")) as f:
     ipad_books = json.load(f)
 
 print(f"Loaded {len(ipad_books)} iPad books")
@@ -154,14 +156,14 @@ print(f"\nMatched: {len(matched)} books")
 print(f"Unmatched: {len(unmatched)} books")
 
 # Save results
-output_path = "/Users/seanbergman/Repositories/calibre_lib/data/ipad_library_enriched.json"
+output_path = str(PROJECT_ROOT / "data" / "ipad_library_enriched.json")
 with open(output_path, 'w') as f:
     json.dump(matched, f, indent=2)
 print(f"\nSaved enriched data to {output_path}")
 
 # Save unmatched for review
 if unmatched:
-    unmatched_path = "/Users/seanbergman/Repositories/calibre_lib/data/ipad_unmatched.json"
+    unmatched_path = str(PROJECT_ROOT / "data" / "ipad_unmatched.json")
     with open(unmatched_path, 'w') as f:
         json.dump(unmatched, f, indent=2)
     print(f"Saved unmatched books to {unmatched_path}")
