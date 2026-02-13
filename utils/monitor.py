@@ -42,6 +42,8 @@ def parse_log(path: str) -> dict:
         "books_errored": 0,
         "total_chunks": 0,
         "total_topics": 0,
+        "current_book_chunks": 0,
+        "current_book_topics": 0,
         "avg_rate": 0.0,
         "elapsed_seconds": 0.0,
         "eta_minutes": 0,
@@ -102,16 +104,22 @@ def parse_log(path: str) -> dict:
         if m:
             last_book_number = int(m.group(1))
 
-        # Indexing: Title (new book resets resume context)
+        # Indexing: Title (new book resets resume context and current counters)
         m = re.match(r"Indexing: (.+)", line)
         if m:
             last_book_title = m.group(1).strip()
+            stats["current_book"] = last_book_title
+            stats["current_number"] = last_book_number
+            stats["current_progress"] = None
             stats["current_resume"] = None
+            stats["current_book_chunks"] = 0
+            stats["current_book_topics"] = 0
 
         # Author: Name
         m = re.match(r"Author: (.+)", line)
         if m:
             last_book_author = m.group(1).strip()
+            stats["current_author"] = last_book_author
 
         # Skipping (oversize)
         if re.match(r"Skipping: .+ exceeds --max-words", line):
@@ -144,11 +152,17 @@ def parse_log(path: str) -> dict:
             stats["current_author"] = last_book_author
             stats["current_number"] = last_book_number
 
-        # Extracted N unique topics
+        # Created N chunks (track for current in-progress book)
+        m = re.search(r"Created (\d+) chunks", line)
+        if m:
+            stats["current_book_chunks"] = int(m.group(1))
+
+        # Extracted N unique topics (track for current book; rolled into total on Book done)
         m = re.search(r"Extracted (\d+) unique topics", line)
         if m:
-            stats["total_topics"] += int(m.group(1))
+            stats["current_book_topics"] = int(m.group(1))
 
+        # Book done with cumulative totals (--all mode):
         # Book done: 264.2s (269 chunks, 0.98s/chunk) | Total: 2/514 books, 809 chunks, 0.35s/chunk avg
         m = re.search(
             r"Book done: ([\d.]+)s \((\d+) chunks, .+\) \| Total: (\d+)/(\d+) books,\s+([\d,]+)\s+chunks,\s+([\d.]+)s/chunk avg",
@@ -161,6 +175,31 @@ def parse_log(path: str) -> dict:
             stats["books_completed"] = int(m.group(3))
             stats["total_chunks"] = int(m.group(5).replace(",", ""))
             stats["avg_rate"] = float(m.group(6))
+            stats["total_topics"] += stats["current_book_topics"]
+            stats["current_book_chunks"] = 0
+            stats["current_book_topics"] = 0
+            stats["completed_books"].append(
+                {
+                    "title": last_book_title or "Unknown",
+                    "time": book_time,
+                    "chunks": book_chunks,
+                }
+            )
+            continue
+
+        # Book done without cumulative totals (single-book / --id mode):
+        # Book done: 193.5s (35 chunks, 5.53s/chunk)
+        m = re.search(r"Book done: ([\d.]+)s \((\d+) chunks, ([\d.]+)s/chunk\)", line)
+        if m:
+            book_time = float(m.group(1))
+            book_chunks = int(m.group(2))
+            total_time += book_time
+            stats["books_completed"] += 1
+            stats["total_chunks"] += book_chunks
+            stats["total_topics"] += stats["current_book_topics"]
+            stats["current_book_chunks"] = 0
+            stats["current_book_topics"] = 0
+            stats["avg_rate"] = float(m.group(3))
             stats["completed_books"].append(
                 {
                     "title": last_book_title or "Unknown",
@@ -242,10 +281,16 @@ def dashboard(stats: dict) -> str:
     if stats["books_errored"] > 0:
         lines.append(f"          {stats['books_errored']} errors")
 
-    # Chunks & topics
+    # Chunks & topics (include in-progress book)
     lines.append("")
-    lines.append(f"  Chunks: {stats['total_chunks']:,} processed")
-    lines.append(f"  Topics: {stats['total_topics']:,} extracted")
+    cur_chunks = stats["current_book_chunks"]
+    cur_topics = stats["current_book_topics"]
+    display_chunks = stats["total_chunks"] + cur_chunks
+    display_topics = stats["total_topics"] + cur_topics
+    chunk_suffix = f" (+{cur_chunks} current)" if cur_chunks and stats["total_chunks"] else ""
+    topic_suffix = f" (+{cur_topics} current)" if cur_topics and stats["total_topics"] else ""
+    lines.append(f"  Chunks: {display_chunks:,} processed{chunk_suffix}")
+    lines.append(f"  Topics: {display_topics:,} extracted{topic_suffix}")
 
     # Timing
     lines.append("")
