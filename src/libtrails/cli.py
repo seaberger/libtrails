@@ -98,7 +98,7 @@ def _progress_tracker(description: str, total: int):
 
         def callback(completed: int, total: int):
             pct = completed * 100 // total if total else 0
-            if pct >= last_pct[0] + 5 or completed == total:
+            if pct >= last_pct[0] + 1 or completed == total:
                 last_pct[0] = pct
                 console.print(f"  {description}: {completed}/{total} ({pct}%)")
 

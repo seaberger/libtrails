@@ -315,6 +315,98 @@ def dashboard(stats: dict) -> str:
     return "\n".join(lines)
 
 
+def query_db_stats(db_path: str) -> dict:
+    """Query extraction progress directly from the database (real-time, no log parsing)."""
+    import sqlite3
+
+    conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True)
+
+    total_books = conn.execute("SELECT COUNT(*) FROM books WHERE calibre_id IS NOT NULL").fetchone()[0]
+    total_chunks = conn.execute("SELECT COUNT(*) FROM chunks").fetchone()[0]
+    chunks_with_topics = conn.execute("SELECT COUNT(DISTINCT chunk_id) FROM chunk_topics").fetchone()[0]
+    total_topics = conn.execute("SELECT COUNT(*) FROM chunk_topics").fetchone()[0]
+
+    # Books fully done (all chunks have topics)
+    books_done = conn.execute("""
+        SELECT COUNT(*) FROM (
+            SELECT c.book_id, COUNT(c.id) as total, COUNT(ct.chunk_id) as done
+            FROM chunks c LEFT JOIN chunk_topics ct ON c.id = ct.chunk_id
+            GROUP BY c.book_id
+        ) WHERE total = done AND total > 0
+    """).fetchone()[0]
+
+    # Books with chunks (started)
+    books_started = conn.execute("SELECT COUNT(DISTINCT book_id) FROM chunks").fetchone()[0]
+
+    # Current in-progress book (has chunks but not all have topics)
+    cur = conn.execute("""
+        SELECT b.title, b.author, COUNT(c.id) as total, COUNT(ct.chunk_id) as done
+        FROM chunks c
+        JOIN books b ON c.book_id = b.id
+        LEFT JOIN chunk_topics ct ON c.id = ct.chunk_id
+        GROUP BY c.book_id
+        HAVING done < total AND done > 0
+        ORDER BY done DESC
+        LIMIT 1
+    """).fetchone()
+
+    # Recent completed books (last 5)
+    completed = conn.execute("""
+        SELECT b.title, COUNT(c.id) as chunks
+        FROM chunks c
+        JOIN books b ON c.book_id = b.id
+        LEFT JOIN chunk_topics ct ON c.id = ct.chunk_id
+        GROUP BY c.book_id
+        HAVING COUNT(ct.chunk_id) = COUNT(c.id) AND COUNT(c.id) > 0
+        ORDER BY c.book_id DESC
+        LIMIT 5
+    """).fetchall()
+
+    conn.close()
+
+    stats = {
+        "total_books": total_books,
+        "books_completed": books_done,
+        "books_skipped": 0,
+        "books_resumed": 0,
+        "books_errored": 0,
+        "total_chunks": chunks_with_topics,
+        "total_topics": total_topics,
+        "current_book_chunks": 0,
+        "current_book_topics": 0,
+        "avg_rate": 0.0,
+        "elapsed_seconds": 0.0,
+        "eta_minutes": 0,
+        "current_book": None,
+        "current_author": None,
+        "current_progress": None,
+        "current_resume": None,
+        "current_number": books_done + 1,
+        "completed_books": [{"title": r[0], "time": 0, "chunks": r[1]} for r in completed],
+        "skipped_oversize": 0,
+        "start_time": None,
+        "wall_elapsed_seconds": 0.0,
+    }
+
+    if cur:
+        stats["current_book"] = cur[0]
+        stats["current_author"] = cur[1]
+        total_ch = cur[2]
+        done_ch = cur[3]
+        pct = done_ch * 100 // total_ch if total_ch else 0
+        stats["current_progress"] = {"done": done_ch, "total": total_ch, "pct": pct}
+
+    return stats
+
+
+DB_ALIASES = {
+    "demo": "data/demo_library.db",
+    "v2": "data/ipad_library_v2.db",
+    "v1": "data/ipad_library.db",
+    "default": "data/ipad_library.db",
+}
+
+
 def find_latest_log() -> str | None:
     """Find the most recent libtrails extraction log in Claude Code's task output directory."""
     task_dirs = [
@@ -342,18 +434,48 @@ def main():
 
     parser = argparse.ArgumentParser(
         description="Monitor libtrails extraction run",
-        epilog="If no logfile is given, auto-discovers the most recent extraction log.",
+        epilog=(
+            "If no logfile is given, auto-discovers the most recent extraction log.\n"
+            "Use --db to query the database directly for real-time progress.\n"
+            "DB aliases: demo, v2, v1 (or pass a path to any .db file)"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("logfile", nargs="?", default=None, help="Path to the extraction log file (auto-detected if omitted)")
     parser.add_argument("-w", "--watch", action="store_true", help="Auto-refresh")
     parser.add_argument("-n", "--interval", type=int, default=5, help="Refresh interval in seconds (default: 5)")
+    parser.add_argument("--db", default=None, help="Query DB directly instead of parsing logs (alias: demo, v2, v1; or path)")
     args = parser.parse_args()
 
+    # DB mode: query database directly for real-time stats
+    if args.db is not None:
+        db_path = DB_ALIASES.get(args.db, args.db)
+        if not Path(db_path).exists():
+            print(f"Database not found: {db_path}")
+            sys.exit(1)
+
+        if args.watch:
+            try:
+                while True:
+                    stats = query_db_stats(db_path)
+                    print("\033[2J\033[H", end="")
+                    print(dashboard(stats))
+                    print(f"  DB: {db_path}")
+                    print(f"  Refreshing every {args.interval}s — Ctrl-C to stop")
+                    time.sleep(args.interval)
+            except KeyboardInterrupt:
+                print("\n  Stopped.")
+        else:
+            stats = query_db_stats(db_path)
+            print(dashboard(stats))
+        return
+
+    # Log mode: parse extraction log
     logfile = args.logfile
     if logfile is None:
         logfile = find_latest_log()
         if logfile is None:
-            print("No extraction log found. Pass a log file path or start a run first.")
+            print("No extraction log found. Pass a log file path, use --db, or start a run first.")
             sys.exit(1)
         print(f"  Auto-detected: {logfile}")
         print()
@@ -369,7 +491,7 @@ def main():
                 # Clear screen
                 print("\033[2J\033[H", end="")
                 print(dashboard(stats))
-                print(f"  Auto-detected: {logfile}")
+                print(f"  Log: {logfile}")
                 print(f"  Refreshing every {args.interval}s — Ctrl-C to stop")
                 time.sleep(args.interval)
         except KeyboardInterrupt:
