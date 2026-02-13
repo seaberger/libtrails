@@ -319,7 +319,7 @@ def query_db_stats(db_path: str) -> dict:
     """Query extraction progress directly from the database (real-time, no log parsing)."""
     import sqlite3
 
-    conn = sqlite3.connect(f"file:{db_path}?mode=ro", uri=True, timeout=2)
+    conn = sqlite3.connect(db_path, isolation_level=None, timeout=2)
 
     total_books = conn.execute("SELECT COUNT(*) FROM books WHERE calibre_id IS NOT NULL").fetchone()[0]
     total_chunks = conn.execute("SELECT COUNT(*) FROM chunks").fetchone()[0]
@@ -339,7 +339,7 @@ def query_db_stats(db_path: str) -> dict:
     books_started = conn.execute("SELECT COUNT(DISTINCT book_id) FROM chunks").fetchone()[0]
 
     # Current in-progress book (has chunks but not all have topics)
-    # Order by book_id DESC to get the most recently started book
+    # Order by most recent chunk_topic rowid to find the actively-worked book
     cur = conn.execute("""
         SELECT b.title, b.author, COUNT(DISTINCT c.id) as total, COUNT(DISTINCT ct.chunk_id) as done
         FROM chunks c
@@ -347,7 +347,7 @@ def query_db_stats(db_path: str) -> dict:
         LEFT JOIN chunk_topics ct ON c.id = ct.chunk_id
         GROUP BY c.book_id
         HAVING done < total AND done > 0
-        ORDER BY c.book_id DESC
+        ORDER BY MAX(ct.rowid) DESC
         LIMIT 1
     """).fetchone()
 
