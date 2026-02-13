@@ -1,11 +1,14 @@
 """Document parsing for EPUB and PDF files."""
 
+import logging
 import re
 import zipfile
 from pathlib import Path
 
-from pypdf import PdfReader
+import fitz
 from selectolax.parser import HTMLParser
+
+logger = logging.getLogger(__name__)
 
 
 def extract_text(file_path: Path) -> str:
@@ -104,19 +107,82 @@ def extract_text_from_epub(epub_path: Path) -> str:
 
 def extract_text_from_pdf(pdf_path: Path) -> str:
     """
-    Extract plain text from a PDF file using pypdf.
+    Extract plain text from a PDF file.
 
-    Fast pure-Python extraction (~1-2s for a 300-page book).
-    Returns page texts joined with double newlines for paragraph-aware chunking.
+    Tries PyMuPDF first (fast). If fewer than 100 words are extracted
+    (likely a scanned-image PDF), falls back to docling OCR.
     """
-    reader = PdfReader(pdf_path)
+    text = _extract_pdf_pymupdf(pdf_path)
+    word_count = len(text.split())
+
+    if word_count >= 100:
+        logger.info("PyMuPDF extracted %d words from %s", word_count, pdf_path.name)
+        return text
+
+    logger.info(
+        "PyMuPDF extracted only %d words from %s, falling back to docling OCR",
+        word_count,
+        pdf_path.name,
+    )
+    return _extract_pdf_docling(pdf_path)
+
+
+def _extract_pdf_pymupdf(pdf_path: Path) -> str:
+    """Extract text from PDF using PyMuPDF (fast path)."""
+    doc = fitz.open(str(pdf_path))
     pages = []
-    for page in reader.pages:
-        text = (page.extract_text() or "").strip()
+    for page in doc:
+        text = page.get_text().strip()
         if text:
             pages.append(text)
-
+    doc.close()
     return "\n\n".join(pages)
+
+
+def _extract_pdf_docling(pdf_path: Path) -> str:
+    """Extract text from scanned PDF using docling OCR (slow path)."""
+    from docling.datamodel.base_models import InputFormat
+    from docling.datamodel.pipeline_options import PdfPipelineOptions
+    from docling.document_converter import DocumentConverter, PdfFormatOption
+
+    ocr_options = _pick_ocr_engine()
+    pipeline_options = PdfPipelineOptions(do_ocr=True, ocr_options=ocr_options)
+    converter = DocumentConverter(
+        format_options={InputFormat.PDF: PdfFormatOption(pipeline_options=pipeline_options)}
+    )
+
+    result = converter.convert(str(pdf_path))
+    md_text = result.document.export_to_markdown()
+    text = _clean_markdown(md_text)
+    word_count = len(text.split())
+    logger.info("Docling OCR extracted %d words from %s", word_count, pdf_path.name)
+    return text
+
+
+def _pick_ocr_engine():
+    """Pick the best available OCR engine: Tesseract > EasyOCR > macOS native."""
+    import shutil
+
+    from docling.datamodel.pipeline_options import (
+        EasyOcrOptions,
+        OcrMacOptions,
+        TesseractOcrOptions,
+    )
+
+    if shutil.which("tesseract"):
+        logger.info("Using Tesseract OCR engine")
+        return TesseractOcrOptions()
+
+    try:
+        import easyocr  # noqa: F401
+
+        logger.info("Using EasyOCR engine")
+        return EasyOcrOptions()
+    except ImportError:
+        pass
+
+    logger.info("Using macOS native OCR engine")
+    return OcrMacOptions()
 
 
 # Block-level HTML elements that should produce paragraph breaks
