@@ -40,6 +40,9 @@ data/*.json
 # Cached embedding models (large files)
 models/
 
+# Downloaded EPUBs (large, not source)
+gutenberg_epubs/
+
 # Jupyter
 .ipynb_checkpoints/
 
