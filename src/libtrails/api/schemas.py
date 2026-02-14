@@ -21,13 +21,20 @@ class TopicInfo(BaseModel):
     cluster_id: int | None = None
 
 
+class ThemeRef(BaseModel):
+    """Cluster reference with label for display."""
+
+    cluster_id: int
+    label: str
+
+
 class BookDetail(BookSummary):
     """Full book info with topics."""
 
     description: str | None = None
     gutenberg_url: str | None = None
     topics: list[TopicInfo] = []
-    theme_ids: list[int] = []
+    themes: list[ThemeRef] = []
     chunk_count: int = 0
 
 

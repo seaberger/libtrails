@@ -3,7 +3,7 @@
 from fastapi import APIRouter, HTTPException, Query
 
 from ..dependencies import DBConnection
-from ..schemas import BookDetail, BookSummary, RelatedBook, TopicInfo
+from ..schemas import BookDetail, BookSummary, RelatedBook, ThemeRef, TopicInfo
 
 router = APIRouter()
 
@@ -93,8 +93,16 @@ def get_book(db: DBConnection, book_id: int):
     )
     topics = [TopicInfo(**dict(r)) for r in cursor.fetchall()]
 
-    # Get unique theme IDs
-    theme_ids = list({t.cluster_id for t in topics if t.cluster_id is not None})
+    # Get unique themes with labels
+    cluster_ids = list({t.cluster_id for t in topics if t.cluster_id is not None})
+    themes = []
+    if cluster_ids:
+        placeholders = ",".join("?" * len(cluster_ids))
+        cursor.execute(
+            f"SELECT cluster_id, top_label FROM cluster_stats WHERE cluster_id IN ({placeholders})",
+            cluster_ids,
+        )
+        themes = [ThemeRef(cluster_id=r["cluster_id"], label=r["top_label"]) for r in cursor.fetchall()]
 
     return BookDetail(
         id=book["id"],
@@ -104,7 +112,7 @@ def get_book(db: DBConnection, book_id: int):
         description=book.get("description"),
         gutenberg_url=gutenberg_url,
         topics=topics,
-        theme_ids=theme_ids,
+        themes=themes,
         chunk_count=chunk_count,
     )
 

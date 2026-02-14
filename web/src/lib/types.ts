@@ -14,11 +14,16 @@ export interface TopicInfo {
   cluster_id: number | null;
 }
 
+export interface ThemeRef {
+  cluster_id: number;
+  label: string;
+}
+
 export interface BookDetail extends BookSummary {
   description: string | null;
   gutenberg_url: string | null;
   topics: TopicInfo[];
-  theme_ids: number[];
+  themes: ThemeRef[];
   chunk_count: number;
 }
 
