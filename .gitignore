@@ -37,6 +37,9 @@ data/*.db
 data/*.json
 !data/.gitkeep
 
+# Book cover images (extracted from Calibre)
+data/covers/
+
 # Cached embedding models (large files)
 models/
 

@@ -3,10 +3,15 @@ import { defineConfig } from 'astro/config';
 
 import tailwindcss from '@tailwindcss/vite';
 import react from '@astrojs/react';
+import node from '@astrojs/node';
+
+const isProduction = process.env.NODE_ENV === 'production';
 
 // https://astro.build/config
 export default defineConfig({
-  output: 'static',  // SSG by default, SSR for pages with prerender=false
+  output: 'server',
+  adapter: node({ mode: 'standalone' }),
+  base: isProduction ? '/libtrails' : '/',
   vite: {
     plugins: [tailwindcss()],
     server: {

@@ -12,9 +12,11 @@ import type {
   UniverseData,
 } from "./types";
 
-// During SSR, we need the full URL. On client, relative works via proxy.
+// During SSR, fetch directly from the backend.
+// On client, use the base path (e.g., /libtrails in production, / in dev).
 const isServer = typeof window === "undefined";
-const API_BASE_URL = isServer ? "http://localhost:8000" : "";
+const basePath = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+const API_BASE_URL = isServer ? "http://localhost:8000" : basePath;
 const API_BASE = `${API_BASE_URL}/api/v1`;
 
 async function fetchJson<T>(path: string): Promise<T> {
@@ -72,12 +74,12 @@ export async function searchBooks(
 }
 
 export function getCoverUrl(calibreId: number | null): string {
-  if (!calibreId) return "/placeholder-cover.svg";
-  return `/api/v1/covers/${calibreId}`;
+  if (!calibreId) return `${basePath}/placeholder-cover.svg`;
+  return `${basePath}/api/v1/covers/${calibreId}`;
 }
 
 export function getBookCoverUrl(bookId: number): string {
-  return `/api/v1/covers/book/${bookId}`;
+  return `${basePath}/api/v1/covers/book/${bookId}`;
 }
 
 // Domain (super-cluster) API

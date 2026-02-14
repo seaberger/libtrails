@@ -6,14 +6,26 @@ from pathlib import Path
 from fastapi import APIRouter, HTTPException
 from fastapi.responses import FileResponse
 
-from ...config import CALIBRE_DB_PATH, CALIBRE_LIBRARY_PATH
+from ...config import CALIBRE_DB_PATH, CALIBRE_LIBRARY_PATH, DATA_DIR
 from ..dependencies import DBConnection
 
 router = APIRouter()
 
+# Local covers directory (for server deployments without Calibre)
+COVERS_DIR = DATA_DIR / "covers"
+
 
 def _find_cover_path(calibre_id: int) -> Path | None:
-    """Find cover image path in Calibre library via metadata.db lookup."""
+    """Find cover image, checking local covers dir first, then Calibre library."""
+    # Check local covers directory first (server deployment)
+    local_cover = COVERS_DIR / f"{calibre_id}.jpg"
+    if local_cover.exists():
+        return local_cover
+
+    # Fall back to Calibre library lookup
+    if not CALIBRE_DB_PATH.exists():
+        return None
+
     conn = sqlite3.connect(f"file:{CALIBRE_DB_PATH}?mode=ro", uri=True)
     try:
         conn.row_factory = sqlite3.Row
