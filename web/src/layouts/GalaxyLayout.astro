@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import { url } from '../lib/url';
 
 interface Props {
   title: string;
@@ -80,12 +81,12 @@ const { title } = Astro.props;
   </head>
   <body>
     <nav class="galaxy-nav">
-      <a href="/" class="brand">LibTrails</a>
+      <a href={url("/")} class="brand">LibTrails</a>
       <div class="links">
-        <a href="/" class="active">Universe</a>
-        <a href="/themes">Themes</a>
-        <a href="/clusters">Clusters</a>
-        <a href="/books">Books</a>
+        <a href={url("/")} class="active">Universe</a>
+        <a href={url("/themes")}>Themes</a>
+        <a href={url("/clusters")}>Clusters</a>
+        <a href={url("/books")}>Books</a>
       </div>
     </nav>
 

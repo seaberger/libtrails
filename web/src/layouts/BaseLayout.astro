@@ -1,5 +1,6 @@
 ---
 import '../styles/global.css';
+import { url } from '../lib/url';
 
 interface Props {
   title: string;
@@ -25,20 +26,20 @@ const { title, description = 'Discover books by themes and topics' } = Astro.pro
     <!-- Navigation -->
     <nav class="sticky top-0 z-50 bg-[var(--color-surface)] border-b border-[var(--color-border)]">
       <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-        <a href="/" class="text-xl font-medium text-[var(--color-text)] hover:text-[var(--color-accent)] transition-colors">
+        <a href={url("/")} class="text-xl font-medium text-[var(--color-text)] hover:text-[var(--color-accent)] transition-colors">
           LibTrails
         </a>
         <div class="flex items-center gap-6">
-          <a href="/" class="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
+          <a href={url("/")} class="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
             Universe
           </a>
-          <a href="/themes" class="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
+          <a href={url("/themes")} class="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
             Themes
           </a>
-          <a href="/clusters" class="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
+          <a href={url("/clusters")} class="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
             Clusters
           </a>
-          <a href="/books" class="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
+          <a href={url("/books")} class="text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] transition-colors">
             Books
           </a>
         </div>

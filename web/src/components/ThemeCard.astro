@@ -1,6 +1,7 @@
 ---
 import type { ThemeSummary } from '../lib/types';
 import BookCover from './BookCover.astro';
+import { url } from '../lib/url';
 
 interface Props {
   theme: ThemeSummary;
@@ -14,7 +15,7 @@ const bookCount = stackBooks.length;
 ---
 
 <a
-  href={`/clusters/${theme.cluster_id}`}
+  href={url(`/clusters/${theme.cluster_id}`)}
   class="group relative block overflow-visible bg-[var(--color-surface)] rounded-lg p-5 border border-[var(--color-border)] hover:border-[var(--color-accent)] hover:shadow-lg hover:z-10 transition-all duration-300"
   data-theme-card
 >
@@ -95,6 +96,8 @@ const bookCount = stackBooks.length;
     });
   }
 
-  // Run after navigation (astro:page-load fires on initial load too)
+  // Run immediately (Astro scripts are deferred, so DOM is ready)
+  initFanEffect();
+  // Also re-run after Astro view transitions if enabled
   document.addEventListener('astro:page-load', initFanEffect);
 </script>

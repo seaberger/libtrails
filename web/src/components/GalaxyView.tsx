@@ -129,7 +129,8 @@ export default function GalaxyView() {
   );
 
   const handleClick = useCallback((cluster: UniverseCluster) => {
-    window.location.href = `/clusters/${cluster.cluster_id}`;
+    const base = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+    window.location.href = `${base}/clusters/${cluster.cluster_id}`;
   }, []);
 
   const toggleDomain = useCallback(

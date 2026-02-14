@@ -1,8 +1,9 @@
 ---
 // Semantic search bar for themes
+const basePath = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 ---
 
-<div class="theme-search mb-8">
+<div class="theme-search mb-8" data-base-path={basePath}>
   <form id="theme-search-form" class="relative">
     <input
       type="text"
@@ -36,14 +37,14 @@
 </div>
 
 <script>
-  const API_BASE = '/api/v1';
-
   // AbortController to tear down listeners before re-attaching
   let searchAbortController: AbortController | null = null;
 
   function initThemeSearch() {
     const form = document.getElementById('theme-search-form') as HTMLFormElement;
     const input = document.getElementById('theme-search-input') as HTMLInputElement;
+    const basePath = document.querySelector('.theme-search')?.getAttribute('data-base-path') || '';
+    const API_BASE = `${basePath}/api/v1`;
     const loading = document.getElementById('search-loading');
     const status = document.getElementById('search-status');
 
@@ -126,7 +127,7 @@
       const center = (bookCount - 1) / 2;
 
       const card = document.createElement('a');
-      card.href = `/clusters/${theme.cluster_id}`;
+      card.href = `${basePath}/clusters/${theme.cluster_id}`;
       card.className = 'group relative block overflow-visible bg-[var(--color-surface)] rounded-lg p-5 border border-[var(--color-border)] hover:border-[var(--color-accent)] hover:shadow-lg hover:z-10 transition-all duration-300';
       card.setAttribute('data-theme-card', '');
 
@@ -154,7 +155,7 @@
         bookDiv.setAttribute('data-stacked-rotate', String(stackedRotate));
 
         const img = document.createElement('img');
-        img.src = book.calibre_id ? `/api/v1/covers/${book.calibre_id}` : '/placeholder-cover.svg';
+        img.src = book.calibre_id ? `${basePath}/api/v1/covers/${book.calibre_id}` : `${basePath}/placeholder-cover.svg`;
         img.alt = book.title || 'Book cover';
         img.className = 'w-16 h-24 object-cover rounded shadow-md';
         img.loading = 'lazy';
@@ -237,6 +238,8 @@
     }, { signal });
   }
 
-  // Initialize after navigation (astro:page-load fires on initial load too)
+  // Run immediately (Astro scripts are deferred, so DOM is ready)
+  initThemeSearch();
+  // Also re-run after Astro view transitions if enabled
   document.addEventListener('astro:page-load', initThemeSearch);
 </script>

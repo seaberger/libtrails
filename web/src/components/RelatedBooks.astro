@@ -1,6 +1,7 @@
 ---
 import type { RelatedBook } from '../lib/types';
 import BookCover from './BookCover.astro';
+import { url } from '../lib/url';
 
 interface Props {
   books: RelatedBook[];
@@ -17,7 +18,7 @@ const { books } = Astro.props;
     <div class="flex gap-4 overflow-x-auto pb-4 -mx-2 px-2">
       {books.map(book => (
         <a
-          href={`/books/${book.id}`}
+          href={url(`/books/${book.id}`)}
           class="flex-shrink-0 group"
         >
           <div class="book-cover">

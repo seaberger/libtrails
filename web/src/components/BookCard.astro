@@ -2,6 +2,7 @@
 import type { BookSummary, TopicInfo } from '../lib/types';
 import BookCover from './BookCover.astro';
 import TopicChip from './TopicChip.astro';
+import { url } from '../lib/url';
 
 interface Props {
   book: BookSummary;
@@ -16,7 +17,7 @@ const displayTopics = topics.slice(0, 5);
 ---
 
 <a
-  href={`/books/${book.id}`}
+  href={url(`/books/${book.id}`)}
   class="flex gap-4 bg-[var(--color-surface)] rounded-lg p-4 border border-[var(--color-border)] card-hover"
 >
   <div class="flex-shrink-0 book-cover">

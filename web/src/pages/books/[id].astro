@@ -7,11 +7,12 @@ import BookCover from '../../components/BookCover.astro';
 import TopicChip from '../../components/TopicChip.astro';
 import RelatedBooks from '../../components/RelatedBooks.astro';
 import { getBook, getRelatedBooks } from '../../lib/api';
+import { url } from '../../lib/url';
 
 const { id } = Astro.params;
 
 if (!id) {
-  return Astro.redirect('/books');
+  return Astro.redirect(url('/books'));
 }
 
 const bookId = parseInt(id, 10);
@@ -23,13 +24,13 @@ try {
   book = await getBook(bookId);
   relatedBooks = await getRelatedBooks(bookId, 12);
 } catch (e) {
-  return Astro.redirect('/books');
+  return Astro.redirect(url('/books'));
 }
 ---
 
 <BaseLayout title={book.title} description={book.description || `Details for ${book.title} by ${book.author}`}>
   <nav class="text-sm text-[var(--color-text-muted)] mb-6">
-    <a href="/books" class="hover:text-[var(--color-text)] transition-colors">All Books</a>
+    <a href={url("/books")} class="hover:text-[var(--color-text)] transition-colors">All Books</a>
     <span class="mx-2">/</span>
     <span class="text-[var(--color-text)]">{book.title}</span>
   </nav>
@@ -79,7 +80,7 @@ try {
               <TopicChip
                 label={topic.label}
                 count={topic.count}
-                href={topic.cluster_id !== null ? `/themes/${topic.cluster_id}` : undefined}
+                href={topic.cluster_id !== null ? url(`/themes/${topic.cluster_id}`) : undefined}
               />
             ))}
           </div>
@@ -93,7 +94,7 @@ try {
           <div class="flex flex-wrap gap-2">
             {book.theme_ids.slice(0, 8).map(themeId => (
               <a
-                href={`/themes/${themeId}`}
+                href={url(`/themes/${themeId}`)}
                 class="inline-flex items-center gap-1 px-3 py-1 text-sm bg-[var(--color-bg)] border border-[var(--color-border)] rounded-md text-[var(--color-text-muted)] hover:text-[var(--color-text)] hover:border-[var(--color-accent)] transition-colors"
               >
                 Theme #{themeId}

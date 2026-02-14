@@ -1,6 +1,7 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import { getDomains, getCoverUrl } from '../../lib/api';
+import { url } from '../../lib/url';
 
 const domains = await getDomains();
 ---
@@ -60,7 +61,7 @@ const domains = await getDomains();
               <div class="flex flex-wrap gap-2">
                 {domain.top_clusters.slice(0, 8).map((cluster: any) => (
                   <a
-                    href={`/clusters/${cluster.cluster_id}`}
+                    href={url(`/clusters/${cluster.cluster_id}`)}
                     class="px-3 py-1.5 bg-[var(--color-bg)] text-sm text-[var(--color-text)] rounded-full hover:bg-[var(--color-accent)] hover:text-white transition-colors"
                   >
                     {cluster.label}
@@ -74,7 +75,7 @@ const domains = await getDomains();
               <h3 class="text-sm font-medium text-[var(--color-text)] mb-3">Featured Books</h3>
               <div class="grid grid-cols-5 gap-3">
                 {domain.sample_books.slice(0, 5).map((book: any) => (
-                  <a href={`/books/${book.id}`} class="group">
+                  <a href={url(`/books/${book.id}`)} class="group">
                     <div class="aspect-[2/3] bg-[var(--color-bg)] rounded overflow-hidden mb-2">
                       <img
                         src={getCoverUrl(book.calibre_id)}
@@ -94,7 +95,7 @@ const domains = await getDomains();
             <!-- View all clusters link -->
             <div class="mt-6 pt-4 border-t border-[var(--color-border)]">
               <a
-                href={`/clusters?domain=${domain.domain_id}`}
+                href={url(`/clusters?domain=${domain.domain_id}`)}
                 class="text-sm text-[var(--color-accent)] hover:underline"
               >
                 View all {domain.cluster_count} clusters in {domain.label} →

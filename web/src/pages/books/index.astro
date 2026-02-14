@@ -2,10 +2,11 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import BookCard from '../../components/BookCard.astro';
 import { getBooks } from '../../lib/api';
+import { url as baseUrl } from '../../lib/url';
 
 // Get page from URL params
-const url = new URL(Astro.request.url);
-const page = parseInt(url.searchParams.get('page') || '1', 10);
+const pageUrl = new URL(Astro.request.url);
+const page = parseInt(pageUrl.searchParams.get('page') || '1', 10);
 const pageSize = 50;
 
 const books = await getBooks(page, pageSize, true);
@@ -32,7 +33,7 @@ const hasMore = books.length === pageSize;
   <div class="flex justify-center items-center gap-4 mt-8 pt-8 border-t border-[var(--color-border)]">
     {page > 1 && (
       <a
-        href={`/books?page=${page - 1}`}
+        href={baseUrl(`/books?page=${page - 1}`)}
         class="px-4 py-2 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] border border-[var(--color-border)] rounded-md transition-colors"
       >
         Previous
@@ -41,7 +42,7 @@ const hasMore = books.length === pageSize;
     <span class="text-sm text-[var(--color-text-muted)]">Page {page}</span>
     {hasMore && (
       <a
-        href={`/books?page=${page + 1}`}
+        href={baseUrl(`/books?page=${page + 1}`)}
         class="px-4 py-2 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] border border-[var(--color-border)] rounded-md transition-colors"
       >
         Next
