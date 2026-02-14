@@ -850,16 +850,30 @@ _DSPY_INSTRUCTION_EXTENDED = (
     "Given a passage from a book along with the book's title, author, and\n"
     "high-level themes, extract exactly 5 topic labels that capture the\n"
     "key concepts discussed in this specific passage.\n\n"
-    "Guidelines:\n"
-    "- Each topic must be a multi-word noun phrase (3-6 words ideal).\n"
-    "- Topics should be specific to this passage, not generic labels.\n"
-    "- Avoid single-word topics or vague terms like 'conflict' or 'emotion'.\n"
-    "- Ground topics in the passage's concrete details: names, places, events.\n"
+    "CRITICAL STYLE GUIDELINES:\n"
+    "- Topics must be ABSTRACT and THEMATIC, not plot summaries.\n"
+    "- Frame topics as universal concepts grounded in the passage, not as narrative events.\n"
+    "- NEVER start a topic with a character's name (e.g. NOT \"Buck's struggle\" — "
+    'instead "canine resistance to captivity").\n'
+    "- NEVER describe what happens in the scene — describe what the scene is ABOUT.\n"
+    "- Think: what would a literary scholar use as an index entry for this passage?\n\n"
+    "GOOD examples (abstract, thematic):\n"
+    '  - "domestication versus primal instinct"\n'
+    '  - "physical transformation under duress"\n'
+    '  - "introduction to primitive law"\n'
+    '  - "betrayal of trust between species"\n'
+    '  - "canine social hierarchy dynamics"\n\n'
+    "BAD examples (too narrative, character-specific, or plot-driven):\n"
+    '  - "Buck\'s violent struggle for freedom" (character name + plot event)\n'
+    '  - "sale of Buck to Perrault" (plot event)\n'
+    '  - "arrival at the Seattle backyard" (scene description)\n'
+    '  - "man in the red sweater" (character reference)\n'
+    '  - "departure from Seattle on the Narwhal" (plot event)\n\n'
+    "Each topic must be a multi-word noun phrase (3-6 words ideal).\n"
     '- Return topics as a JSON object: {"topics": ["topic1", "topic2", ...]}.\n'
     "- Each topic must be a plain string, never a dict or nested object.\n"
     "- Use the book context to disambiguate: 'river journey' in Siddhartha\n"
     "  is spiritual, in Huckleberry Finn is geographical.\n"
-    '- Do not wrap topics in dicts like {"topic": "value"}. Return plain strings only.\n'
     "- Ignore boilerplate like copyright notices, publisher info, or legal disclaimers — "
     'do not extract topics like "book rights and permissions", '
     '"publisher\'s legal disclaimer", or "hachette book group branding".\n'

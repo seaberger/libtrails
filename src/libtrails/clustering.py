@@ -627,6 +627,173 @@ def cluster_topics(
     return result
 
 
+def sweep_resolutions(
+    mode: str = None,
+    partition_type: str = None,
+    cooccurrence_min: int = None,
+    knn_k: int = None,
+    n_resolutions: int = None,
+    resolution_range: tuple[float, float] | None = None,
+    n_iterations: int = 1,
+    seed: int | None = None,
+    plateau_threshold: float | None = None,
+    auto_select: bool = False,
+    output_path: str | None = None,
+    progress_file: str | None = None,
+) -> dict:
+    """Run a multi-resolution Leiden CPM sweep to find optimal resolution.
+
+    Builds the topic graph once, then runs Leiden at many resolutions.
+    Uses NMI between adjacent partitions to identify stable plateaus.
+
+    Args:
+        mode: Graph construction mode (default from config).
+        partition_type: Ignored, always uses CPM for sweeps.
+        cooccurrence_min: Minimum co-occurrence count for edges.
+        knn_k: Number of nearest neighbors for k-NN mode.
+        n_resolutions: Number of resolution values to try.
+        resolution_range: (low, high) range for log-spaced resolutions.
+        n_iterations: Runs per resolution for robustness.
+        seed: Random seed for determinism.
+        plateau_threshold: NMI threshold for stability detection.
+        auto_select: If True, apply recommended resolution to DB.
+        output_path: Optional path to save sweep JSON.
+        progress_file: Optional file for progress updates.
+
+    Returns:
+        Dict with sweep summary, recommendation, and optionally cluster result.
+    """
+    import time
+    from datetime import datetime
+
+    from .config import (
+        SWEEP_MIN_PLATEAU_LENGTH,
+        SWEEP_N_RESOLUTIONS,
+        SWEEP_PLATEAU_THRESHOLD,
+        SWEEP_RESOLUTION_RANGE,
+        SWEEP_SEED,
+    )
+    from .sweep import format_sweep_table, log_spaced_resolutions, run_sweep, save_sweep_json
+    from .topic_graph import build_topic_graph, build_topic_graph_cooccurrence_only
+
+    def log_progress(msg: str):
+        timestamp = datetime.now().strftime("%H:%M:%S")
+        full_msg = f"[{timestamp}] {msg}"
+        print(full_msg, flush=True)
+        if progress_file:
+            with open(progress_file, "w") as f:
+                f.write(f"{full_msg}\n")
+
+    # Apply defaults
+    if mode is None:
+        mode = CLUSTER_MODE
+    if knn_k is None:
+        knn_k = CLUSTER_KNN_K
+    if n_resolutions is None:
+        n_resolutions = SWEEP_N_RESOLUTIONS
+    if resolution_range is None:
+        resolution_range = SWEEP_RESOLUTION_RANGE
+    if seed is None:
+        seed = SWEEP_SEED
+    if plateau_threshold is None:
+        plateau_threshold = SWEEP_PLATEAU_THRESHOLD
+
+    min_cooccur = cooccurrence_min if cooccurrence_min is not None else COOCCURRENCE_MIN_COUNT
+
+    # Build graph once
+    log_progress(f"Building topic graph (mode={mode})...")
+    graph_start = time.time()
+
+    if mode == "cooccurrence":
+        g = build_topic_graph_cooccurrence_only(
+            cooccurrence_min=min_cooccur,
+            pmi_min=PMI_MIN_THRESHOLD,
+        )
+    elif mode == "full":
+        g = build_topic_graph(
+            embedding_threshold=EMBEDDING_EDGE_THRESHOLD,
+            cooccurrence_min=min_cooccur,
+            pmi_min=PMI_MIN_THRESHOLD,
+        )
+    elif mode == "knn":
+        from .topic_graph import build_topic_graph_knn
+
+        g = build_topic_graph_knn(
+            cooccurrence_min=min_cooccur,
+            pmi_min=PMI_MIN_THRESHOLD,
+            k=knn_k,
+        )
+    else:
+        return {"error": f"Unknown mode: {mode}"}
+
+    graph_elapsed = time.time() - graph_start
+    log_progress(f"Graph built in {graph_elapsed:.1f}s: {g.vcount()} nodes, {g.ecount()} edges")
+
+    if g.vcount() == 0:
+        return {"error": "No topics in graph"}
+
+    # Generate resolutions and run sweep
+    resolutions = log_spaced_resolutions(
+        low=resolution_range[0],
+        high=resolution_range[1],
+        n=n_resolutions,
+    )
+
+    log_progress(
+        f"Sweeping {n_resolutions} resolutions from {resolution_range[0]} to {resolution_range[1]}..."
+    )
+    sweep_start = time.time()
+
+    summary = run_sweep(
+        g,
+        resolutions=resolutions,
+        seed=seed,
+        n_iterations=n_iterations,
+        plateau_threshold=plateau_threshold,
+        min_plateau_length=SWEEP_MIN_PLATEAU_LENGTH,
+    )
+
+    sweep_elapsed = time.time() - sweep_start
+    log_progress(f"Sweep completed in {sweep_elapsed:.1f}s")
+
+    # Save JSON if requested
+    if output_path:
+        from pathlib import Path
+
+        save_sweep_json(summary, Path(output_path))
+        log_progress(f"Saved sweep results to {output_path}")
+
+    # Build return dict
+    result = {
+        "graph_nodes": g.vcount(),
+        "graph_edges": g.ecount(),
+        "graph_build_time": graph_elapsed,
+        "sweep_time": sweep_elapsed,
+        "n_resolutions": n_resolutions,
+        "plateaus_found": len(summary.plateaus),
+        "recommended_resolution": summary.recommended_resolution,
+        "sweep_summary": summary,
+    }
+
+    # Auto-select: apply recommended resolution
+    if auto_select and summary.recommended_resolution is not None:
+        log_progress(
+            f"Auto-selecting resolution {summary.recommended_resolution:.6f}..."
+        )
+        cluster_result = cluster_topics(
+            mode=mode,
+            partition_type="cpm",
+            cooccurrence_min=cooccurrence_min,
+            resolution=summary.recommended_resolution,
+            knn_k=knn_k,
+            dry_run=False,
+            progress_file=progress_file,
+        )
+        result["cluster_result"] = cluster_result
+
+    return result
+
+
 def get_cluster_topics(cluster_id: int) -> list[dict]:
     """Get all topics in a cluster."""
     with get_db() as conn:

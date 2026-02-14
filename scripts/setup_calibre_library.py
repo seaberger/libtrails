@@ -72,18 +72,30 @@ def run_cmd(cmd: list[str], *, check: bool = True) -> subprocess.CompletedProces
     return subprocess.run(cmd, text=True, capture_output=True, check=check)
 
 
+CALIBREDB_MACOS = "/Applications/calibre.app/Contents/MacOS/calibredb"
+
+
+def find_calibredb() -> str:
+    """Find calibredb binary, checking PATH and macOS app bundle."""
+    path = shutil.which("calibredb")
+    if path:
+        return path
+    if Path(CALIBREDB_MACOS).exists():
+        return CALIBREDB_MACOS
+    raise SystemExit(
+        "Could not find `calibredb` on PATH or in /Applications/calibre.app.\n"
+        "Install Calibre from https://calibre-ebook.com/ and ensure calibredb is available.\n"
+    )
+
+
 def ensure_calibre_available() -> None:
-    if shutil.which("calibredb") is None:
-        raise SystemExit(
-            "Could not find `calibredb` on PATH.\n"
-            "Install Calibre from https://calibre-ebook.com/ and ensure calibredb is available.\n"
-        )
+    find_calibredb()
 
 
-def ensure_library(library_dir: Path) -> None:
+def ensure_library(library_dir: Path, calibredb: str) -> None:
     library_dir.mkdir(parents=True, exist_ok=True)
     run_cmd(
-        ["calibredb", "--with-library", str(library_dir), "list", "--limit", "0"],
+        [calibredb, "--with-library", str(library_dir), "list", "--limit", "0"],
         check=True,
     )
 
@@ -159,8 +171,9 @@ def main() -> int:
         format="%(asctime)s | %(levelname)s | %(message)s",
     )
 
-    ensure_calibre_available()
-    ensure_library(args.library_dir)
+    calibredb = find_calibredb()
+    LOG.info("Using calibredb: %s", calibredb)
+    ensure_library(args.library_dir, calibredb)
 
     books = read_books(args.csv)
 
@@ -184,7 +197,7 @@ def main() -> int:
         tags = ",".join(tags_for(book))
 
         add_cmd = [
-            "calibredb",
+            calibredb,
             "--with-library",
             str(args.library_dir),
             "add",
@@ -212,7 +225,7 @@ def main() -> int:
 
             if book_id is not None and book.rationale:
                 set_cmd = [
-                    "calibredb",
+                    calibredb,
                     "--with-library",
                     str(args.library_dir),
                     "set_metadata",
@@ -247,7 +260,7 @@ def main() -> int:
     try:
         proc = run_cmd(
             [
-                "calibredb",
+                calibredb,
                 "--with-library",
                 str(args.library_dir),
                 "list",

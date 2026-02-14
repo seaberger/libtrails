@@ -375,6 +375,26 @@ The `LIBTRAILS_DB` env var is read in `config.py` and controls `IPAD_DB_PATH`.
 
 ## Configuration
 
+### LM Studio Infrastructure (Two-Machine Setup)
+
+| Role | Model | Machine | API Endpoint |
+|------|-------|---------|--------------|
+| Theme extraction (Pass 1) | `gemma-3-27b` | MacBook Pro (local, MLX) | `http://localhost:1234` |
+| Chunk extraction (Pass 2) | `gemma-3-12b` | Windows PC with RTX 3090 | `http://192.168.1.36:1234` |
+
+Configured in `~/.libtrails/config.yaml`:
+```yaml
+lm_studio:
+  theme_api_base: http://localhost:1234      # 27b on local Mac
+  chunk_api_base: http://192.168.1.36:1234   # 12b on remote 3090
+```
+
+Can also be set via env vars: `LM_STUDIO_THEME_API_BASE`, `LM_STUDIO_CHUNK_API_BASE`.
+
+**Note**: The 3090 PC IP may change on reboot (DHCP). If unreachable, scan with `arp -a` + curl port 1234.
+
+### config.py Settings
+
 Edit `src/libtrails/config.py`:
 
 ```python
@@ -388,7 +408,7 @@ CALIBRE_LIBRARY_PATH = Path.home() / "Calibre_Main_Library"
 CALIBRE_DB_PATH = CALIBRE_LIBRARY_PATH / "metadata.db"
 
 # LLM settings
-DEFAULT_MODEL = "gemma3:4b"  # Use 4b for topic extraction (faster, sufficient quality)
+DEFAULT_MODEL = "gemma3:27b"
 OLLAMA_HOST = "http://localhost:11434"
 
 # Chunking settings

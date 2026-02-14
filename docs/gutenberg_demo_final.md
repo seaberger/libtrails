@@ -6,16 +6,16 @@
 
 ```bash
 # 1. Download EPUBs (polite: 2s between requests, ~4 min)
-python scripts/download_gutenberg.py --csv data/gutenberg_demo_books.csv
+uv run python scripts/download_gutenberg.py --csv data/gutenberg_demo_books.csv
 
 # 2. Create Calibre library
-python scripts/setup_calibre_library.py \
+uv run python scripts/setup_calibre_library.py \
   --csv data/gutenberg_demo_books.csv \
   --epub-dir gutenberg_epubs \
   --library-dir ~/Calibre_Demo_Library
 
 # 3. Create LibTrails demo DB
-python scripts/create_demo_db.py --library-dir ~/Calibre_Demo_Library
+uv run python scripts/create_demo_db.py --library-dir ~/Calibre_Demo_Library
 
 # 4. Index all 100 books
 CALIBRE_LIBRARY_PATH=~/Calibre_Demo_Library \

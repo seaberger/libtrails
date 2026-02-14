@@ -114,6 +114,18 @@ CLUSTER_RESOLUTION = 0.001  # Resolution for CPM (lower = fewer clusters)
 # KNN graph: minimum cosine similarity for embedding edges
 KNN_MIN_SIMILARITY = 0.65
 
+# Multi-resolution sweep defaults
+SWEEP_N_RESOLUTIONS = 20
+SWEEP_RESOLUTION_RANGE = (0.0001, 1.0)
+SWEEP_PLATEAU_THRESHOLD = 0.90
+SWEEP_MIN_PLATEAU_LENGTH = 2
+SWEEP_SEED = 42
+
+# Domain (super-cluster) Leiden defaults
+DOMAIN_SWEEP_RESOLUTION_RANGE = (0.001, 0.5)
+DOMAIN_CLUSTER_KNN_K = 8
+DOMAIN_CLUSTER_MIN_SIMILARITY = 0.3
+
 # Topic extraction models — override with env vars to use Gemini API
 # Gemini models use "gemini/" prefix, e.g. "gemini/gemini-3-flash-preview"
 THEME_MODEL = os.environ.get("LIBTRAILS_THEME_MODEL", "gemma3:27b")

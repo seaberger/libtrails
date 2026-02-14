@@ -1841,6 +1841,41 @@ def process():
     help="Hub detection method (default: degree)",
 )
 @click.option(
+    "--sweep",
+    is_flag=True,
+    help="Run multi-resolution sweep to find optimal CPM resolution",
+)
+@click.option(
+    "--sweep-resolutions",
+    type=int,
+    default=None,
+    help="Number of resolution values to try in sweep (default: 20)",
+)
+@click.option(
+    "--sweep-range",
+    nargs=2,
+    type=float,
+    default=None,
+    help="Resolution range for sweep as LOW HIGH (default: 0.0001 1.0)",
+)
+@click.option(
+    "--sweep-iterations",
+    type=int,
+    default=1,
+    help="Runs per resolution for robustness (default: 1)",
+)
+@click.option(
+    "--sweep-output",
+    type=click.Path(),
+    default=None,
+    help="Save sweep results to JSON file",
+)
+@click.option(
+    "--auto-select",
+    is_flag=True,
+    help="Automatically apply the sweep-recommended resolution",
+)
+@click.option(
     "--progress-file",
     "-p",
     default=None,
@@ -1858,6 +1893,12 @@ def cluster(
     remove_hubs,
     hub_percentile,
     hub_method,
+    sweep,
+    sweep_resolutions,
+    sweep_range,
+    sweep_iterations,
+    sweep_output,
+    auto_select,
     progress_file,
 ):
     """Run topic clustering with configurable options.
@@ -1872,8 +1913,10 @@ def cluster(
         libtrails cluster --sample-size 5000           # Test on 5K topics (dry run)
         libtrails cluster --dry-run --resolution 0.2   # Test params without saving
         libtrails cluster --remove-hubs --dry-run      # Test hub removal approach
+        libtrails cluster --sweep --skip-cooccur       # Find optimal resolution
+        libtrails cluster --sweep --auto-select        # Find and apply optimal resolution
     """
-    from .clustering import cluster_topics
+    from .clustering import cluster_topics, sweep_resolutions
     from .database import get_db
     from .topic_graph import compute_cooccurrences
 
@@ -1911,7 +1954,68 @@ def cluster(
             f"  [green]Found {cooccur_stats['cooccurrence_pairs']} co-occurrence pairs[/green]"
         )
 
-    # Run clustering
+    # Sweep mode: find optimal resolution
+    if sweep:
+        console.print("\n[bold cyan]Step 2/2: Multi-resolution sweep[/bold cyan]")
+
+        resolution_range = tuple(sweep_range) if sweep_range else None
+
+        sweep_result = sweep_resolutions(
+            mode=mode,
+            cooccurrence_min=min_cooccur,
+            knn_k=knn_k,
+            n_resolutions=sweep_resolutions,
+            resolution_range=resolution_range,
+            n_iterations=sweep_iterations,
+            auto_select=auto_select,
+            output_path=sweep_output,
+            progress_file=progress_file,
+        )
+
+        if "error" in sweep_result:
+            console.print(f"  [red]Error: {sweep_result['error']}[/red]")
+            return
+
+        # Display sweep table
+        from .sweep import format_sweep_table
+
+        summary = sweep_result["sweep_summary"]
+        console.print()
+        console.print(format_sweep_table(summary))
+
+        # Show plateaus
+        if summary.plateaus:
+            console.print(f"\n[green]Found {len(summary.plateaus)} stable plateau(s):[/green]")
+            for p in summary.plateaus:
+                console.print(
+                    f"  Resolution {p.start_resolution:.6f} - {p.end_resolution:.6f} "
+                    f"(NMI={p.mean_nmi:.3f}, length={p.length})"
+                )
+        else:
+            console.print("\n[yellow]No stable plateaus found[/yellow]")
+
+        if summary.recommended_resolution is not None:
+            console.print(
+                f"\n[bold]Recommended resolution: {summary.recommended_resolution:.6f}[/bold]"
+            )
+
+        if auto_select and "cluster_result" in sweep_result:
+            cr = sweep_result["cluster_result"]
+            console.print(
+                f"\n[bold green]Applied resolution {summary.recommended_resolution:.6f}: "
+                f"{cr['num_clusters']} clusters[/bold green]"
+            )
+            _refresh_and_report_stats()
+        elif not auto_select:
+            console.print(
+                "\n[dim]Use --auto-select to apply the recommended resolution[/dim]"
+            )
+
+        if sweep_output:
+            console.print(f"\n[dim]Sweep results saved to {sweep_output}[/dim]")
+        return
+
+    # Standard clustering path
     if dry_run or sample_size:
         console.print("\n[bold yellow]Step 2/2: Clustering topics (DRY RUN)[/bold yellow]")
     else:
@@ -2023,7 +2127,7 @@ def load_domains(json_file: str):
     "-n",
     default=25,
     type=int,
-    help="Number of super-clusters to generate",
+    help="Number of super-clusters to generate (K-means only)",
 )
 @click.option(
     "--output",
@@ -2036,28 +2140,117 @@ def load_domains(json_file: str):
     is_flag=True,
     help="Show super-clusters without saving",
 )
-def regenerate_domains(n_domains: int, output: str, dry_run: bool):
+@click.option(
+    "--method",
+    type=click.Choice(["kmeans", "leiden"]),
+    default="kmeans",
+    help="Clustering method for domain generation (default: kmeans)",
+)
+@click.option(
+    "--sweep",
+    is_flag=True,
+    help="Run multi-resolution sweep (Leiden method only)",
+)
+@click.option(
+    "--resolution",
+    type=float,
+    default=None,
+    help="CPM resolution for Leiden method (default: 0.01)",
+)
+@click.option(
+    "--cluster-knn-k",
+    type=int,
+    default=None,
+    help="k-NN neighbors for cluster graph (default: 8)",
+)
+@click.option(
+    "--auto-select",
+    is_flag=True,
+    help="Automatically apply sweep-recommended resolution (Leiden only)",
+)
+def regenerate_domains(
+    n_domains: int,
+    output: str,
+    dry_run: bool,
+    method: str,
+    sweep: bool,
+    resolution: float | None,
+    cluster_knn_k: int | None,
+    auto_select: bool,
+):
     """
     Regenerate domains (super-clusters) from current Leiden clusters.
 
-    This uses K-means on cluster centroids to group similar clusters.
-    After reviewing the auto-generated labels, update REFINED_LABELS
-    in experiments/domain_labels_final.py and run load-domains.
+    Two methods available:
+      kmeans (default): K-means on cluster centroids (original approach)
+      leiden: Leiden CPM on a cluster-level k-NN graph
 
-    Example workflow:
-      1. uv run libtrails regenerate-domains  # generates super_clusters_new.json
+    Example workflow (K-means):
+      1. uv run libtrails regenerate-domains
       2. Review output and update REFINED_LABELS mapping
       3. uv run python experiments/domain_labels_final.py
       4. uv run libtrails load-domains
+
+    Example workflow (Leiden):
+      uv run libtrails regenerate-domains --method leiden --sweep
+      uv run libtrails regenerate-domains --method leiden --sweep --auto-select
+      uv run libtrails regenerate-domains --method leiden --resolution 0.01
     """
     from pathlib import Path
 
-    from .domains import generate_super_clusters
+    if method == "leiden":
+        from .config import DOMAIN_CLUSTER_KNN_K, DOMAIN_CLUSTER_MIN_SIMILARITY
+        from .domains import generate_super_clusters_leiden
 
-    console.print(f"[bold]Generating {n_domains} super-clusters...[/bold]")
+        k = cluster_knn_k if cluster_knn_k is not None else DOMAIN_CLUSTER_KNN_K
+        min_sim = DOMAIN_CLUSTER_MIN_SIMILARITY
 
-    super_clusters = generate_super_clusters(n_domains=n_domains)
+        console.print(
+            f"[bold]Generating domains via Leiden (k={k}, min_sim={min_sim})...[/bold]"
+        )
 
+        result = generate_super_clusters_leiden(
+            resolution=resolution,
+            sweep=sweep,
+            k=k,
+            min_similarity=min_sim,
+            auto_select=auto_select,
+        )
+
+        if "error" in result:
+            console.print(f"[red]Error: {result['error']}[/red]")
+            return
+
+        # Display sweep table if available
+        if "sweep_summary" in result:
+            from .sweep import format_sweep_table
+
+            console.print()
+            console.print(format_sweep_table(result["sweep_summary"]))
+
+            summary = result["sweep_summary"]
+            if summary.plateaus:
+                console.print(f"\n[green]Found {len(summary.plateaus)} stable plateau(s)[/green]")
+            if summary.recommended_resolution is not None:
+                console.print(
+                    f"[bold]Recommended resolution: {summary.recommended_resolution:.6f}[/bold]"
+                )
+
+        super_clusters = result.get("super_clusters", [])
+        if not super_clusters:
+            if not auto_select and sweep:
+                console.print(
+                    "\n[dim]Use --auto-select to apply the recommended resolution[/dim]"
+                )
+            return
+
+    else:
+        from .domains import generate_super_clusters
+
+        console.print(f"[bold]Generating {n_domains} super-clusters (K-means)...[/bold]")
+        super_clusters = generate_super_clusters(n_domains=n_domains)
+
+    # Display results (shared by both methods)
     console.print(f"\n[bold]=== {len(super_clusters)} Super-Clusters ===[/bold]\n")
 
     table = Table(title="Super-Clusters (Auto-labeled)")
@@ -2081,7 +2274,6 @@ def regenerate_domains(n_domains: int, output: str, dry_run: bool):
         console.print("\n[bold yellow]DRY RUN - not saving to file[/bold yellow]")
     else:
         output_path = Path(output)
-        # Convert to format expected by domain_labels_final.py
         import json
 
         with open(output_path, "w") as f:

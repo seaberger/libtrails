@@ -428,3 +428,241 @@ def split_catchall_superclusters(
     new_super_clusters.sort(key=lambda x: len(x["leiden_clusters"]), reverse=True)
 
     return new_super_clusters
+
+
+def build_cluster_graph(
+    k: int = 8,
+    min_similarity: float = 0.3,
+    db_path: Path | None = None,
+) -> "ig.Graph":
+    """Build a k-NN cosine similarity graph between Leiden cluster centroids.
+
+    Each node is a Leiden cluster. Edges connect clusters whose centroids
+    are among each other's k nearest neighbors with similarity >= min_similarity.
+
+    Args:
+        k: Number of nearest neighbors per cluster.
+        min_similarity: Minimum cosine similarity to include an edge.
+        db_path: Path to database (defaults to IPAD_DB_PATH).
+
+    Returns:
+        igraph Graph with cluster_id vertex attribute and similarity edge weights.
+    """
+    import igraph as ig
+    from sklearn.neighbors import NearestNeighbors
+
+    db_path = db_path or IPAD_DB_PATH
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    # Get all Leiden clusters with 3+ topics
+    cursor.execute("""
+        SELECT DISTINCT cluster_id, COUNT(*) as size
+        FROM topics
+        WHERE cluster_id IS NOT NULL AND cluster_id >= 0
+        GROUP BY cluster_id
+        HAVING size >= 3
+        ORDER BY size DESC
+    """)
+    clusters = cursor.fetchall()
+
+    # Compute robust centroids
+    cluster_ids = []
+    centroids = []
+    for row in clusters:
+        cluster_id = row["cluster_id"]
+        topics = get_cluster_topics(cursor, cluster_id)
+        centroid = compute_robust_centroid(topics)
+        if centroid is not None:
+            cluster_ids.append(cluster_id)
+            centroids.append(centroid)
+
+    conn.close()
+
+    if len(centroids) < 2:
+        g = ig.Graph(n=len(centroids))
+        if cluster_ids:
+            g.vs["cluster_id"] = cluster_ids
+        return g
+
+    X = np.array(centroids)
+    # Normalize for cosine similarity via dot product
+    norms = np.linalg.norm(X, axis=1, keepdims=True)
+    norms[norms == 0] = 1.0
+    X_norm = X / norms
+
+    # k-NN in cosine space
+    effective_k = min(k + 1, len(centroids))  # +1 because self is included
+    nn = NearestNeighbors(n_neighbors=effective_k, metric="cosine")
+    nn.fit(X_norm)
+    distances, indices = nn.kneighbors(X_norm)
+
+    # Build graph
+    g = ig.Graph(n=len(cluster_ids))
+    g.vs["cluster_id"] = cluster_ids
+
+    edges = set()
+    edge_weights = {}
+    for i in range(len(cluster_ids)):
+        for j_pos in range(1, effective_k):  # skip self at position 0
+            j = indices[i][j_pos]
+            similarity = 1.0 - distances[i][j_pos]
+            if similarity >= min_similarity:
+                edge = (min(i, j), max(i, j))
+                if edge not in edges:
+                    edges.add(edge)
+                    edge_weights[edge] = similarity
+
+    if edges:
+        edge_list = list(edges)
+        g.add_edges(edge_list)
+        g.es["weight"] = [edge_weights[e] for e in edge_list]
+
+    return g
+
+
+def generate_super_clusters_leiden(
+    resolution: float | None = None,
+    sweep: bool = False,
+    k: int = 8,
+    min_similarity: float = 0.3,
+    auto_select: bool = False,
+    db_path: Path | None = None,
+) -> dict:
+    """Generate super-clusters using Leiden CPM on a cluster-level graph.
+
+    Alternative to K-means that uses graph community detection, with
+    optional multi-resolution sweep to find optimal resolution.
+
+    Args:
+        resolution: CPM resolution (required if sweep=False).
+        sweep: If True, run multi-resolution sweep.
+        k: Number of nearest neighbors for cluster graph.
+        min_similarity: Minimum cosine similarity for cluster graph edges.
+        auto_select: If True during sweep, apply recommended resolution.
+        db_path: Path to database.
+
+    Returns:
+        Dict with super_clusters list and optional sweep_summary.
+    """
+    import leidenalg
+
+    from .config import DOMAIN_SWEEP_RESOLUTION_RANGE, SWEEP_SEED
+
+    db_path = db_path or IPAD_DB_PATH
+
+    # Build cluster-level graph
+    print(f"Building cluster graph (k={k}, min_similarity={min_similarity})...")
+    g = build_cluster_graph(k=k, min_similarity=min_similarity, db_path=db_path)
+    print(f"Cluster graph: {g.vcount()} nodes, {g.ecount()} edges")
+
+    if g.vcount() == 0:
+        return {"error": "No clusters found", "super_clusters": []}
+
+    result = {}
+
+    if sweep:
+        from .sweep import format_sweep_table, run_sweep, log_spaced_resolutions
+
+        resolutions = log_spaced_resolutions(
+            low=DOMAIN_SWEEP_RESOLUTION_RANGE[0],
+            high=DOMAIN_SWEEP_RESOLUTION_RANGE[1],
+        )
+        summary = run_sweep(g, resolutions=resolutions, seed=SWEEP_SEED)
+        result["sweep_summary"] = summary
+
+        if auto_select and summary.recommended_resolution is not None:
+            resolution = summary.recommended_resolution
+            print(f"Auto-selected resolution: {resolution:.6f}")
+        elif summary.recommended_resolution is not None:
+            print(f"Recommended resolution: {summary.recommended_resolution:.6f}")
+            print("Use --auto-select to apply, or --resolution to set manually.")
+            result["super_clusters"] = []
+            return result
+        else:
+            print("No stable resolution found in sweep.")
+            result["super_clusters"] = []
+            return result
+
+    if resolution is None:
+        resolution = 0.01  # sensible default for cluster-level graph
+
+    # Run Leiden on cluster graph
+    weights = g.es["weight"] if g.ecount() > 0 and "weight" in g.es.attributes() else None
+    partition = leidenalg.find_partition(
+        g,
+        leidenalg.CPMVertexPartition,
+        weights=weights,
+        resolution_parameter=resolution,
+        seed=SWEEP_SEED,
+    )
+
+    membership = partition.membership
+    n_super = len(set(membership))
+    print(f"Leiden produced {n_super} super-clusters at resolution {resolution:.6f}")
+
+    # Build super-cluster structures (same format as K-means output)
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    cursor = conn.cursor()
+
+    super_clusters = {}
+    for node_idx, super_id in enumerate(membership):
+        super_id = int(super_id)
+        cluster_id = g.vs[node_idx]["cluster_id"]
+
+        if super_id not in super_clusters:
+            super_clusters[super_id] = {
+                "super_cluster_id": super_id,
+                "leiden_clusters": [],
+                "top_topics": [],
+            }
+
+        # Get top topics for this Leiden cluster
+        cursor.execute(
+            """
+            SELECT label, occurrence_count
+            FROM topics
+            WHERE cluster_id = ?
+            ORDER BY occurrence_count DESC
+            LIMIT 3
+        """,
+            (cluster_id,),
+        )
+        top = [{"label": r["label"], "count": r["occurrence_count"]} for r in cursor.fetchall()]
+
+        super_clusters[super_id]["leiden_clusters"].append(
+            {"cluster_id": cluster_id, "top_topics": top}
+        )
+
+    # Generate auto-labels
+    for super_id, data in super_clusters.items():
+        all_topics = {}
+        for lc in data["leiden_clusters"]:
+            for t in lc["top_topics"]:
+                label = t["label"]
+                if label not in all_topics:
+                    all_topics[label] = 0
+                all_topics[label] += t["count"]
+
+        filtered = [(k, v) for k, v in all_topics.items() if len(k) >= DEFAULT_MIN_LABEL_LENGTH]
+        sorted_topics = sorted(filtered, key=lambda x: x[1], reverse=True)[:10]
+        data["top_topics"] = [{"label": t[0], "total_count": t[1]} for t in sorted_topics]
+
+        if sorted_topics:
+            data["auto_label"] = " / ".join([t[0] for t in sorted_topics[:3]])
+        else:
+            data["auto_label"] = f"Domain {super_id}"
+
+    conn.close()
+
+    result["super_clusters"] = sorted(
+        super_clusters.values(),
+        key=lambda x: len(x["leiden_clusters"]),
+        reverse=True,
+    )
+    result["resolution"] = resolution
+    result["n_super_clusters"] = n_super
+
+    return result

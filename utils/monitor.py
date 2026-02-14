@@ -265,6 +265,8 @@ def dashboard(stats: dict) -> str:
                 bar = render_bar(overall_pct)
                 lines.append(f"          {bar} {total_done}/{r['total']} chunks ({overall_pct}%)")
                 lines.append(f"          ({r['done']} previously done, {p['done']}/{p['total']} remaining)")
+            elif p["pct"] >= 100:
+                lines.append(f"          Done! {p['total']} chunks")
             else:
                 bar = render_bar(p["pct"])
                 lines.append(f"          {bar} {p['done']}/{p['total']} chunks ({p['pct']}%)")
@@ -338,20 +340,23 @@ def query_db_stats(db_path: str) -> dict:
     # Books with chunks (started)
     books_started = conn.execute("SELECT COUNT(DISTINCT book_id) FROM chunks").fetchone()[0]
 
-    # Current in-progress book (has chunks but not all have topics)
-    # Order by most recent chunk_topic rowid to find the actively-worked book
+    # Most recently active book — find the book with the newest chunk_topic entry.
+    # Don't filter on done < total: with fast APIs (Gemini), books complete between
+    # refreshes and we'd fall back to showing a stale incomplete book.
     cur = conn.execute("""
         SELECT b.title, b.author, COUNT(DISTINCT c.id) as total, COUNT(DISTINCT ct.chunk_id) as done
         FROM chunks c
         JOIN books b ON c.book_id = b.id
         LEFT JOIN chunk_topics ct ON c.id = ct.chunk_id
+        WHERE c.book_id = (
+            SELECT c2.book_id FROM chunk_topics ct2
+            JOIN chunks c2 ON ct2.chunk_id = c2.id
+            ORDER BY ct2.rowid DESC LIMIT 1
+        )
         GROUP BY c.book_id
-        HAVING done < total AND done > 0
-        ORDER BY MAX(ct.rowid) DESC
-        LIMIT 1
     """).fetchone()
 
-    # Recent completed books (last 5)
+    # Recent completed books (last 5, ordered by most recently finished)
     completed = conn.execute("""
         SELECT b.title, COUNT(DISTINCT c.id) as chunks
         FROM chunks c
@@ -359,7 +364,7 @@ def query_db_stats(db_path: str) -> dict:
         LEFT JOIN chunk_topics ct ON c.id = ct.chunk_id
         GROUP BY c.book_id
         HAVING COUNT(DISTINCT ct.chunk_id) = COUNT(DISTINCT c.id) AND COUNT(DISTINCT c.id) > 0
-        ORDER BY c.book_id DESC
+        ORDER BY MAX(ct.rowid) DESC
         LIMIT 5
     """).fetchall()
 
