@@ -1,0 +1,211 @@
+---
+import BaseLayout from '../../layouts/BaseLayout.astro';
+import { url } from '../../lib/url';
+---
+
+<BaseLayout title="About" description="About LibTrails — trail-finding across your book library">
+  <header class="mb-8">
+    <h1 class="text-2xl font-medium text-[var(--color-text)] mb-2">
+      About LibTrails
+    </h1>
+    <p class="text-[var(--color-text-muted)]">
+      Trail-finding across your book library using semantic search and topic clustering.
+    </p>
+  </header>
+
+  <div class="max-w-3xl space-y-10">
+
+    <!-- What is this -->
+    <section>
+      <h2 class="text-lg font-medium text-[var(--color-text)] mb-3">What is this?</h2>
+      <p class="text-[var(--color-text-muted)] mb-4">
+        LibTrails helps you discover conceptual connections across your book collection. It extracts topics
+        from your EPUBs using LLMs (local or cloud), generates semantic embeddings, and builds a hierarchical
+        topic graph — all stored locally in SQLite.
+      </p>
+      <ul class="space-y-2 text-[var(--color-text-muted)]">
+        <li class="flex items-start gap-2">
+          <span class="text-[var(--color-accent)] mt-1.5 flex-shrink-0">&#8226;</span>
+          Find books that discuss similar themes
+        </li>
+        <li class="flex items-start gap-2">
+          <span class="text-[var(--color-accent)] mt-1.5 flex-shrink-0">&#8226;</span>
+          Discover unexpected connections between books
+        </li>
+        <li class="flex items-start gap-2">
+          <span class="text-[var(--color-accent)] mt-1.5 flex-shrink-0">&#8226;</span>
+          Build "trails" of related excerpts across your library
+        </li>
+        <li class="flex items-start gap-2">
+          <span class="text-[var(--color-accent)] mt-1.5 flex-shrink-0">&#8226;</span>
+          Explore your reading interests through topic clusters
+        </li>
+      </ul>
+    </section>
+
+    <!-- Pipeline -->
+    <section>
+      <h2 class="text-lg font-medium text-[var(--color-text)] mb-3">The Pipeline</h2>
+
+      <!-- Stage 1: Topic Extraction -->
+      <h3 class="text-sm font-medium text-[var(--color-text)] uppercase tracking-wide text-[var(--color-text-muted)] mt-6 mb-3">Stage 1: Topic Extraction</h3>
+      <div class="space-y-4 text-[var(--color-text-muted)]">
+        <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5">
+          <h4 class="text-sm font-medium text-[var(--color-text)] mb-2">Parse & Chunk</h4>
+          <p class="text-sm">
+            EPUBs are parsed with selectolax (HTML block tags converted to paragraph breaks) and recursively
+            split into ~500-word chunks — first at paragraph boundaries, then sentences, then words as a last resort.
+          </p>
+        </div>
+        <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5">
+          <h4 class="text-sm font-medium text-[var(--color-text)] mb-2">Two-Pass LLM Extraction</h4>
+          <p class="text-sm">
+            <strong>Pass 1</strong>: A larger model (gemma3:27b) reads the first few chunks plus Calibre metadata
+            (tags, description, series) to extract 5–10 book-level themes in a single call.
+          </p>
+          <p class="text-sm mt-2">
+            <strong>Pass 2</strong>: A smaller model (gemma3:4b or 12b) extracts chunk-level topics, contextualized
+            with the book themes from Pass 1. This produces domain-specific noun phrases instead of generic single words.
+          </p>
+        </div>
+      </div>
+
+      <!-- Stage 2: Graph & Clustering -->
+      <h3 class="text-sm font-medium text-[var(--color-text)] uppercase tracking-wide text-[var(--color-text-muted)] mt-8 mb-3">Stage 2: Post-Processing Pipeline</h3>
+      <div class="space-y-4 text-[var(--color-text-muted)]">
+        <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5">
+          <h4 class="text-sm font-medium text-[var(--color-text)] mb-2">Embed & Deduplicate</h4>
+          <p class="text-sm">
+            All topics get 384-dimensional embeddings via BGE-small-en-v1.5. A two-tier deduplication then
+            merges near-duplicates: cosine similarity &gt;0.95 merges unconditionally, while 0.85–0.95 only
+            merges if both topics share at least one book — preventing cross-domain conflation
+            (e.g., "energy manipulation" in fantasy vs. psychology).
+          </p>
+        </div>
+        <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5">
+          <h4 class="text-sm font-medium text-[var(--color-text)] mb-2">Co-occurrence & KNN Graph</h4>
+          <p class="text-sm">
+            Topic pairs that appear in the same chunk get Pointwise Mutual Information (PMI) scores.
+            A KNN graph is built from two edge types: co-occurrence edges weighted by PMI with a book-count
+            boost (PMI &times; (1 + log(1 + book_count))), and embedding-similarity edges from each topic's
+            10 nearest neighbors (cosine &ge; 0.65). Only genuinely surprising co-occurrences make the cut (PMI &ge; 1.0).
+          </p>
+        </div>
+        <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5">
+          <h4 class="text-sm font-medium text-[var(--color-text)] mb-2">Hub Removal & Leiden Clustering</h4>
+          <p class="text-sm">
+            High-degree "hub" topics (95th percentile) are removed before clustering — these generic terms
+            would create artificially large, incoherent communities. The Leiden algorithm then runs with the
+            CPM (Constant Potts Model) partition type at resolution 0.001, producing ~1,200 coherent topic clusters
+            with more even sizes than modularity-based approaches.
+          </p>
+        </div>
+        <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5">
+          <h4 class="text-sm font-medium text-[var(--color-text)] mb-2">Super-Clusters & Domain Labels</h4>
+          <p class="text-sm">
+            K-means groups the ~1,200 Leiden clusters into ~29 high-level domains based on their centroid
+            embeddings (weighted average of each cluster's top-15 topics). An LLM auto-generates domain labels
+            from constituent topics, which are then human-refined into names like "Adventure & Human Folly,"
+            "Literary Classics & Philosophy," or "Nature & Rural Life."
+          </p>
+        </div>
+      </div>
+
+      <!-- Stage 3: Visualization -->
+      <h3 class="text-sm font-medium text-[var(--color-text)] uppercase tracking-wide text-[var(--color-text-muted)] mt-8 mb-3">Stage 3: Visualization</h3>
+      <div class="space-y-4 text-[var(--color-text-muted)]">
+        <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5">
+          <h4 class="text-sm font-medium text-[var(--color-text)] mb-2">3D Projection & Semantic Colors</h4>
+          <p class="text-sm">
+            Cluster centroids are projected into 3D with UMAP (cosine metric, n_neighbors=15). Domain embeddings
+            are mapped onto a single PCA axis, then each domain's position becomes a hue value — so semantically
+            similar domains share similar colors in the
+            <a href={url("/")} class="text-[var(--color-accent)] hover:underline">galaxy view</a>.
+            The result is rendered with React Three Fiber using instanced meshes for performance.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Features -->
+    <section>
+      <h2 class="text-lg font-medium text-[var(--color-text)] mb-3">Features</h2>
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        {[
+          ["Two-Pass Extraction", "Book themes contextualize chunk topics for domain-specific results"],
+          ["Multi-Provider LLM", "Ollama, Gemini API, or LM Studio — swap with a CLI flag"],
+          ["3D Galaxy", "Interactive Three.js universe with semantic domain colors"],
+          ["Semantic Search", "Find topics by meaning, not keywords (sqlite-vec cosine)"],
+          ["Smart Deduplication", "Two-tier merging prevents cross-domain conflation"],
+          ["Leiden Clustering", "Community detection with hub removal for clean topic groups"],
+        ].map(([title, desc]) => (
+          <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg px-4 py-3">
+            <div class="text-sm font-medium text-[var(--color-text)]">{title}</div>
+            <div class="text-xs text-[var(--color-text-muted)] mt-1">{desc}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+
+    <!-- Tech stack -->
+    <section>
+      <h2 class="text-lg font-medium text-[var(--color-text)] mb-3">Tech Stack</h2>
+      <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg overflow-hidden">
+        <table class="w-full text-sm">
+          <tbody>
+            {[
+              ["Topic extraction", "gemma3 via Ollama / Gemini / LM Studio"],
+              ["Embeddings", "BGE-small-en-v1.5 (384 dims)"],
+              ["Vector search", "sqlite-vec (cosine distance)"],
+              ["Clustering", "Leiden (python-igraph + leidenalg)"],
+              ["3D projection", "UMAP + PCA semantic colors"],
+              ["Backend", "FastAPI + SQLite"],
+              ["Frontend", "Astro + React Three Fiber"],
+            ].map(([component, tech], i) => (
+              <tr class={i > 0 ? "border-t border-[var(--color-border)]" : ""}>
+                <td class="px-4 py-2.5 font-medium text-[var(--color-text)] whitespace-nowrap">{component}</td>
+                <td class="px-4 py-2.5 text-[var(--color-text-muted)]">{tech}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Inspiration & links -->
+    <section>
+      <h2 class="text-lg font-medium text-[var(--color-text)] mb-3">Inspiration</h2>
+      <p class="text-[var(--color-text-muted)] mb-4">
+        Inspired by <a href="https://pieterma.es/syntopic-reading-claude/" class="text-[var(--color-accent)] hover:underline" target="_blank" rel="noopener">Pieter Maes' "Reading Across Books"</a> project
+        and the <a href="https://trails.pieterma.es" class="text-[var(--color-accent)] hover:underline" target="_blank" rel="noopener">Trails visualization</a>.
+      </p>
+    </section>
+
+    <!-- Links -->
+    <section class="pb-4">
+      <h2 class="text-lg font-medium text-[var(--color-text)] mb-3">Links</h2>
+      <div class="flex flex-wrap gap-3">
+        <a
+          href="https://github.com/seaberger/libtrails"
+          class="inline-flex items-center gap-2 px-4 py-2 text-sm border border-[var(--color-border)] rounded-lg text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-colors"
+          target="_blank"
+          rel="noopener"
+        >
+          <svg class="w-4 h-4" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/>
+          </svg>
+          GitHub Repository
+        </a>
+        <a
+          href="https://github.com/seaberger/libtrails#readme"
+          class="inline-flex items-center gap-2 px-4 py-2 text-sm border border-[var(--color-border)] rounded-lg text-[var(--color-text)] hover:bg-[var(--color-surface)] transition-colors"
+          target="_blank"
+          rel="noopener"
+        >
+          Documentation
+        </a>
+      </div>
+    </section>
+
+  </div>
+</BaseLayout>
