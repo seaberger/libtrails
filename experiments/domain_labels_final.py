@@ -1,65 +1,72 @@
 """
 Apply human-refined labels to super-clusters and prepare for database integration.
+
+Usage:
+    LIBTRAILS_DB=demo uv run python experiments/domain_labels_final.py
+    LIBTRAILS_DB=demo uv run libtrails load-domains
 """
 
 import json
 from pathlib import Path
 
-SUPER_CLUSTERS_PATH = Path(__file__).parent / "super_clusters_robust.json"
+SUPER_CLUSTERS_PATH = Path(__file__).parent / "super_clusters_new.json"
 OUTPUT_PATH = Path(__file__).parent / "domain_labels_final.json"
 
-# Human-refined labels based on split super-clusters (Feb 2026)
+# Human-refined labels for demo library (100 Gutenberg classics)
+# Generated from Leiden domain clustering at resolution 0.006 (26 domains)
 # Maps super_cluster_id -> final label
-# 34 super-clusters → ~25 domains via strategic merges
 REFINED_LABELS = {
-    # === Core domains (no merge) ===
-    0: "History & Archaeology",       # history, religious beliefs, archaeology
-    1: "Logic & Mathematics",         # logic, risk assessment, mathematics
-    2: "Politics & Power",            # politics, power, government
-    3: "Inner Landscapes",            # memory, observation, personal reflection
-    4: "Religion & Philosophy",       # religion, philosophy, human nature
-    5: "AI & Machine Learning",       # artificial intelligence, ML, neural networks
-    6: "Nature & Agriculture",        # animals, economics, agriculture
-    7: "Leadership & Strategy",       # communication, leadership, decision making
-    8: "Financial Strategy",          # investment strategies, risk management, wealth
-    9: "Space & Science",             # space exploration, space travel, science
-    10: "Architecture & Design",      # architecture, urban life, domesticity
-    11: "Crime & Suspense",           # crime, suspense, violence
-    12: "Family & Relationships",     # relationships, family, family dynamics
-    15: "Identity & Dreams",          # identity, dreams, deception
-    16: "Conflict & Emotion",         # conflict, fear, betrayal
-    17: "Nature & Travel",            # travel, nature, weather
-    18: "Historical Drama",           # shakespeare, royal court, american history
-    19: "Technology & Data",          # technology, text, data structures
-    21: "Arts & Society",             # music, marriage, social status
-    22: "World Cultures",             # india, japanese cuisine, japanese culture
-    23: "Survival & Mortality",       # death, rescue, survival
-    25: "Literature & Poetry",        # literature, poetry, symbols
-    26: "Espionage & Security",       # espionage, surveillance, security
-    27: "Education & Class",          # social interactions, education, social class
-    35: "Time & Communication",       # time, human interaction, typography
-    36: "Engineering & Robotics",     # robotics, engineering, construction (+ holograms)
+    # === Literary Worlds ===
+    0: "Chivalric & Heroic Romance",    # Don Quixote, musketeers, heroic code, Sancho Panza
+    1: "Adventure & Human Folly",       # Candide, Voltaire, rapid-paced adventure, human weakness
+    2: "Voyages & Exploration",         # Captain Nemo, submarine, Pacific Ocean, seafaring
+    4: "Psychological Portraits",       # Lady Glyde, Dorian Gray, Nastasia, Hester Prynne, Scarlet Letter
+    19: "Character Types",              # young man, wise man, coachman, provincial ladies
 
-    # === Merged domains ===
-    # Culinary Arts (merge 13 + 34)
-    13: "Culinary Arts",              # cooking techniques, baking, food
-    34: "Culinary Arts",              # fire, grilling → merge with cooking
+    # === Ideas & Belief ===
+    5: "Religion & Spirituality",       # divine intervention, worship, sacrifice, convent life
+    16: "Ethics & Morality",            # moral compromise, ethical conduct, slave morality, virtue
+    18: "Death & Mortality",            # dying man, immortality, impending death, grief
 
-    # Warfare & Military (merge 14 + 28)
-    14: "Warfare & Military",         # american revolution, military strategy, WWII
-    28: "Warfare & Military",         # combat, military, warfare
+    # === Society & Power ===
+    3: "Economics & Industry",          # financial manipulation, industrial army, mercantile system, tax
+    7: "Race & Social Justice",         # social inequality, Tuskegee, racial dynamics, suppressed desires
+    10: "Revolution & Political Theory", # French Revolution, Napoleon, federal republic, Articles of Confederation
+    11: "War & Military",              # civil war, military discipline, dueling, standing armies
+    12: "Law & Governance",            # implied warranties, property, courts of justice, intellectual property
 
-    # Fantasy & Speculative Fiction (merge 20 + 30 + 31 + 32)
-    20: "Fantasy & Speculative",      # characters, political intrigue, magic
-    30: "Fantasy & Speculative",      # glyphs, allomancy, nietzsche (Mistborn + philosophy)
-    31: "Fantasy & Speculative",      # warriors, hell, home (dark fantasy)
-    32: "Fantasy & Speculative",      # aes sedai, oasis, data collection (Wheel of Time)
+    # === Daily Life & Setting ===
+    6: "Material Culture & Leisure",    # capital, beauty, chess, diamond, silver, Paris salons
+    8: "Domestic & Social Life",        # district council, customs, hospitality, public execution, wine
+    9: "Crime & Intrigue",             # moral decay, asylum, body identification, investigation, secrets
+    14: "Family & Medicine",           # maternal abandonment, family honor, doctor-patient, infant care
+    20: "Travel & Transport",          # hussar regiment, hotel, railway, carriage, homeward journey
+    21: "Night & Atmosphere",          # moonlight, churchyard, darkness, lightning, midnight
+
+    # === Expression & Knowledge ===
+    13: "Letters & Communication",      # literary criticism, telegraph, love letters, speech, poetry
+    15: "Love & Desire",               # erotic desire, personal fulfillment, romance, divorce, passion
+    22: "Education & Intellect",        # education of children, university, classical literature, discipline
+    25: "Theater & Performance",        # Grace Poole, Klondike, opera, theatrical innovation, nihilism
+
+    # === Nature & Survival ===
+    17: "Nature & Animals",            # hunting techniques, bird species, guanaco, horseback riding
+    23: "Slavery & Desolation",        # freedmen's bureau, free labor, blight of slavery, ruins
+    24: "Ships & the Sea",            # shipwreck, ship's crew, naval, maritime trade, Captain Smollett
 }
+
 
 def main():
     # Load super-clusters
     with open(SUPER_CLUSTERS_PATH) as f:
         super_clusters = json.load(f)
+
+    # Verify all IDs are mapped
+    unmapped = [sc["super_cluster_id"] for sc in super_clusters if sc["super_cluster_id"] not in REFINED_LABELS]
+    if unmapped:
+        print(f"WARNING: Unmapped super-cluster IDs: {unmapped}")
+        print("Add these to REFINED_LABELS before proceeding.")
+        return
 
     # Build final domains, merging where labels match
     domains = {}
@@ -110,18 +117,18 @@ def main():
     print("=" * 70)
     print("FINAL DOMAIN LABELS (Human-Refined)")
     print("=" * 70)
-    print(f"| {'ID':>2} | {'Clusters':>8} | {'Label':<30} |")
-    print(f"|{'-'*4}|{'-'*10}|{'-'*32}|")
+    print(f"| {'ID':>2} | {'Clusters':>8} | {'Label':<35} |")
+    print(f"|{'-'*4}|{'-'*10}|{'-'*37}|")
 
     total_clusters = 0
     for d in result:
-        print(f"| {d['domain_id']:2d} | {d['cluster_count']:8d} | {d['label']:<30} |")
+        print(f"| {d['domain_id']:2d} | {d['cluster_count']:8d} | {d['label']:<35} |")
         total_clusters += d['cluster_count']
 
-    print(f"|{'-'*4}|{'-'*10}|{'-'*32}|")
-    print(f"| {'':2} | {total_clusters:8d} | {'TOTAL':<30} |")
+    print(f"|{'-'*4}|{'-'*10}|{'-'*37}|")
+    print(f"| {'':2} | {total_clusters:8d} | {'TOTAL':<35} |")
     print()
-    print(f"Domains: {len(result)} (was 25, merged military)")
+    print(f"Domains: {len(result)}")
     print(f"Saved to: {OUTPUT_PATH}")
 
 
