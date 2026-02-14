@@ -9,6 +9,7 @@ from libtrails.sweep import (
     Plateau,
     SweepResult,
     SweepSummary,
+    compute_significance,
     compute_stability,
     find_stable_plateaus,
     leiden_sweep,
@@ -122,7 +123,33 @@ class TestFindStablePlateaus:
 
 
 class TestRecommendResolution:
-    def test_with_plateau(self):
+    def test_significance_takes_priority(self):
+        """When significance scores are provided, peak significance wins."""
+        results = [
+            SweepResult(0.01, 100, 10.0, [0] * 100, 0.01),
+            SweepResult(0.02, 90, 9.0, [0] * 100, 0.01),
+            SweepResult(0.03, 80, 8.0, [0] * 100, 0.01),
+            SweepResult(0.04, 50, 5.0, [0] * 100, 0.01),
+        ]
+        nmi_scores = [0.95, 0.93, 0.5]
+        plateaus = [
+            Plateau(
+                start_resolution=0.01,
+                end_resolution=0.03,
+                start_index=0,
+                end_index=2,
+                mean_nmi=0.94,
+                length=2,
+            )
+        ]
+        # Significance peaks at index 2 (res=0.03), overriding plateau midpoint
+        significance_scores = [100.0, 200.0, 500.0, 300.0]
+        res, idx = recommend_resolution(results, nmi_scores, plateaus, significance_scores)
+        assert res == 0.03
+        assert idx == 2
+
+    def test_plateau_fallback_without_significance(self):
+        """Without significance, falls back to plateau midpoint."""
         results = [
             SweepResult(0.01, 100, 10.0, [0] * 100, 0.01),
             SweepResult(0.02, 90, 9.0, [0] * 100, 0.01),
@@ -232,6 +259,51 @@ class TestLeidenSweep:
         assert results[0].num_clusters >= 1
 
 
+class TestComputeSignificance:
+    def test_basic_scoring(self):
+        """Significance scores should be computed for each partition."""
+        g = _make_test_graph(30, 3)
+        resolutions = [0.01, 0.1, 0.5]
+        results = leiden_sweep(g, resolutions=resolutions, seed=42)
+        scores = compute_significance(g, results)
+
+        assert len(scores) == 3
+        for s in scores:
+            assert s >= 0  # Significance is non-negative
+
+    def test_planted_community_peak(self):
+        """Good partitions should have higher significance than bad ones."""
+        g = _make_test_graph(60, 3)
+        # Low resolution: everything in one cluster (bad)
+        # Mid resolution: should find the planted communities (good)
+        # Very high resolution: near-singleton clusters (bad)
+        resolutions = [0.0001, 0.1, 10.0]
+        results = leiden_sweep(g, resolutions=resolutions, seed=42)
+        scores = compute_significance(g, results)
+
+        # Mid-resolution partition should have highest significance
+        assert scores[1] > scores[0]
+        assert scores[1] > scores[2]
+
+    def test_works_with_weighted_graph(self):
+        """Should handle weighted graphs by stripping weights internally."""
+        g = _make_test_graph(30, 3)
+        assert "weight" in g.es.attributes()  # Confirm graph is weighted
+        results = leiden_sweep(g, resolutions=[0.1], seed=42)
+        scores = compute_significance(g, results)
+        assert len(scores) == 1
+        assert scores[0] >= 0
+
+    def test_unweighted_graph(self):
+        """Should also work on graphs without weights."""
+        g = _make_test_graph(30, 3)
+        del g.es["weight"]  # Remove weights
+        results = leiden_sweep(g, resolutions=[0.1], seed=42)
+        scores = compute_significance(g, results)
+        assert len(scores) == 1
+        assert scores[0] >= 0
+
+
 class TestRunSweep:
     def test_end_to_end(self):
         g = _make_test_graph(30, 3)
@@ -244,8 +316,40 @@ class TestRunSweep:
         assert isinstance(summary, SweepSummary)
         assert len(summary.results) == 5
         assert len(summary.nmi_scores) == 4
+        assert len(summary.significance_scores) == 5
         assert summary.recommended_resolution is not None
         assert summary.recommended_index is not None
+
+    def test_significance_in_summary(self):
+        """Sweep summary should include significance scores."""
+        g = _make_test_graph(30, 3)
+        summary = run_sweep(
+            g,
+            resolutions=[0.01, 0.1, 0.5],
+            seed=42,
+        )
+
+        assert len(summary.significance_scores) == 3
+        for s in summary.significance_scores:
+            assert isinstance(s, float)
+            assert s >= 0
+
+    def test_recommendation_uses_significance(self):
+        """Recommended resolution should be at peak significance."""
+        g = _make_test_graph(60, 3)
+        summary = run_sweep(
+            g,
+            resolutions=log_spaced_resolutions(0.001, 1.0, 15),
+            seed=42,
+            plateau_threshold=0.85,
+            min_plateau_length=2,
+        )
+
+        assert summary.recommended_resolution is not None
+        rec_idx = summary.recommended_index
+        # The recommended index should be at the peak significance
+        peak_sig_idx = int(np.argmax(summary.significance_scores))
+        assert rec_idx == peak_sig_idx
 
     def test_sweep_with_planted_communities(self):
         """A graph with clear communities should produce stable plateaus."""

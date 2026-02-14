@@ -1847,6 +1847,7 @@ def process():
 )
 @click.option(
     "--sweep-resolutions",
+    "sweep_resolutions_n",
     type=int,
     default=None,
     help="Number of resolution values to try in sweep (default: 20)",
@@ -1894,7 +1895,7 @@ def cluster(
     hub_percentile,
     hub_method,
     sweep,
-    sweep_resolutions,
+    sweep_resolutions_n,
     sweep_range,
     sweep_iterations,
     sweep_output,
@@ -1964,7 +1965,7 @@ def cluster(
             mode=mode,
             cooccurrence_min=min_cooccur,
             knn_k=knn_k,
-            n_resolutions=sweep_resolutions,
+            n_resolutions=sweep_resolutions_n,
             resolution_range=resolution_range,
             n_iterations=sweep_iterations,
             auto_select=auto_select,
@@ -1995,9 +1996,13 @@ def cluster(
             console.print("\n[yellow]No stable plateaus found[/yellow]")
 
         if summary.recommended_resolution is not None:
-            console.print(
-                f"\n[bold]Recommended resolution: {summary.recommended_resolution:.6f}[/bold]"
-            )
+            rec_idx = summary.recommended_index
+            rec_clusters = summary.results[rec_idx].num_clusters if rec_idx is not None else "?"
+            rec_line = f"\n[bold]Recommended resolution: {summary.recommended_resolution:.6f} ({rec_clusters} clusters)[/bold]"
+            if summary.significance_scores and rec_idx is not None:
+                rec_sig = summary.significance_scores[rec_idx]
+                rec_line += f"\n  [dim]Peak significance: {rec_sig:,.1f}[/dim]"
+            console.print(rec_line)
 
         if auto_select and "cluster_result" in sweep_result:
             cr = sweep_result["cluster_result"]

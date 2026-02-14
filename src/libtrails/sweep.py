@@ -1,7 +1,8 @@
-"""Multi-resolution Leiden CPM sweep with NMI stability evaluation.
+"""Multi-resolution Leiden CPM sweep with NMI stability and significance evaluation.
 
 Finds natural community structure by sweeping CPM resolution and
-identifying stable plateaus where the partition doesn't change much.
+scoring partitions with both NMI stability (adjacent partition similarity)
+and Significance (statistical quality vs. random graph).
 """
 
 import json
@@ -56,6 +57,7 @@ class SweepSummary:
     recommended_resolution: float | None
     recommended_index: int | None
     resolutions: list[float] = field(default_factory=list)
+    significance_scores: list[float] = field(default_factory=list)
 
 
 def log_spaced_resolutions(
@@ -156,6 +158,39 @@ def compute_stability(results: list[SweepResult]) -> list[float]:
     return nmi_scores
 
 
+def compute_significance(
+    g: ig.Graph,
+    results: list[SweepResult],
+) -> list[float]:
+    """Score each partition using Significance on an unweighted graph.
+
+    Significance measures statistical quality of community structure
+    compared to a random graph. It's resolution-free — the peak indicates
+    the most statistically significant partition.
+
+    Only works on unweighted graphs, so we strip edge weights before scoring.
+
+    Args:
+        g: The original igraph Graph (may be weighted).
+        results: Sweep results containing memberships to score.
+
+    Returns:
+        List of significance scores, one per result.
+    """
+    # Create unweighted copy for Significance scoring
+    g_uw = g.copy()
+    if "weight" in g_uw.es.attributes():
+        del g_uw.es["weight"]
+
+    scores = []
+    for r in results:
+        sig_part = leidenalg.SignificanceVertexPartition(
+            g_uw, initial_membership=r.membership
+        )
+        scores.append(sig_part.quality())
+    return scores
+
+
 def find_stable_plateaus(
     nmi_scores: list[float],
     resolutions: list[float],
@@ -207,18 +242,25 @@ def recommend_resolution(
     results: list[SweepResult],
     nmi_scores: list[float],
     plateaus: list[Plateau],
+    significance_scores: list[float] | None = None,
 ) -> tuple[float | None, int | None]:
     """Pick the best resolution from sweep results.
 
-    Strategy:
-    - If plateaus exist, use midpoint of the best (highest mean NMI) plateau.
-    - Otherwise, fall back to the resolution with highest pairwise NMI.
+    Strategy (in priority order):
+    1. If significance scores are available, use the resolution with peak significance.
+    2. If plateaus exist, use midpoint of the best (highest mean NMI) plateau.
+    3. Fall back to the resolution with highest pairwise NMI.
 
     Returns:
         (resolution, index) or (None, None) if results are empty.
     """
     if not results:
         return None, None
+
+    # Significance peak is the most principled criterion
+    if significance_scores:
+        best_idx = int(np.argmax(significance_scores))
+        return results[best_idx].resolution, best_idx
 
     if plateaus:
         best = plateaus[0]
@@ -252,20 +294,23 @@ def run_sweep(
         min_plateau_length: Minimum consecutive stable NMI scores.
 
     Returns:
-        SweepSummary with results, NMI, plateaus, and recommendation.
+        SweepSummary with results, NMI, significance, plateaus, and recommendation.
     """
     if resolutions is None:
         resolutions = log_spaced_resolutions()
 
     results = leiden_sweep(g, resolutions=resolutions, seed=seed, n_iterations=n_iterations)
     nmi_scores = compute_stability(results)
+    significance_scores = compute_significance(g, results)
     plateaus = find_stable_plateaus(
         nmi_scores,
         resolutions,
         threshold=plateau_threshold,
         min_length=min_plateau_length,
     )
-    rec_res, rec_idx = recommend_resolution(results, nmi_scores, plateaus)
+    rec_res, rec_idx = recommend_resolution(
+        results, nmi_scores, plateaus, significance_scores
+    )
 
     return SweepSummary(
         results=results,
@@ -274,20 +319,25 @@ def run_sweep(
         recommended_resolution=rec_res,
         recommended_index=rec_idx,
         resolutions=resolutions,
+        significance_scores=significance_scores,
     )
 
 
 def format_sweep_table(summary: SweepSummary) -> "Table":
     """Build a Rich table showing sweep results.
 
-    Columns: Resolution | Clusters | Quality | NMI | Markers
+    Columns: Resolution | Clusters | Quality | Significance | NMI | Markers
     """
     from rich.table import Table
+
+    has_sig = bool(summary.significance_scores)
 
     table = Table(title="Leiden CPM Resolution Sweep")
     table.add_column("Resolution", justify="right", style="cyan", width=12)
     table.add_column("Clusters", justify="right", width=10)
     table.add_column("Quality", justify="right", width=12)
+    if has_sig:
+        table.add_column("Significance", justify="right", width=14)
     table.add_column("NMI", justify="right", width=8)
     table.add_column("Time (s)", justify="right", width=8)
     table.add_column("", width=16)  # markers
@@ -298,6 +348,11 @@ def format_sweep_table(summary: SweepSummary) -> "Table":
         for i in range(p.start_index, p.end_index + 1):
             plateau_indices.add(i)
 
+    # Find peak significance index for marking
+    peak_sig_idx = (
+        int(np.argmax(summary.significance_scores)) if has_sig else -1
+    )
+
     for i, r in enumerate(summary.results):
         nmi_str = f"{summary.nmi_scores[i]:.3f}" if i < len(summary.nmi_scores) else ""
 
@@ -307,14 +362,22 @@ def format_sweep_table(summary: SweepSummary) -> "Table":
         if i == summary.recommended_index:
             markers.append("[bold yellow]<< BEST[/bold yellow]")
 
-        table.add_row(
+        row = [
             f"{r.resolution:.6f}",
             str(r.num_clusters),
             f"{r.quality:.2f}",
+        ]
+        if has_sig:
+            sig_str = f"{summary.significance_scores[i]:.1f}"
+            if i == peak_sig_idx:
+                sig_str = f"[bold]{sig_str}[/bold]"
+            row.append(sig_str)
+        row.extend([
             nmi_str,
             f"{r.elapsed:.2f}",
             " ".join(markers),
-        )
+        ])
+        table.add_row(*row)
 
     return table
 
@@ -327,6 +390,7 @@ def save_sweep_json(summary: SweepSummary, path: Path) -> None:
         "quality": [r.quality for r in summary.results],
         "elapsed": [r.elapsed for r in summary.results],
         "nmi_scores": summary.nmi_scores,
+        "significance_scores": summary.significance_scores,
         "plateaus": [
             {
                 "start_resolution": p.start_resolution,
