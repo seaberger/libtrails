@@ -350,6 +350,52 @@ class TestMergeGroupsBatch:
         assert result["topics_merged"] == 3  # 1 + 2 duplicates
 
 
+    @patch("libtrails.vector_search.get_vec_db")
+    @patch("libtrails.deduplication.sqlite3")
+    def test_occurrence_count_recalculated_not_summed(self, mock_sqlite3, mock_vec_db):
+        """occurrence_count should be recalculated from chunk_topic_links, not summed.
+
+        This tests the fix for the data bug where additive counting inflated
+        occurrence_count when chunk_topic_links overlapped between merged topics.
+        """
+        mock_conn = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.rowcount = 5
+        mock_conn.cursor.return_value = mock_cursor
+        mock_sqlite3.connect.return_value = mock_conn
+
+        mock_vec_conn = MagicMock()
+        mock_vec_db.return_value = mock_vec_conn
+
+        groups = [
+            [
+                {"id": 1, "label": "philosophy", "occurrence_count": 10},
+                {"id": 2, "label": "Philosophy", "occurrence_count": 5},
+            ]
+        ]
+
+        merge_groups_batch(groups)
+
+        # Verify that occurrence_count is recalculated via subquery, not added
+        execute_calls = [str(call) for call in mock_cursor.execute.call_args_list]
+        recalculate_calls = [
+            c for c in execute_calls
+            if "SELECT COUNT(*) FROM chunk_topic_links" in c
+        ]
+        assert len(recalculate_calls) > 0, (
+            "Expected occurrence_count to be recalculated from chunk_topic_links"
+        )
+
+        # Verify NO additive update pattern exists
+        additive_calls = [
+            c for c in execute_calls
+            if "occurrence_count = occurrence_count +" in c
+        ]
+        assert len(additive_calls) == 0, (
+            "Should not use additive occurrence_count update (data bug)"
+        )
+
+
 class TestTwoTierDedup:
     """Tests for two-tier deduplication threshold behavior."""
 

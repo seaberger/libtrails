@@ -380,18 +380,16 @@ def merge_topic_group(group: list[dict], dry_run: bool = False) -> dict:
                 (dup["id"], dup["id"]),
             )
 
-            # Add occurrence count to canonical
-            cursor.execute(
-                """
-                UPDATE topics
-                SET occurrence_count = occurrence_count + ?
-                WHERE id = ?
-            """,
-                (dup["occurrence_count"], canonical["id"]),
-            )
-
             # Delete duplicate topic
             cursor.execute("DELETE FROM topics WHERE id = ?", (dup["id"],))
+
+        # Recalculate occurrence count from actual chunk_topic_links (ground truth)
+        cursor.execute(
+            "UPDATE topics SET occurrence_count = "
+            "(SELECT COUNT(*) FROM chunk_topic_links WHERE topic_id = ?) "
+            "WHERE id = ?",
+            (canonical["id"], canonical["id"]),
+        )
 
         conn.commit()
 
@@ -476,12 +474,16 @@ def merge_groups_batch(groups: list[list[dict]], commit_every: int = 100) -> dic
            OR topic2_id IN (SELECT dup_id FROM dup_map)
     """)
 
-    # Step 5: Update occurrence counts on canonicals
-    console.print("  Updating occurrence counts...")
-    cursor.executemany(
-        "UPDATE topics SET occurrence_count = occurrence_count + ? WHERE id = ?",
-        [(occ, cid) for cid, occ in canonical_occ_adds.items()],
-    )
+    # Step 5: Recalculate occurrence counts from actual chunk_topic_links
+    console.print("  Recalculating occurrence counts...")
+    canonical_ids = list(canonical_occ_adds.keys())
+    for cid in canonical_ids:
+        cursor.execute(
+            "UPDATE topics SET occurrence_count = "
+            "(SELECT COUNT(*) FROM chunk_topic_links WHERE topic_id = ?) "
+            "WHERE id = ?",
+            (cid, cid),
+        )
 
     # Step 6: Delete duplicate topics
     console.print("  Deleting duplicate topics...")

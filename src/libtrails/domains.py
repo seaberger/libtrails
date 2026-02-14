@@ -10,6 +10,7 @@ The process:
 
 import json
 import sqlite3
+from collections import defaultdict
 from pathlib import Path
 
 import numpy as np
@@ -21,6 +22,133 @@ from .config import IPAD_DB_PATH
 DEFAULT_N_DOMAINS = 25
 DEFAULT_TOP_N_TOPICS = 15
 DEFAULT_MIN_LABEL_LENGTH = 4
+
+
+def disparity_filter(g: "ig.Graph", alpha: float = 0.05) -> "ig.Graph":
+    """Remove statistically insignificant edges using the disparity filter.
+
+    Keeps edges where the weight is significant (p < alpha) for at
+    least one endpoint, given the null hypothesis of uniform weight
+    distribution across each node's edges.
+
+    Reference: Serrano et al. (2009) "Extracting the multiscale backbone
+    of complex weighted networks."
+
+    Args:
+        g: Weighted igraph Graph.
+        alpha: Significance level (lower = more aggressive pruning).
+
+    Returns:
+        A new Graph with only significant edges retained.
+    """
+    import igraph as ig
+
+    if g.ecount() == 0:
+        return g.copy()
+
+    weights = np.array(g.es["weight"], dtype=np.float64)
+
+    # Compute node strengths (sum of edge weights per node)
+    strengths = np.zeros(g.vcount())
+    for eid, edge in enumerate(g.es):
+        strengths[edge.source] += weights[eid]
+        strengths[edge.target] += weights[eid]
+
+    # Test each edge for significance from both endpoints
+    keep = []
+    for eid, edge in enumerate(g.es):
+        w = weights[eid]
+        significant = False
+
+        for node in (edge.source, edge.target):
+            k = g.degree(node)
+            if k <= 1:
+                # Single-edge nodes always keep their edge
+                significant = True
+                break
+            s = strengths[node]
+            if s == 0:
+                continue
+            p_ij = w / s  # fraction of node's weight on this edge
+            # Probability under null (uniform weight distribution)
+            alpha_ij = (1.0 - p_ij) ** (k - 1)
+            if alpha_ij < alpha:
+                significant = True
+                break
+
+        if significant:
+            keep.append(eid)
+
+    # Build filtered graph
+    g_filtered = ig.Graph(n=g.vcount())
+    # Copy vertex attributes
+    for attr in g.vs.attributes():
+        g_filtered.vs[attr] = g.vs[attr]
+
+    if keep:
+        kept_edges = [(g.es[eid].source, g.es[eid].target) for eid in keep]
+        kept_weights = [weights[eid] for eid in keep]
+        g_filtered.add_edges(kept_edges)
+        g_filtered.es["weight"] = kept_weights
+
+    return g_filtered
+
+
+def compute_participation_coefficients(
+    g: "ig.Graph", membership: list[int]
+) -> list[dict]:
+    """Compute participation coefficient for each node.
+
+    The participation coefficient measures how evenly a node's edges are
+    distributed across communities. High P = bridge/outlier node with
+    edges spread across many domains.
+
+    Reference: Guimera & Amaral (2005) "Functional cartography of complex
+    metabolic networks."
+
+    Args:
+        g: igraph Graph.
+        membership: Community assignment for each node.
+
+    Returns:
+        List of dicts with node_idx, cluster_id, participation, internal_frac,
+        sorted by participation descending.
+    """
+    results = []
+    for i in range(g.vcount()):
+        neighbors = g.neighbors(i)
+        k_i = len(neighbors)
+        if k_i == 0:
+            results.append({
+                "node_idx": i,
+                "cluster_id": g.vs[i]["cluster_id"] if "cluster_id" in g.vs.attributes() else i,
+                "participation": 0.0,
+                "internal_frac": 1.0,
+            })
+            continue
+
+        # Count edges to each community
+        community_counts = defaultdict(int)
+        for j in neighbors:
+            community_counts[membership[j]] += 1
+
+        # Participation coefficient: P_i = 1 - sum((k_ic / k_i)^2)
+        p_i = 1.0 - sum((count / k_i) ** 2 for count in community_counts.values())
+
+        # Internal fraction: edges to own community / total edges
+        own_community = membership[i]
+        internal = community_counts.get(own_community, 0)
+        internal_frac = internal / k_i
+
+        results.append({
+            "node_idx": i,
+            "cluster_id": g.vs[i]["cluster_id"] if "cluster_id" in g.vs.attributes() else i,
+            "participation": p_i,
+            "internal_frac": internal_frac,
+        })
+
+    results.sort(key=lambda x: x["participation"], reverse=True)
+    return results
 
 
 def get_cluster_topics(cursor: sqlite3.Cursor, cluster_id: int) -> list[dict]:
@@ -76,7 +204,12 @@ def compute_robust_centroid(
     weights = np.array([np.log1p(t["occurrence_count"]) for t in topics])
     weights = weights / weights.sum()  # Normalize
 
-    return np.average(embeddings, axis=0, weights=weights)
+    centroid = np.average(embeddings, axis=0, weights=weights)
+    # L2 normalize so centroid is unit-norm (consistent with cosine similarity)
+    norm = np.linalg.norm(centroid)
+    if norm > 0:
+        centroid = centroid / norm
+    return centroid
 
 
 def generate_super_clusters(
@@ -433,6 +566,7 @@ def split_catchall_superclusters(
 def build_cluster_graph(
     k: int = 8,
     min_similarity: float = 0.3,
+    backbone_alpha: float | None = None,
     db_path: Path | None = None,
 ) -> "ig.Graph":
     """Build a k-NN cosine similarity graph between Leiden cluster centroids.
@@ -440,9 +574,13 @@ def build_cluster_graph(
     Each node is a Leiden cluster. Edges connect clusters whose centroids
     are among each other's k nearest neighbors with similarity >= min_similarity.
 
+    If backbone_alpha is set, applies the disparity filter to prune
+    statistically insignificant edges after k-NN construction.
+
     Args:
         k: Number of nearest neighbors per cluster.
         min_similarity: Minimum cosine similarity to include an edge.
+        backbone_alpha: Disparity filter significance level (None = no filter).
         db_path: Path to database (defaults to IPAD_DB_PATH).
 
     Returns:
@@ -519,6 +657,12 @@ def build_cluster_graph(
         g.add_edges(edge_list)
         g.es["weight"] = [edge_weights[e] for e in edge_list]
 
+    # Apply disparity filter if requested
+    if backbone_alpha is not None and g.ecount() > 0:
+        before = g.ecount()
+        g = disparity_filter(g, alpha=backbone_alpha)
+        print(f"Disparity filter (alpha={backbone_alpha}): {before} → {g.ecount()} edges")
+
     return g
 
 
@@ -527,6 +671,9 @@ def generate_super_clusters_leiden(
     sweep: bool = False,
     k: int = 8,
     min_similarity: float = 0.3,
+    backbone_alpha: float | None = None,
+    remove_outliers: bool = False,
+    outlier_threshold: float = 0.7,
     auto_select: bool = False,
     db_path: Path | None = None,
 ) -> dict:
@@ -540,6 +687,9 @@ def generate_super_clusters_leiden(
         sweep: If True, run multi-resolution sweep.
         k: Number of nearest neighbors for cluster graph.
         min_similarity: Minimum cosine similarity for cluster graph edges.
+        backbone_alpha: Disparity filter significance level (None = no filter).
+        remove_outliers: If True, reassign high-participation outlier clusters.
+        outlier_threshold: Participation coefficient above which a node is an outlier.
         auto_select: If True during sweep, apply recommended resolution.
         db_path: Path to database.
 
@@ -554,7 +704,9 @@ def generate_super_clusters_leiden(
 
     # Build cluster-level graph
     print(f"Building cluster graph (k={k}, min_similarity={min_similarity})...")
-    g = build_cluster_graph(k=k, min_similarity=min_similarity, db_path=db_path)
+    g = build_cluster_graph(
+        k=k, min_similarity=min_similarity, backbone_alpha=backbone_alpha, db_path=db_path
+    )
     print(f"Cluster graph: {g.vcount()} nodes, {g.ecount()} edges")
 
     if g.vcount() == 0:
@@ -598,9 +750,40 @@ def generate_super_clusters_leiden(
         seed=SWEEP_SEED,
     )
 
-    membership = partition.membership
+    membership = list(partition.membership)
     n_super = len(set(membership))
     print(f"Leiden produced {n_super} super-clusters at resolution {resolution:.6f}")
+
+    # Outlier detection and reassignment
+    outliers_reassigned = 0
+    if remove_outliers and g.vcount() > 0:
+        coeffs = compute_participation_coefficients(g, membership)
+        for info in coeffs:
+            if (
+                info["participation"] > outlier_threshold
+                and info["internal_frac"] < 0.3
+            ):
+                node_idx = info["node_idx"]
+                # Reassign to strongest-connected domain (most edge weight)
+                neighbor_weights = defaultdict(float)
+                for j in g.neighbors(node_idx):
+                    eid = g.get_eid(node_idx, j)
+                    w = g.es[eid]["weight"] if "weight" in g.es.attributes() else 1.0
+                    neighbor_weights[membership[j]] += w
+
+                if neighbor_weights:
+                    best_community = max(neighbor_weights, key=neighbor_weights.get)
+                    membership[node_idx] = best_community
+                    outliers_reassigned += 1
+
+        if outliers_reassigned > 0:
+            n_super = len(set(membership))
+            print(
+                f"Outlier reassignment: {outliers_reassigned} clusters reassigned "
+                f"(threshold={outlier_threshold}), now {n_super} super-clusters"
+            )
+
+    result["outliers_reassigned"] = outliers_reassigned
 
     # Build super-cluster structures (same format as K-means output)
     conn = sqlite3.connect(db_path)

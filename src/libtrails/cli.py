@@ -2169,6 +2169,23 @@ def load_domains(json_file: str):
     help="k-NN neighbors for cluster graph (default: 8)",
 )
 @click.option(
+    "--backbone-alpha",
+    type=float,
+    default=None,
+    help="Disparity filter significance level (Leiden only, default: None = no filter, try 0.05)",
+)
+@click.option(
+    "--remove-outliers/--no-remove-outliers",
+    default=True,
+    help="Reassign high-participation outlier clusters (Leiden only, default: enabled)",
+)
+@click.option(
+    "--outlier-threshold",
+    type=float,
+    default=0.7,
+    help="Participation coefficient threshold for outlier detection (default: 0.7)",
+)
+@click.option(
     "--auto-select",
     is_flag=True,
     help="Automatically apply sweep-recommended resolution (Leiden only)",
@@ -2181,6 +2198,9 @@ def regenerate_domains(
     sweep: bool,
     resolution: float | None,
     cluster_knn_k: int | None,
+    backbone_alpha: float | None,
+    remove_outliers: bool,
+    outlier_threshold: float,
     auto_select: bool,
 ):
     """
@@ -2210,8 +2230,9 @@ def regenerate_domains(
         k = cluster_knn_k if cluster_knn_k is not None else DOMAIN_CLUSTER_KNN_K
         min_sim = DOMAIN_CLUSTER_MIN_SIMILARITY
 
+        alpha_str = f", backbone_alpha={backbone_alpha}" if backbone_alpha else ""
         console.print(
-            f"[bold]Generating domains via Leiden (k={k}, min_sim={min_sim})...[/bold]"
+            f"[bold]Generating domains via Leiden (k={k}, min_sim={min_sim}{alpha_str})...[/bold]"
         )
 
         result = generate_super_clusters_leiden(
@@ -2219,6 +2240,9 @@ def regenerate_domains(
             sweep=sweep,
             k=k,
             min_similarity=min_sim,
+            backbone_alpha=backbone_alpha,
+            remove_outliers=remove_outliers,
+            outlier_threshold=outlier_threshold,
             auto_select=auto_select,
         )
 
