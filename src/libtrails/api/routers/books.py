@@ -54,7 +54,7 @@ def get_book(db: DBConnection, book_id: int):
     # Get book
     cursor.execute(
         """
-        SELECT id, title, author, calibre_id, description
+        SELECT id, title, author, calibre_id, description, ipad_id
         FROM books
         WHERE id = ?
     """,
@@ -65,6 +65,13 @@ def get_book(db: DBConnection, book_id: int):
         raise HTTPException(status_code=404, detail="Book not found")
 
     book = dict(row)
+
+    # Build Gutenberg URL from ipad_id (format: "gutenberg:1342")
+    gutenberg_url = None
+    ipad_id = book.pop("ipad_id", None)
+    if ipad_id and str(ipad_id).startswith("gutenberg:"):
+        gid = str(ipad_id).split(":", 1)[1]
+        gutenberg_url = f"https://www.gutenberg.org/ebooks/{gid}"
 
     # Get chunk count
     cursor.execute("SELECT COUNT(*) as cnt FROM chunks WHERE book_id = ?", (book_id,))
@@ -95,6 +102,7 @@ def get_book(db: DBConnection, book_id: int):
         author=book["author"],
         calibre_id=book["calibre_id"],
         description=book.get("description"),
+        gutenberg_url=gutenberg_url,
         topics=topics,
         theme_ids=theme_ids,
         chunk_count=chunk_count,

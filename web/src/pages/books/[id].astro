@@ -38,19 +38,35 @@ try {
   <div class="flex flex-col md:flex-row gap-8">
     <!-- Cover -->
     <div class="flex-shrink-0 self-start">
-      <div class="book-cover">
-        <BookCover
-          calibreId={book.calibre_id}
-          title={book.title}
-          size="lg"
-        />
-      </div>
+      {book.gutenberg_url ? (
+        <a href={book.gutenberg_url} target="_blank" rel="noopener" class="block book-cover">
+          <BookCover
+            calibreId={book.calibre_id}
+            title={book.title}
+            size="lg"
+          />
+        </a>
+      ) : (
+        <div class="book-cover">
+          <BookCover
+            calibreId={book.calibre_id}
+            title={book.title}
+            size="lg"
+          />
+        </div>
+      )}
     </div>
 
     <!-- Book details -->
     <div class="flex-1">
       <h1 class="text-2xl font-medium text-[var(--color-text)] mb-2">
-        {book.title}
+        {book.gutenberg_url ? (
+          <a href={book.gutenberg_url} target="_blank" rel="noopener" class="hover:text-[var(--color-accent)] transition-colors">
+            {book.title}
+          </a>
+        ) : (
+          book.title
+        )}
       </h1>
       <p class="text-lg text-[var(--color-text-muted)] mb-4">
         {book.author}

@@ -25,6 +25,7 @@ class BookDetail(BookSummary):
     """Full book info with topics."""
 
     description: str | None = None
+    gutenberg_url: str | None = None
     topics: list[TopicInfo] = []
     theme_ids: list[int] = []
     chunk_count: int = 0

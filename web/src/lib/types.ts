@@ -16,6 +16,7 @@ export interface TopicInfo {
 
 export interface BookDetail extends BookSummary {
   description: string | null;
+  gutenberg_url: string | null;
   topics: TopicInfo[];
   theme_ids: number[];
   chunk_count: number;
