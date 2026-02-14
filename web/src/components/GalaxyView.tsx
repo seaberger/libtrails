@@ -149,7 +149,7 @@ export default function GalaxyView() {
 
   if (error) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", color: "#e0e0e0", fontFamily: "Inter, sans-serif", flexDirection: "column", gap: "1rem" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#e0e0e0", fontFamily: "Inter, sans-serif", flexDirection: "column", gap: "1rem", position: "absolute", inset: 0 }}>
         <p style={{ fontSize: "1.1rem" }}>Could not load universe data</p>
         <p style={{ fontSize: "0.85rem", color: "#888" }}>{error}</p>
       </div>
@@ -158,14 +158,14 @@ export default function GalaxyView() {
 
   if (!data) {
     return (
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100vh", color: "#e0e0e0", fontFamily: "Inter, sans-serif" }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "center", height: "100%", color: "#e0e0e0", fontFamily: "Inter, sans-serif", position: "absolute", inset: 0 }}>
         <p>Loading universe...</p>
       </div>
     );
   }
 
   return (
-    <div style={{ width: "100%", height: "100vh", position: "relative", overflow: "hidden" }}>
+    <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
       <Canvas
         camera={{ position: [0, 20, 70], fov: 60, near: 0.1, far: 500 }}
         gl={{ antialias: true }}
@@ -234,6 +234,7 @@ export default function GalaxyView() {
         background: "rgba(15, 15, 26, 0.85)",
         border: "1px solid rgba(255,255,255,0.1)", borderRadius: "10px",
         padding: "12px 14px", maxHeight: "calc(100vh - 100px)", overflowY: "auto",
+        maxWidth: "220px",
         fontFamily: "Inter, sans-serif", fontSize: "0.75rem",
         backdropFilter: "blur(8px)", zIndex: 40,
       }}>
@@ -258,7 +259,7 @@ export default function GalaxyView() {
             transition: "opacity 0.15s",
           }}>
             <span style={{ width: "10px", height: "10px", borderRadius: "50%", background: d.color, flexShrink: 0 }} />
-            <span style={{ color: "#ccc" }}>{d.label}</span>
+            <span style={{ color: "#ccc", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.label}</span>
           </div>
         ))}
       </div>
