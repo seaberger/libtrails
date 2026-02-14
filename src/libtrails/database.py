@@ -286,6 +286,7 @@ def init_chunks_table():
                 cluster_id INTEGER NOT NULL,
                 book_id INTEGER NOT NULL,
                 topic_count INTEGER DEFAULT 0,
+                book_total_topics INTEGER DEFAULT 0,
                 PRIMARY KEY (cluster_id, book_id)
             );
 
@@ -324,6 +325,14 @@ def init_chunks_table():
         book_columns = [row[1] for row in cursor.fetchall()]
         if "book_themes" not in book_columns:
             conn.execute("ALTER TABLE books ADD COLUMN book_themes TEXT")
+
+        # Migration: add book_total_topics column to cluster_books table
+        cursor.execute("PRAGMA table_info(cluster_books)")
+        cb_columns = [row[1] for row in cursor.fetchall()]
+        if cb_columns and "book_total_topics" not in cb_columns:
+            conn.execute(
+                "ALTER TABLE cluster_books ADD COLUMN book_total_topics INTEGER DEFAULT 0"
+            )
 
         conn.commit()
 

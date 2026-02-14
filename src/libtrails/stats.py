@@ -6,10 +6,45 @@ domain loading — not on every API request.
 """
 
 import json
+import math
 import sqlite3
 import time
 
 from .database import get_db, init_chunks_table
+
+
+def book_cluster_relevance(
+    topics_in_cluster: int,
+    total_topics_book: int,
+    total_topics_cluster: int,
+    total_corpus: int,
+    k1: float = 1.5,
+    min_topics: int = 3,
+) -> float:
+    """Score a book's relevance to a cluster using concentration + BM25 + PPMI.
+
+    Eliminates length bias by normalizing for book size, applies BM25 saturation
+    to prevent tiny books from dominating, and uses PPMI to reward above-chance
+    associations.
+    """
+    if topics_in_cluster < min_topics:
+        return 0.0
+
+    # Concentration: what fraction of this book's topics are in this cluster
+    concentration = topics_in_cluster / total_topics_book
+
+    # BM25-style saturation: diminishing returns on concentration
+    saturated = concentration * (k1 + 1) / (concentration + k1)
+
+    # PPMI: is this association above random chance?
+    expected = (total_topics_book * total_topics_cluster) / total_corpus
+    if expected > 0 and topics_in_cluster > 0:
+        pmi = math.log2(topics_in_cluster / expected)
+        ppmi = max(pmi, 0)
+    else:
+        ppmi = 0
+
+    return saturated * (1 + ppmi)
 
 
 def refresh_cluster_books(conn: sqlite3.Connection) -> int:
@@ -23,6 +58,8 @@ def refresh_cluster_books(conn: sqlite3.Connection) -> int:
     try:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM cluster_books")
+
+        # Insert cluster-book pairs with topic counts
         cursor.execute("""
             INSERT INTO cluster_books (cluster_id, book_id, topic_count)
             SELECT t.cluster_id, b.id, COUNT(DISTINCT t.id)
@@ -34,6 +71,17 @@ def refresh_cluster_books(conn: sqlite3.Connection) -> int:
             GROUP BY t.cluster_id, b.id
         """)
         count = cursor.rowcount
+
+        # Populate book_total_topics: each book's total distinct topics across all clusters
+        cursor.execute("""
+            UPDATE cluster_books
+            SET book_total_topics = (
+                SELECT SUM(cb2.topic_count)
+                FROM cluster_books cb2
+                WHERE cb2.book_id = cluster_books.book_id
+            )
+        """)
+
         conn.commit()
         return count
     except Exception:
@@ -52,6 +100,12 @@ def refresh_cluster_stats(conn: sqlite3.Connection) -> int:
     try:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM cluster_stats")
+
+        # Total corpus size for PPMI calculation (sum of all topic counts)
+        total_corpus_row = cursor.execute(
+            "SELECT SUM(topic_count) FROM cluster_books"
+        ).fetchone()
+        total_corpus = total_corpus_row[0] if total_corpus_row[0] else 1
 
         # Get all clusters with their sizes
         cursor.execute("""
@@ -99,19 +153,34 @@ def refresh_cluster_stats(conn: sqlite3.Connection) -> int:
             )
             top_topics = [dict(r) for r in cursor.fetchall()]
 
-            # Sample books: top 5 by topic_count in this cluster (with calibre_id)
+            # Sample books: top 5 by relevance score (not raw topic_count)
             cursor.execute(
                 """
-                SELECT b.id, b.title, b.author, b.calibre_id
+                SELECT b.id, b.title, b.author, b.calibre_id,
+                       cb.topic_count, cb.book_total_topics
                 FROM cluster_books cb
                 JOIN books b ON b.id = cb.book_id
                 WHERE cb.cluster_id = ? AND b.calibre_id IS NOT NULL
-                ORDER BY cb.topic_count DESC
-                LIMIT 5
             """,
                 (cluster_id,),
             )
-            sample_books = [dict(r) for r in cursor.fetchall()]
+            book_rows = cursor.fetchall()
+
+            scored = []
+            for r in book_rows:
+                score = book_cluster_relevance(
+                    topics_in_cluster=r["topic_count"],
+                    total_topics_book=r["book_total_topics"],
+                    total_topics_cluster=size,
+                    total_corpus=total_corpus,
+                )
+                scored.append((score, r))
+            scored.sort(key=lambda x: x[0], reverse=True)
+            sample_books = [
+                {"id": r["id"], "title": r["title"], "author": r["author"],
+                 "calibre_id": r["calibre_id"]}
+                for _, r in scored[:5]
+            ]
 
             cursor.execute(
                 """
@@ -147,6 +216,12 @@ def refresh_domain_stats(conn: sqlite3.Connection) -> int:
     try:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM domain_stats")
+
+        # Total corpus for PPMI (computed once)
+        total_corpus_row = cursor.execute(
+            "SELECT SUM(topic_count) FROM cluster_books"
+        ).fetchone()
+        total_corpus = total_corpus_row[0] if total_corpus_row[0] else 1
 
         cursor.execute("SELECT id FROM domains")
         domains = cursor.fetchall()
@@ -184,28 +259,45 @@ def refresh_domain_stats(conn: sqlite3.Connection) -> int:
             )
             book_count = cursor.fetchone()["cnt"]
 
-            # Sample books: top 5 by total topic coverage across domain clusters
+            # Sample books: top 5 by relevance score across domain clusters
             cursor.execute(
                 f"""
                 SELECT b.id, b.title, b.author, b.calibre_id,
-                       SUM(cb.topic_count) as total_topics
+                       SUM(cb.topic_count) as domain_topics,
+                       cb.book_total_topics
                 FROM cluster_books cb
                 JOIN books b ON b.id = cb.book_id
                 WHERE cb.cluster_id IN ({placeholders}) AND b.calibre_id IS NOT NULL
                 GROUP BY b.id
-                ORDER BY total_topics DESC
-                LIMIT 5
             """,
                 cluster_ids,
             )
+            domain_book_rows = cursor.fetchall()
+
+            # Total topics across all clusters in this domain
+            cursor.execute(
+                f"""
+                SELECT SUM(topic_count) FROM cluster_books
+                WHERE cluster_id IN ({placeholders})
+            """,
+                cluster_ids,
+            )
+            domain_total = cursor.fetchone()[0] or 1
+
+            scored = []
+            for r in domain_book_rows:
+                score = book_cluster_relevance(
+                    topics_in_cluster=r["domain_topics"],
+                    total_topics_book=r["book_total_topics"],
+                    total_topics_cluster=domain_total,
+                    total_corpus=total_corpus,
+                )
+                scored.append((score, r))
+            scored.sort(key=lambda x: x[0], reverse=True)
             sample_books = [
-                {
-                    "id": r["id"],
-                    "title": r["title"],
-                    "author": r["author"],
-                    "calibre_id": r["calibre_id"],
-                }
-                for r in cursor.fetchall()
+                {"id": r["id"], "title": r["title"], "author": r["author"],
+                 "calibre_id": r["calibre_id"]}
+                for _, r in scored[:5]
             ]
 
             # Top 5 clusters by size
