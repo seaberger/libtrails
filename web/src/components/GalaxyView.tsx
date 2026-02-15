@@ -372,11 +372,18 @@ function Sidebar({
     el.addEventListener("touchstart", onTouchStart, { passive: true });
     el.addEventListener("touchmove", onTouchMove, { passive: false });
     el.addEventListener("touchend", onTouchEnd, { passive: true });
+    el.addEventListener("touchcancel", onTouchEnd, { passive: true });
     return () => {
       el.removeEventListener("touchstart", onTouchStart);
       el.removeEventListener("touchmove", onTouchMove);
       el.removeEventListener("touchend", onTouchEnd);
+      el.removeEventListener("touchcancel", onTouchEnd);
     };
+  }, [isMobile]);
+
+  // Reset sheet height when switching between mobile/desktop (e.g. rotation)
+  useEffect(() => {
+    setSheetHeight(DEFAULT_SHEET_HEIGHT);
   }, [isMobile]);
 
   const containerStyle: React.CSSProperties = isMobile
