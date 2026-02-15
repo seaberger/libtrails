@@ -40,6 +40,8 @@ const basePath = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 </div>
 
 <script>
+  let slashHandlerBound = false;
+
   function initSearchBar() {
     document.querySelectorAll<HTMLDivElement>('.search-bar').forEach(container => {
       const input = container.querySelector<HTMLInputElement>('.search-bar-input');
@@ -111,15 +113,19 @@ const basePath = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
           input.blur();
         }
       });
+    });
 
-      // "/" keyboard shortcut to focus
+    // "/" keyboard shortcut — bind once, targets the first visible search-bar input
+    if (!slashHandlerBound) {
+      slashHandlerBound = true;
       document.addEventListener('keydown', (e) => {
         if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
           e.preventDefault();
-          input.focus();
+          const activeInput = document.querySelector<HTMLInputElement>('.search-bar:not([hidden]) .search-bar-input');
+          activeInput?.focus();
         }
       });
-    });
+    }
   }
 
   initSearchBar();

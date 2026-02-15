@@ -355,14 +355,17 @@ function Sidebar({
     return m;
   }, [domains]);
 
-  // Map search results to cluster objects for the sidebar list
+  // Map search results to cluster objects for the sidebar list,
+  // filtered by activeDomains so hidden domains don't appear in results
   const searchResultClusters = useMemo(() => {
     if (!search.results.length) return [];
     const clusterMap = new Map(allClusters.map((c) => [c.cluster_id, c]));
     return search.results
       .map((r) => clusterMap.get(r.cluster_id))
-      .filter((c): c is UniverseCluster => c !== undefined);
-  }, [search.results, allClusters]);
+      .filter((c): c is UniverseCluster =>
+        c !== undefined && (!activeDomains || activeDomains.has(c.domain_id))
+      );
+  }, [search.results, allClusters, activeDomains]);
 
   // ── Bottom sheet drag-to-resize (mobile only) ──
   // Uses ref-based DOM listeners with { passive: false } so preventDefault()
@@ -553,7 +556,7 @@ function Sidebar({
           onClose={onClose}
           colors={colors}
         />
-      ) : search.query && searchResultClusters.length > 0 ? (
+      ) : search.query && searchResultClusters.length > 0 && !search.loading ? (
         /* Search results list */
         <div style={{ padding: "12px 16px" }}>
           <div style={{ fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.05em", color: colors.textMuted, marginBottom: 8 }}>
@@ -1466,7 +1469,8 @@ export default function GalaxyView() {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<UniverseSearchResult[]>([]);
   const [searchLoading, setSearchLoading] = useState(false);
-  const searchTimerRef = useRef<ReturnType<typeof setTimeout>>();
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
+  const searchAbortRef = useRef<AbortController | null>(null);
 
   const searchHitIds = useMemo(() => {
     if (!searchQuery || searchResults.length === 0) return null;
@@ -1476,19 +1480,24 @@ export default function GalaxyView() {
   const handleSearchChange = useCallback((query: string) => {
     setSearchQuery(query);
     clearTimeout(searchTimerRef.current);
+    if (searchAbortRef.current) searchAbortRef.current.abort();
     if (!query.trim()) {
       setSearchResults([]);
       setSearchLoading(false);
       return;
     }
     setSearchLoading(true);
+    const controller = new AbortController();
+    searchAbortRef.current = controller;
     searchTimerRef.current = setTimeout(() => {
       searchHybrid(query, "universe", 50)
         .then((resp) => {
+          if (controller.signal.aborted) return;
           setSearchResults(resp.universe);
           setSearchLoading(false);
         })
-        .catch(() => {
+        .catch((err) => {
+          if (err?.name === "AbortError") return;
           setSearchResults([]);
           setSearchLoading(false);
         });

@@ -115,6 +115,8 @@ const basePath = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
     const original = document.getElementById('books-original');
     const resultsContainer = document.getElementById('books-search-results');
     if (!original || !resultsContainer) return;
+    if (original.dataset.searchInit === 'true') return;
+    original.dataset.searchInit = 'true';
 
     const basePath = original.dataset.basePath || '';
 

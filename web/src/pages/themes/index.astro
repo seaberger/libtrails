@@ -183,6 +183,8 @@ const domains = await getDomains();
     const details = document.querySelectorAll('.domain-detail');
     const browser = document.getElementById('domain-browser');
     if (!browser) return;
+    if ((browser as HTMLElement).dataset.searchInit === 'true') return;
+    (browser as HTMLElement).dataset.searchInit = 'true';
 
     document.addEventListener('libtrails:search', ((e: CustomEvent) => {
       if (e.detail.scope !== 'domains') return;
