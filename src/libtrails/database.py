@@ -686,6 +686,72 @@ def get_domain_for_cluster(cluster_id: int) -> Optional[dict]:
         return dict(row) if row else None
 
 
+def rebuild_fts_indexes(conn: sqlite3.Connection) -> dict[str, int]:
+    """
+    Create and populate FTS5 indexes for books, topics, and chunks.
+
+    Returns dict with row counts for each FTS table.
+    """
+    cursor = conn.cursor()
+
+    # books_fts: title, author, description, series
+    cursor.execute("DROP TABLE IF EXISTS books_fts")
+    cursor.execute("""
+        CREATE VIRTUAL TABLE books_fts USING fts5(
+            title, author, description, series,
+            content='', tokenize='porter unicode61'
+        )
+    """)
+    cursor.execute("""
+        INSERT INTO books_fts(rowid, title, author, description, series)
+        SELECT b.id,
+               COALESCE(b.title, ''),
+               COALESCE(b.author, ''),
+               COALESCE(b.description, ''),
+               COALESCE(b.series, '')
+        FROM books b
+    """)
+    cursor.execute("SELECT COUNT(*) FROM books_fts")
+    books_count = cursor.fetchone()[0]
+
+    # topics_fts: topic label
+    cursor.execute("DROP TABLE IF EXISTS topics_fts")
+    cursor.execute("""
+        CREATE VIRTUAL TABLE topics_fts USING fts5(
+            label,
+            content='', tokenize='porter unicode61'
+        )
+    """)
+    cursor.execute("""
+        INSERT INTO topics_fts(rowid, label)
+        SELECT id, label FROM topics
+    """)
+    cursor.execute("SELECT COUNT(*) FROM topics_fts")
+    topics_count = cursor.fetchone()[0]
+
+    # chunks_fts: chunk text content
+    cursor.execute("DROP TABLE IF EXISTS chunks_fts")
+    cursor.execute("""
+        CREATE VIRTUAL TABLE chunks_fts USING fts5(
+            content,
+            content='', tokenize='porter unicode61'
+        )
+    """)
+    cursor.execute("""
+        INSERT INTO chunks_fts(rowid, content)
+        SELECT id, text FROM chunks
+    """)
+    cursor.execute("SELECT COUNT(*) FROM chunks_fts")
+    chunks_count = cursor.fetchone()[0]
+
+    conn.commit()
+    return {
+        "books_fts": books_count,
+        "topics_fts": topics_count,
+        "chunks_fts": chunks_count,
+    }
+
+
 def get_topic_stats() -> dict:
     """Get statistics about the topics table."""
     with get_db() as conn:

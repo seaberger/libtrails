@@ -131,3 +131,10 @@ h1, h2, h3, h4 {
 .scrollbar-hide::-webkit-scrollbar {
   display: none;
 }
+
+/* Explicit spin keyframes — used by both SearchBar (Tailwind animate-spin)
+   and GalaxyView (inline React styles). Defining here avoids fragile
+   coupling to Tailwind's CSS purge. */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

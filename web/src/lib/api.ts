@@ -5,6 +5,7 @@ import type {
   BookSummary,
   DomainDetail,
   DomainSummary,
+  HybridSearchResponse,
   RelatedBook,
   SearchResult,
   ThemeDetail,
@@ -104,4 +105,15 @@ export async function getDomain(domainId: number): Promise<DomainDetail> {
 // Universe (galaxy visualization) API
 export async function getUniverse(): Promise<UniverseData> {
   return fetchJson("/universe");
+}
+
+// Hybrid search API
+export async function searchHybrid(
+  query: string,
+  scope: "books" | "clusters" | "domains" | "universe",
+  limit = 20
+): Promise<HybridSearchResponse> {
+  return fetchJson(
+    `/search/hybrid?q=${encodeURIComponent(query)}&scope=${scope}&limit=${limit}`
+  );
 }

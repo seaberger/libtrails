@@ -1,7 +1,8 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import BookCard from '../../components/BookCard.astro';
-import { getBooks } from '../../lib/api';
+import SearchBar from '../../components/SearchBar.astro';
+import { getBooks, getCoverUrl } from '../../lib/api';
 import { url as baseUrl } from '../../lib/url';
 
 // Get page from URL params
@@ -11,6 +12,7 @@ const pageSize = 50;
 
 const books = await getBooks(page, pageSize, true);
 const hasMore = books.length === pageSize;
+const basePath = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 ---
 
 <BaseLayout title="All Books" description="Browse all indexed books in your library">
@@ -23,30 +25,130 @@ const hasMore = books.length === pageSize;
     </p>
   </header>
 
-  <div class="space-y-3">
-    {books.map(book => (
-      <BookCard book={book} />
-    ))}
-  </div>
+  <SearchBar placeholder="Search by title, author, or topic..." scope="books" />
 
-  <!-- Pagination -->
-  <div class="flex justify-center items-center gap-4 mt-8 pt-8 border-t border-[var(--color-border)]">
-    {page > 1 && (
-      <a
-        href={baseUrl(`/books?page=${page - 1}`)}
-        class="px-4 py-2 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] border border-[var(--color-border)] rounded-md transition-colors"
-      >
-        Previous
-      </a>
-    )}
-    <span class="text-sm text-[var(--color-text-muted)]">Page {page}</span>
-    {hasMore && (
-      <a
-        href={baseUrl(`/books?page=${page + 1}`)}
-        class="px-4 py-2 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] border border-[var(--color-border)] rounded-md transition-colors"
-      >
-        Next
-      </a>
-    )}
+  <!-- Search results (hidden by default) -->
+  <div id="books-search-results" class="space-y-3 hidden"></div>
+
+  <!-- Original book list -->
+  <div id="books-original" data-base-path={basePath}>
+    <div class="space-y-3">
+      {books.map(book => (
+        <BookCard book={book} />
+      ))}
+    </div>
+
+    <!-- Pagination -->
+    <div class="flex justify-center items-center gap-4 mt-8 pt-8 border-t border-[var(--color-border)]">
+      {page > 1 && (
+        <a
+          href={baseUrl(`/books?page=${page - 1}`)}
+          class="px-4 py-2 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] border border-[var(--color-border)] rounded-md transition-colors"
+        >
+          Previous
+        </a>
+      )}
+      <span class="text-sm text-[var(--color-text-muted)]">Page {page}</span>
+      {hasMore && (
+        <a
+          href={baseUrl(`/books?page=${page + 1}`)}
+          class="px-4 py-2 text-sm text-[var(--color-text-muted)] hover:text-[var(--color-text)] border border-[var(--color-border)] rounded-md transition-colors"
+        >
+          Next
+        </a>
+      )}
+    </div>
   </div>
 </BaseLayout>
+
+<script>
+  function createBookResultCard(result: any, basePath: string): HTMLElement {
+    const coverUrl = result.calibre_id
+      ? `${basePath}/api/v1/covers/${result.calibre_id}`
+      : `${basePath}/placeholder-cover.svg`;
+    const matchBadge = result.match_type === 'keyword' ? 'Title/Author'
+      : result.match_type === 'content' ? 'Content'
+      : result.match_type === 'semantic' ? 'Semantic'
+      : 'Topic';
+
+    const card = document.createElement('a');
+    card.href = `${basePath}/books/${result.book_id}`;
+    card.className = 'flex gap-4 bg-[var(--color-surface)] rounded-lg p-4 border border-[var(--color-border)] card-hover';
+
+    // Cover image
+    const coverWrap = document.createElement('div');
+    coverWrap.className = 'flex-shrink-0';
+    const img = document.createElement('img');
+    img.src = coverUrl;
+    img.alt = result.title;
+    img.className = 'w-12 h-[72px] object-cover rounded';
+    img.loading = 'lazy';
+    img.onerror = () => { img.src = `${basePath}/placeholder-cover.svg`; };
+    coverWrap.appendChild(img);
+
+    // Text content
+    const textWrap = document.createElement('div');
+    textWrap.className = 'flex-1 min-w-0';
+
+    const title = document.createElement('h3');
+    title.className = 'font-medium text-[var(--color-text)] leading-tight mb-1';
+    title.textContent = result.title;
+
+    const author = document.createElement('p');
+    author.className = 'text-sm text-[var(--color-text-muted)] mb-2';
+    author.textContent = result.author;
+
+    const badge = document.createElement('span');
+    badge.className = 'text-xs px-2 py-0.5 rounded-full bg-[var(--color-bg)] text-[var(--color-text-muted)]';
+    badge.textContent = matchBadge;
+
+    textWrap.appendChild(title);
+    textWrap.appendChild(author);
+    textWrap.appendChild(badge);
+
+    card.appendChild(coverWrap);
+    card.appendChild(textWrap);
+    return card;
+  }
+
+  function initBooksSearch() {
+    const original = document.getElementById('books-original');
+    const resultsContainer = document.getElementById('books-search-results');
+    if (!original || !resultsContainer) return;
+    if (original.dataset.searchInit === 'true') return;
+    original.dataset.searchInit = 'true';
+
+    const basePath = original.dataset.basePath || '';
+
+    document.addEventListener('libtrails:search', ((e: CustomEvent) => {
+      if (e.detail.scope !== 'books') return;
+      const { data } = e.detail;
+      original.classList.add('hidden');
+      resultsContainer.classList.remove('hidden');
+
+      while (resultsContainer.firstChild) resultsContainer.removeChild(resultsContainer.firstChild);
+
+      if (data.books.length === 0) {
+        const msg = document.createElement('p');
+        msg.className = 'text-[var(--color-text-muted)] text-center py-8';
+        msg.textContent = 'No books found';
+        resultsContainer.appendChild(msg);
+        return;
+      }
+
+      data.books.forEach((result: any) => {
+        resultsContainer.appendChild(createBookResultCard(result, basePath));
+      });
+    }) as EventListener);
+
+    document.addEventListener('libtrails:search-clear', ((e: CustomEvent) => {
+      if (e.detail.scope !== 'books') return;
+      original.classList.remove('hidden');
+      resultsContainer.classList.add('hidden');
+      while (resultsContainer.firstChild) resultsContainer.removeChild(resultsContainer.firstChild);
+    }) as EventListener);
+  }
+
+  initBooksSearch();
+  document.addEventListener('astro:page-load', initBooksSearch);
+</script>

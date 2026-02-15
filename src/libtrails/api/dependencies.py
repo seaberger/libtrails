@@ -19,4 +19,20 @@ def get_db_connection() -> Generator[sqlite3.Connection, None, None]:
         conn.close()
 
 
+def get_vec_db_connection() -> Generator[sqlite3.Connection, None, None]:
+    """Yield a database connection with sqlite-vec loaded."""
+    import sqlite_vec
+
+    conn = sqlite3.connect(IPAD_DB_PATH)
+    conn.row_factory = sqlite3.Row
+    conn.enable_load_extension(True)
+    sqlite_vec.load(conn)
+    conn.enable_load_extension(False)
+    try:
+        yield conn
+    finally:
+        conn.close()
+
+
 DBConnection = Annotated[sqlite3.Connection, Depends(get_db_connection)]
+VecDBConnection = Annotated[sqlite3.Connection, Depends(get_vec_db_connection)]
