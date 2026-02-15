@@ -2012,9 +2012,7 @@ def cluster(
             )
             _refresh_and_report_stats()
         elif not auto_select:
-            console.print(
-                "\n[dim]Use --auto-select to apply the recommended resolution[/dim]"
-            )
+            console.print("\n[dim]Use --auto-select to apply the recommended resolution[/dim]")
 
         if sweep_output:
             console.print(f"\n[dim]Sweep results saved to {sweep_output}[/dim]")
@@ -2268,9 +2266,7 @@ def regenerate_domains(
         super_clusters = result.get("super_clusters", [])
         if not super_clusters:
             if not auto_select and sweep:
-                console.print(
-                    "\n[dim]Use --auto-select to apply the recommended resolution[/dim]"
-                )
+                console.print("\n[dim]Use --auto-select to apply the recommended resolution[/dim]")
             return
 
     else:

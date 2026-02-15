@@ -116,7 +116,9 @@ def get_book(db: DBConnection, book_id: int):
             f"SELECT cluster_id, top_label FROM cluster_stats WHERE cluster_id IN ({placeholders})",
             cluster_ids,
         )
-        themes = [ThemeRef(cluster_id=r["cluster_id"], label=r["top_label"]) for r in cursor.fetchall()]
+        themes = [
+            ThemeRef(cluster_id=r["cluster_id"], label=r["top_label"]) for r in cursor.fetchall()
+        ]
 
     return BookDetail(
         id=book["id"],

@@ -330,9 +330,7 @@ def init_chunks_table():
         cursor.execute("PRAGMA table_info(cluster_books)")
         cb_columns = [row[1] for row in cursor.fetchall()]
         if cb_columns and "book_total_topics" not in cb_columns:
-            conn.execute(
-                "ALTER TABLE cluster_books ADD COLUMN book_total_topics INTEGER DEFAULT 0"
-            )
+            conn.execute("ALTER TABLE cluster_books ADD COLUMN book_total_topics INTEGER DEFAULT 0")
 
         conn.commit()
 

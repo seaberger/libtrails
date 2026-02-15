@@ -8,15 +8,21 @@ The process:
 3. Apply human-refined labels to create final domains
 """
 
+from __future__ import annotations
+
 import json
 import sqlite3
 from collections import defaultdict
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 from sklearn.cluster import KMeans
 
 from .config import IPAD_DB_PATH
+
+if TYPE_CHECKING:
+    import igraph as ig
 
 # Default configuration
 DEFAULT_N_DOMAINS = 25
@@ -94,9 +100,7 @@ def disparity_filter(g: "ig.Graph", alpha: float = 0.05) -> "ig.Graph":
     return g_filtered
 
 
-def compute_participation_coefficients(
-    g: "ig.Graph", membership: list[int]
-) -> list[dict]:
+def compute_participation_coefficients(g: "ig.Graph", membership: list[int]) -> list[dict]:
     """Compute participation coefficient for each node.
 
     The participation coefficient measures how evenly a node's edges are
@@ -119,12 +123,14 @@ def compute_participation_coefficients(
         neighbors = g.neighbors(i)
         k_i = len(neighbors)
         if k_i == 0:
-            results.append({
-                "node_idx": i,
-                "cluster_id": g.vs[i]["cluster_id"] if "cluster_id" in g.vs.attributes() else i,
-                "participation": 0.0,
-                "internal_frac": 1.0,
-            })
+            results.append(
+                {
+                    "node_idx": i,
+                    "cluster_id": g.vs[i]["cluster_id"] if "cluster_id" in g.vs.attributes() else i,
+                    "participation": 0.0,
+                    "internal_frac": 1.0,
+                }
+            )
             continue
 
         # Count edges to each community
@@ -140,12 +146,14 @@ def compute_participation_coefficients(
         internal = community_counts.get(own_community, 0)
         internal_frac = internal / k_i
 
-        results.append({
-            "node_idx": i,
-            "cluster_id": g.vs[i]["cluster_id"] if "cluster_id" in g.vs.attributes() else i,
-            "participation": p_i,
-            "internal_frac": internal_frac,
-        })
+        results.append(
+            {
+                "node_idx": i,
+                "cluster_id": g.vs[i]["cluster_id"] if "cluster_id" in g.vs.attributes() else i,
+                "participation": p_i,
+                "internal_frac": internal_frac,
+            }
+        )
 
     results.sort(key=lambda x: x["participation"], reverse=True)
     return results
@@ -715,7 +723,7 @@ def generate_super_clusters_leiden(
     result = {}
 
     if sweep:
-        from .sweep import format_sweep_table, run_sweep, log_spaced_resolutions
+        from .sweep import log_spaced_resolutions, run_sweep
 
         resolutions = log_spaced_resolutions(
             low=DOMAIN_SWEEP_RESOLUTION_RANGE[0],
@@ -759,10 +767,7 @@ def generate_super_clusters_leiden(
     if remove_outliers and g.vcount() > 0:
         coeffs = compute_participation_coefficients(g, membership)
         for info in coeffs:
-            if (
-                info["participation"] > outlier_threshold
-                and info["internal_frac"] < 0.3
-            ):
+            if info["participation"] > outlier_threshold and info["internal_frac"] < 0.3:
                 node_idx = info["node_idx"]
                 # Reassign to strongest-connected domain (most edge weight)
                 neighbor_weights = defaultdict(float)
