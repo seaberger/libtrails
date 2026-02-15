@@ -300,6 +300,9 @@ interface SidebarProps {
   isMobile: boolean;
 }
 
+const SNAP_POINTS = [20, 40, 85]; // vh: peek, half, expanded
+const DEFAULT_SHEET_HEIGHT = 40; // vh
+
 function Sidebar({
   selectedClusters,
   singleDetail,
@@ -321,13 +324,68 @@ function Sidebar({
     return m;
   }, [domains]);
 
+  // ── Bottom sheet drag-to-resize (mobile only) ──
+  // Uses ref-based DOM listeners with { passive: false } so preventDefault()
+  // works in touchmove (React 18 attaches touch handlers as passive by default).
+  const [sheetHeight, setSheetHeight] = useState(DEFAULT_SHEET_HEIGHT);
+  const [isDragging, setIsDragging] = useState(false);
+  const dragRef = useRef<{ startY: number; startHeight: number } | null>(null);
+  const sheetHeightRef = useRef(sheetHeight);
+  const dragHandleRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    sheetHeightRef.current = sheetHeight;
+  }, [sheetHeight]);
+
+  useEffect(() => {
+    const el = dragHandleRef.current;
+    if (!el || !isMobile) return;
+
+    const onTouchStart = (e: TouchEvent) => {
+      setIsDragging(true);
+      dragRef.current = {
+        startY: e.touches[0].clientY,
+        startHeight: sheetHeightRef.current,
+      };
+    };
+
+    const onTouchMove = (e: TouchEvent) => {
+      if (!dragRef.current) return;
+      e.preventDefault(); // works because listener is { passive: false }
+      const deltaY = dragRef.current.startY - e.touches[0].clientY;
+      const deltaVh = (deltaY / window.innerHeight) * 100;
+      const newHeight = Math.max(12, Math.min(92, dragRef.current.startHeight + deltaVh));
+      setSheetHeight(newHeight);
+    };
+
+    const onTouchEnd = () => {
+      if (!dragRef.current) return;
+      const current = sheetHeightRef.current;
+      const closest = SNAP_POINTS.reduce((prev, curr) =>
+        Math.abs(curr - current) < Math.abs(prev - current) ? curr : prev
+      );
+      setSheetHeight(closest);
+      dragRef.current = null;
+      setIsDragging(false);
+    };
+
+    el.addEventListener("touchstart", onTouchStart, { passive: true });
+    el.addEventListener("touchmove", onTouchMove, { passive: false });
+    el.addEventListener("touchend", onTouchEnd, { passive: true });
+    return () => {
+      el.removeEventListener("touchstart", onTouchStart);
+      el.removeEventListener("touchmove", onTouchMove);
+      el.removeEventListener("touchend", onTouchEnd);
+    };
+  }, [isMobile]);
+
   const containerStyle: React.CSSProperties = isMobile
     ? {
         position: "absolute",
         bottom: 0,
         left: 0,
         right: 0,
-        height: "60vh",
+        height: `${sheetHeight}vh`,
         background: colors.bg,
         borderTop: `1px solid ${colors.border}`,
         backdropFilter: "blur(12px)",
@@ -340,7 +398,9 @@ function Sidebar({
         overflowX: "hidden",
         paddingTop: 0,
         borderRadius: "16px 16px 0 0",
-        transition: "transform 0.2s ease, background 0.15s ease",
+        transition: isDragging
+          ? "background 0.15s ease"
+          : "height 0.25s ease, background 0.15s ease",
       }
     : {
         position: "absolute",
@@ -364,14 +424,20 @@ function Sidebar({
 
   return (
     <div style={containerStyle}>
-      {/* Drag handle for mobile */}
+      {/* Drag handle for mobile — touch target for resizing */}
       {isMobile && (
         <div
+          ref={dragHandleRef}
+          data-testid="sheet-drag-handle"
           style={{
             display: "flex",
             justifyContent: "center",
-            padding: "10px 0 4px",
+            alignItems: "center",
+            minHeight: 28,
+            padding: "10px 0 6px",
             flexShrink: 0,
+            cursor: "grab",
+            touchAction: "none",
           }}
         >
           <div
