@@ -142,3 +142,57 @@ class UniverseData(BaseModel):
 
     clusters: list[UniverseCluster]
     domains: list[UniverseDomain]
+
+
+# ── Hybrid search schemas ──
+
+
+class HybridBookResult(BaseModel):
+    """Book result from hybrid search."""
+
+    book_id: int
+    title: str
+    author: str
+    calibre_id: int | None = None
+    score: float
+    match_type: str  # "keyword", "content", "semantic", "topic"
+
+
+class HybridClusterResult(BaseModel):
+    """Cluster result from hybrid search."""
+
+    cluster_id: int
+    label: str
+    size: int
+    book_count: int
+    score: float
+    sample_books: list[BookSummary] = []
+
+
+class HybridDomainResult(BaseModel):
+    """Domain result from hybrid search."""
+
+    domain_id: int
+    label: str
+    score: float
+    matching_clusters: int
+
+
+class UniverseSearchResult(BaseModel):
+    """Minimal cluster hit for universe highlighting."""
+
+    cluster_id: int
+    score: float
+
+
+class HybridSearchResponse(BaseModel):
+    """Unified hybrid search response."""
+
+    query: str
+    scope: str
+    total: int
+    timing_ms: int
+    books: list[HybridBookResult] = []
+    clusters: list[HybridClusterResult] = []
+    domains: list[HybridDomainResult] = []
+    universe: list[UniverseSearchResult] = []

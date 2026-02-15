@@ -3,13 +3,14 @@ import { Canvas, useThree } from "@react-three/fiber";
 import type { ThreeEvent } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
-import { getBooksBatch, getCoverUrl, getUniverse } from "../lib/api";
+import { getBooksBatch, getCoverUrl, getUniverse, searchHybrid } from "../lib/api";
 import type {
   BookSummary,
   ThemeDetail,
   UniverseCluster,
   UniverseData,
   UniverseDomain,
+  UniverseSearchResult,
 } from "../lib/types";
 
 const SPREAD = 40;
@@ -165,10 +166,13 @@ function CameraRef({ cameraRef }: { cameraRef: React.MutableRefObject<THREE.Came
 
 // ── Cluster spheres using InstancedMesh ──
 
+const SEARCH_HIGHLIGHT_COLOR = "#f59e0b"; // amber for search hits
+
 interface ClusterSpheresProps {
   clusters: UniverseCluster[];
   colorMap: Map<number, string>;
   selectedIds: Set<number>;
+  searchHitIds: Set<number> | null;
   onClickSphere: (cluster: UniverseCluster) => void;
 }
 
@@ -176,6 +180,7 @@ function ClusterSpheres({
   clusters,
   colorMap,
   selectedIds,
+  searchHitIds,
   onClickSphere,
 }: ClusterSpheresProps) {
   const meshRef = useRef<THREE.InstancedMesh>(null!);
@@ -189,23 +194,36 @@ function ClusterSpheres({
     if (!mesh) return;
     const dummy = new THREE.Object3D();
     const col = new THREE.Color();
+    const isSearching = searchHitIds !== null;
 
     for (let i = 0; i < clusters.length; i++) {
       const c = clusters[i];
       const isSelected = selectedIds.has(c.cluster_id);
+      const isSearchHit = isSearching && searchHitIds.has(c.cluster_id);
       dummy.position.set(c.x * SPREAD, c.y * SPREAD, (c.z ?? 0) * SPREAD);
       const base = 0.2 + 0.8 * Math.sqrt(c.book_count / maxBooks);
-      dummy.scale.setScalar(isSelected ? base * 1.6 : base);
+      const scale = isSelected ? base * 1.6 : isSearchHit ? base * 1.3 : base;
+      dummy.scale.setScalar(scale);
       dummy.updateMatrix();
       mesh.setMatrixAt(i, dummy.matrix);
 
-      col.set(isSelected ? HIGHLIGHT_COLOR : colorMap.get(c.domain_id) || "#888888");
+      if (isSelected) {
+        col.set(HIGHLIGHT_COLOR);
+      } else if (isSearchHit) {
+        col.set(SEARCH_HIGHLIGHT_COLOR);
+      } else if (isSearching) {
+        // Dim non-matching clusters during search
+        col.set(colorMap.get(c.domain_id) || "#888888");
+        col.multiplyScalar(0.15);
+      } else {
+        col.set(colorMap.get(c.domain_id) || "#888888");
+      }
       mesh.setColorAt(i, col);
     }
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     mesh.computeBoundingSphere();
-  }, [clusters, colorMap, maxBooks, selectedIds]);
+  }, [clusters, colorMap, maxBooks, selectedIds, searchHitIds]);
 
   const handlePointerMove = useCallback(
     (e: ThreeEvent<PointerEvent>) => {
@@ -286,6 +304,12 @@ function SelectionOverlay({ rect }: { rect: SelectRect }) {
 
 // ── Sidebar panel ──
 
+interface SearchState {
+  query: string;
+  results: UniverseSearchResult[];
+  loading: boolean;
+}
+
 interface SidebarProps {
   selectedClusters: UniverseCluster[];
   singleDetail: ThemeDetail | null;
@@ -298,6 +322,9 @@ interface SidebarProps {
   onClose: () => void;
   colors: SidebarColors;
   isMobile: boolean;
+  search: SearchState;
+  onSearchChange: (query: string) => void;
+  allClusters: UniverseCluster[];
 }
 
 const SNAP_POINTS = [20, 40, 85]; // vh: peek, half, expanded
@@ -315,14 +342,27 @@ function Sidebar({
   onClose,
   colors,
   isMobile,
+  search,
+  onSearchChange,
+  allClusters,
 }: SidebarProps) {
   const basePath = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const domainMap = useMemo(() => {
     const m = new Map<number, UniverseDomain>();
     for (const d of domains) m.set(d.domain_id, d);
     return m;
   }, [domains]);
+
+  // Map search results to cluster objects for the sidebar list
+  const searchResultClusters = useMemo(() => {
+    if (!search.results.length) return [];
+    const clusterMap = new Map(allClusters.map((c) => [c.cluster_id, c]));
+    return search.results
+      .map((r) => clusterMap.get(r.cluster_id))
+      .filter((c): c is UniverseCluster => c !== undefined);
+  }, [search.results, allClusters]);
 
   // ── Bottom sheet drag-to-resize (mobile only) ──
   // Uses ref-based DOM listeners with { passive: false } so preventDefault()
@@ -457,6 +497,43 @@ function Sidebar({
           />
         </div>
       )}
+      {/* Search input (always visible at top when no cluster selected) */}
+      {selectedClusters.length === 0 && (
+        <div style={{ padding: "12px 16px 0" }}>
+          <div style={{ position: "relative" }}>
+            <input
+              ref={searchInputRef}
+              type="text"
+              value={search.query}
+              onChange={(e) => onSearchChange(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Escape") { onSearchChange(""); searchInputRef.current?.blur(); } }}
+              placeholder="Search clusters..."
+              style={{
+                width: "100%",
+                padding: "8px 12px 8px 32px",
+                background: colors.chipBg,
+                border: `1px solid ${colors.border}`,
+                borderRadius: 8,
+                color: colors.text,
+                fontSize: "0.8rem",
+                outline: "none",
+              }}
+            />
+            <svg
+              style={{ position: "absolute", left: 10, top: "50%", transform: "translateY(-50%)", width: 14, height: 14 }}
+              fill="none"
+              stroke={colors.textMuted}
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            {search.loading && (
+              <div style={{ position: "absolute", right: 10, top: "50%", transform: "translateY(-50%)", width: 14, height: 14, border: `2px solid ${colors.accent}`, borderTopColor: "transparent", borderRadius: "50%", animation: "spin 0.6s linear infinite" }} />
+            )}
+          </div>
+        </div>
+      )}
+
       {selectedClusters.length === 1 ? (
         <ClusterPanel
           cluster={selectedClusters[0]}
@@ -476,6 +553,37 @@ function Sidebar({
           onClose={onClose}
           colors={colors}
         />
+      ) : search.query && searchResultClusters.length > 0 ? (
+        /* Search results list */
+        <div style={{ padding: "12px 16px" }}>
+          <div style={{ fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.05em", color: colors.textMuted, marginBottom: 8 }}>
+            {searchResultClusters.length} matching clusters
+          </div>
+          <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+            {searchResultClusters.map((c) => {
+              const domain = domainMap.get(c.domain_id);
+              return (
+                <div
+                  key={c.cluster_id}
+                  onClick={() => onSelectCluster(c)}
+                  style={{ padding: "6px 10px", borderRadius: 6, cursor: "pointer", background: colors.chipBg, transition: "background 0.1s" }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = colors.chipBgHover)}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = colors.chipBg)}
+                >
+                  {domain && (
+                    <span style={{ display: "inline-block", width: 8, height: 8, borderRadius: "50%", background: domain.color, marginRight: 6, verticalAlign: "middle" }} />
+                  )}
+                  <span style={{ fontSize: "0.78rem", fontWeight: 500 }}>{c.label}</span>
+                  <span style={{ fontSize: "0.68rem", color: colors.textMuted, marginLeft: 8 }}>{c.book_count} books</span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : search.query && !search.loading ? (
+        <div style={{ padding: "16px", fontSize: "0.8rem", color: colors.textMuted, textAlign: "center" }}>
+          No clusters found
+        </div>
       ) : (
         <DomainLegend
           domains={domains}
@@ -1354,6 +1462,39 @@ export default function GalaxyView() {
   const [singleDetail, setSingleDetail] = useState<ThemeDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
 
+  // Search state
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<UniverseSearchResult[]>([]);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const searchTimerRef = useRef<ReturnType<typeof setTimeout>>();
+
+  const searchHitIds = useMemo(() => {
+    if (!searchQuery || searchResults.length === 0) return null;
+    return new Set(searchResults.map((r) => r.cluster_id));
+  }, [searchQuery, searchResults]);
+
+  const handleSearchChange = useCallback((query: string) => {
+    setSearchQuery(query);
+    clearTimeout(searchTimerRef.current);
+    if (!query.trim()) {
+      setSearchResults([]);
+      setSearchLoading(false);
+      return;
+    }
+    setSearchLoading(true);
+    searchTimerRef.current = setTimeout(() => {
+      searchHybrid(query, "universe", 50)
+        .then((resp) => {
+          setSearchResults(resp.universe);
+          setSearchLoading(false);
+        })
+        .catch(() => {
+          setSearchResults([]);
+          setSearchLoading(false);
+        });
+    }, 300);
+  }, []);
+
   // Shift+drag rectangle selection
   const [selectRect, setSelectRect] = useState<SelectRect | null>(null);
   const isDraggingRef = useRef(false);
@@ -1617,6 +1758,7 @@ export default function GalaxyView() {
             clusters={visibleClusters}
             colorMap={colorMap}
             selectedIds={selectedIds}
+            searchHitIds={searchHitIds}
             onClickSphere={handleClickSphere}
           />
         )}
@@ -1646,6 +1788,9 @@ export default function GalaxyView() {
         onClose={handleClickEmpty}
         colors={sidebarColors}
         isMobile={isMobile}
+        search={{ query: searchQuery, results: searchResults, loading: searchLoading }}
+        onSearchChange={handleSearchChange}
+        allClusters={data.clusters}
       />
     </div>
   );

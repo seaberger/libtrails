@@ -1,9 +1,20 @@
 """Search API endpoints."""
 
-from fastapi import APIRouter, Query
+import json
+import time
 
-from ..dependencies import DBConnection
-from ..schemas import BookSummary, SearchResult
+from fastapi import APIRouter, HTTPException, Query
+
+from ..dependencies import DBConnection, VecDBConnection
+from ..schemas import (
+    BookSummary,
+    HybridBookResult,
+    HybridClusterResult,
+    HybridDomainResult,
+    HybridSearchResponse,
+    SearchResult,
+    UniverseSearchResult,
+)
 
 router = APIRouter()
 
@@ -183,3 +194,73 @@ def semantic_search(
 
     results.sort(key=lambda x: x.score, reverse=True)
     return results[:limit]
+
+
+VALID_SCOPES = {"books", "clusters", "domains", "universe"}
+
+
+@router.get("/search/hybrid", response_model=HybridSearchResponse)
+def hybrid_search(
+    db: VecDBConnection,
+    q: str = Query(..., min_length=1, description="Search query"),
+    scope: str = Query("books", description="Search scope: books, clusters, domains, universe"),
+    limit: int = Query(20, ge=1, le=100),
+):
+    """Hybrid search using FTS5 + semantic vectors + RRF fusion."""
+    if scope not in VALID_SCOPES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid scope '{scope}'. Must be one of: {', '.join(sorted(VALID_SCOPES))}",
+        )
+
+    from ...hybrid_search import (
+        hybrid_search_books,
+        hybrid_search_clusters,
+        hybrid_search_domains,
+        hybrid_search_universe,
+    )
+
+    t0 = time.monotonic()
+
+    response = HybridSearchResponse(query=q, scope=scope, total=0, timing_ms=0)
+
+    if scope == "books":
+        raw = hybrid_search_books(db, q, limit)
+        response.books = [HybridBookResult(**r) for r in raw]
+        response.total = len(response.books)
+
+    elif scope == "clusters":
+        raw = hybrid_search_clusters(db, q, limit)
+        cluster_results = []
+        for r in raw:
+            sample_books = []
+            if r.get("sample_books_json"):
+                try:
+                    sample_books = [BookSummary(**b) for b in json.loads(r["sample_books_json"])]
+                except Exception:
+                    pass
+            cluster_results.append(
+                HybridClusterResult(
+                    cluster_id=r["cluster_id"],
+                    label=r["label"],
+                    size=r["size"],
+                    book_count=r["book_count"],
+                    score=r["score"],
+                    sample_books=sample_books,
+                )
+            )
+        response.clusters = cluster_results
+        response.total = len(response.clusters)
+
+    elif scope == "domains":
+        raw = hybrid_search_domains(db, q, limit)
+        response.domains = [HybridDomainResult(**r) for r in raw]
+        response.total = len(response.domains)
+
+    elif scope == "universe":
+        raw = hybrid_search_universe(db, q, limit)
+        response.universe = [UniverseSearchResult(**r) for r in raw]
+        response.total = len(response.universe)
+
+    response.timing_ms = round((time.monotonic() - t0) * 1000)
+    return response

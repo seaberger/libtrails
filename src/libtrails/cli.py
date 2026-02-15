@@ -2428,6 +2428,24 @@ def refresh_stats():
     console.print(f"  [dim]Completed in {result['elapsed_seconds']:.1f}s[/dim]")
 
 
+@main.command("rebuild-fts")
+def rebuild_fts():
+    """Rebuild FTS5 full-text search indexes (books, topics, chunks).
+
+    Creates or replaces the books_fts, topics_fts, and chunks_fts virtual
+    tables used by the hybrid search endpoint.
+    """
+    from .database import get_db, rebuild_fts_indexes
+
+    console.print("[bold]Rebuilding FTS5 indexes...[/bold]")
+    with get_db() as conn:
+        counts = rebuild_fts_indexes(conn)
+
+    for table, count in counts.items():
+        console.print(f"  [green]{table}: {count:,} rows[/green]")
+    console.print("[dim]Done.[/dim]")
+
+
 @main.command("backfill")
 @click.option(
     "--chunk-model", default="gemini/gemini-2.5-flash-lite", help="Model for topic extraction"

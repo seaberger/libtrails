@@ -1,0 +1,127 @@
+---
+// Reusable search bar that emits custom DOM events
+interface Props {
+  placeholder?: string;
+  scope: "books" | "clusters" | "domains" | "universe";
+}
+
+const { placeholder = "Search...", scope } = Astro.props;
+const basePath = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+---
+
+<div class="search-bar mb-6" data-scope={scope} data-base-path={basePath}>
+  <form class="search-bar-form relative" onsubmit="return false">
+    <input
+      type="text"
+      class="search-bar-input w-full px-4 py-3 pl-12 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] placeholder-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
+      placeholder={placeholder}
+      autocomplete="off"
+    />
+    <!-- Search icon -->
+    <svg
+      class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--color-text-muted)]"
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        stroke-width="2"
+        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
+      />
+    </svg>
+    <!-- Loading spinner -->
+    <div class="search-bar-loading absolute right-4 top-1/2 -translate-y-1/2 hidden">
+      <div class="w-5 h-5 border-2 border-[var(--color-accent)] border-t-transparent rounded-full animate-spin"></div>
+    </div>
+  </form>
+  <p class="search-bar-status mt-2 text-sm text-[var(--color-text-muted)] hidden"></p>
+</div>
+
+<script>
+  function initSearchBar() {
+    document.querySelectorAll<HTMLDivElement>('.search-bar').forEach(container => {
+      const input = container.querySelector<HTMLInputElement>('.search-bar-input');
+      const loading = container.querySelector<HTMLDivElement>('.search-bar-loading');
+      const status = container.querySelector<HTMLParagraphElement>('.search-bar-status');
+      const scope = container.dataset.scope || 'books';
+      const basePath = container.dataset.basePath || '';
+
+      if (!input) return;
+      // Prevent double-init
+      if (container.dataset.initialized === 'true') return;
+      container.dataset.initialized = 'true';
+
+      let debounceTimer: ReturnType<typeof setTimeout>;
+      let abortController: AbortController | null = null;
+
+      async function doSearch(query: string) {
+        // Cancel previous in-flight request
+        if (abortController) abortController.abort();
+
+        if (!query.trim()) {
+          loading?.classList.add('hidden');
+          status?.classList.add('hidden');
+          document.dispatchEvent(new CustomEvent('libtrails:search-clear', { detail: { scope } }));
+          return;
+        }
+
+        loading?.classList.remove('hidden');
+        status?.classList.add('hidden');
+        abortController = new AbortController();
+
+        try {
+          const API_BASE = `${basePath}/api/v1`;
+          const res = await fetch(
+            `${API_BASE}/search/hybrid?q=${encodeURIComponent(query)}&scope=${scope}&limit=50`,
+            { signal: abortController.signal }
+          );
+          if (!res.ok) throw new Error('Search failed');
+          const data = await res.json();
+
+          loading?.classList.add('hidden');
+          if (status) {
+            status.textContent = `${data.total} result${data.total !== 1 ? 's' : ''} (${data.timing_ms}ms)`;
+            status.classList.remove('hidden');
+          }
+
+          document.dispatchEvent(new CustomEvent('libtrails:search', {
+            detail: { scope, query, data }
+          }));
+        } catch (err: any) {
+          if (err.name === 'AbortError') return;
+          loading?.classList.add('hidden');
+          if (status) {
+            status.textContent = 'Search failed. Please try again.';
+            status.classList.remove('hidden');
+          }
+        }
+      }
+
+      input.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        debounceTimer = setTimeout(() => doSearch(input.value), 300);
+      });
+
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+          input.value = '';
+          doSearch('');
+          input.blur();
+        }
+      });
+
+      // "/" keyboard shortcut to focus
+      document.addEventListener('keydown', (e) => {
+        if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+          e.preventDefault();
+          input.focus();
+        }
+      });
+    });
+  }
+
+  initSearchBar();
+  document.addEventListener('astro:page-load', initSearchBar);
+</script>

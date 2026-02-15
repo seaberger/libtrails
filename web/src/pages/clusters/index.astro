@@ -1,11 +1,12 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import ThemeCard from '../../components/ThemeCard.astro';
-import ThemeSearch from '../../components/ThemeSearch.astro';
-import { getThemes } from '../../lib/api';
+import SearchBar from '../../components/SearchBar.astro';
+import { getThemes, getCoverUrl } from '../../lib/api';
 
 // Fetch clusters at build time (SSR) or request time
 const clusters = await getThemes(2000, 3);
+const basePath = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 ---
 
 <BaseLayout title="Clusters" description="Browse all topic clusters from your library">
@@ -18,11 +19,146 @@ const clusters = await getThemes(2000, 3);
     </p>
   </header>
 
-  <ThemeSearch />
+  <SearchBar placeholder="Search clusters (e.g., stoic philosophy, machine learning, family drama...)" scope="clusters" />
 
-  <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4" data-themes-grid>
+  <!-- Search results grid (hidden by default) -->
+  <div id="clusters-search-results" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 hidden" data-base-path={basePath}></div>
+
+  <!-- Original clusters grid -->
+  <div id="clusters-original" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4" data-themes-grid>
     {clusters.map(theme => (
       <ThemeCard theme={theme} />
     ))}
   </div>
 </BaseLayout>
+
+<script>
+  function createClusterCard(cluster: any, basePath: string): HTMLElement {
+    const books = cluster.sample_books || [];
+    const bookCount = books.length;
+    const center = (bookCount - 1) / 2;
+
+    const card = document.createElement('a');
+    card.href = `${basePath}/clusters/${cluster.cluster_id}`;
+    card.className = 'group relative block overflow-visible bg-[var(--color-surface)] rounded-lg p-5 border border-[var(--color-border)] hover:border-[var(--color-accent)] hover:shadow-lg hover:z-10 transition-all duration-300';
+    card.setAttribute('data-theme-card', '');
+
+    // Cover stack container
+    const coverContainer = document.createElement('div');
+    coverContainer.className = 'relative h-40 mb-4 flex items-center justify-center';
+
+    const coverStack = document.createElement('div');
+    coverStack.className = 'relative';
+    coverStack.style.cssText = 'width: 180px; height: 140px;';
+
+    books.forEach((book: any, index: number) => {
+      const offset = index - center;
+      const stackedX = offset * 8;
+      const stackedRotate = offset * 1.5;
+      const fannedX = offset * 16;
+      const fannedRotate = offset * 16;
+
+      const bookDiv = document.createElement('div');
+      bookDiv.className = 'absolute left-1/2 transition-all duration-300 ease-out group-hover:scale-105';
+      bookDiv.style.cssText = `z-index: ${bookCount - index}; transform: translateX(calc(-50% + ${stackedX}px)) rotate(${stackedRotate}deg); transform-origin: center 150%;`;
+      bookDiv.setAttribute('data-fanned-x', String(fannedX));
+      bookDiv.setAttribute('data-fanned-rotate', String(fannedRotate));
+      bookDiv.setAttribute('data-stacked-x', String(stackedX));
+      bookDiv.setAttribute('data-stacked-rotate', String(stackedRotate));
+
+      const img = document.createElement('img');
+      img.src = book.calibre_id ? `${basePath}/api/v1/covers/${book.calibre_id}` : `${basePath}/placeholder-cover.svg`;
+      img.alt = book.title || 'Book cover';
+      img.className = 'w-16 h-24 object-cover rounded shadow-md';
+      img.loading = 'lazy';
+
+      bookDiv.appendChild(img);
+      coverStack.appendChild(bookDiv);
+    });
+
+    coverContainer.appendChild(coverStack);
+    card.appendChild(coverContainer);
+
+    // Cluster label
+    const label = document.createElement('h3');
+    label.className = 'font-bold text-[var(--color-text)] text-base leading-tight mb-2 text-center capitalize';
+    label.textContent = cluster.label;
+    card.appendChild(label);
+
+    // Stats
+    const stats = document.createElement('p');
+    stats.className = 'text-xs text-[var(--color-text-muted)] text-center';
+    stats.textContent = `${cluster.book_count} books · ${cluster.size} topics`;
+    card.appendChild(stats);
+
+    return card;
+  }
+
+  function initFanEffect() {
+    const cards = document.querySelectorAll('[data-theme-card]');
+    cards.forEach(card => {
+      const books = card.querySelectorAll('[data-fanned-x]');
+      if (!books.length) return;
+
+      card.addEventListener('mouseenter', () => {
+        books.forEach(book => {
+          const x = book.getAttribute('data-fanned-x');
+          const rotate = book.getAttribute('data-fanned-rotate');
+          (book as HTMLElement).style.transform = `translateX(calc(-50% + ${x}px)) rotate(${rotate}deg)`;
+        });
+      });
+
+      card.addEventListener('mouseleave', () => {
+        books.forEach(book => {
+          const x = book.getAttribute('data-stacked-x');
+          const rotate = book.getAttribute('data-stacked-rotate');
+          (book as HTMLElement).style.transform = `translateX(calc(-50% + ${x}px)) rotate(${rotate}deg)`;
+        });
+      });
+    });
+  }
+
+  function initClustersSearch() {
+    const original = document.getElementById('clusters-original');
+    const resultsContainer = document.getElementById('clusters-search-results');
+    if (!original || !resultsContainer) return;
+
+    const basePath = resultsContainer.dataset.basePath || '';
+
+    document.addEventListener('libtrails:search', ((e: CustomEvent) => {
+      if (e.detail.scope !== 'clusters') return;
+      const { data } = e.detail;
+      original.classList.add('hidden');
+      resultsContainer.classList.remove('hidden');
+
+      while (resultsContainer.firstChild) resultsContainer.removeChild(resultsContainer.firstChild);
+
+      if (data.clusters.length === 0) {
+        const msg = document.createElement('p');
+        msg.className = 'text-[var(--color-text-muted)] text-center py-8 col-span-full';
+        msg.textContent = 'No clusters found';
+        resultsContainer.appendChild(msg);
+        return;
+      }
+
+      data.clusters.forEach((cluster: any) => {
+        resultsContainer.appendChild(createClusterCard(cluster, basePath));
+      });
+      initFanEffect();
+    }) as EventListener);
+
+    document.addEventListener('libtrails:search-clear', ((e: CustomEvent) => {
+      if (e.detail.scope !== 'clusters') return;
+      original.classList.remove('hidden');
+      resultsContainer.classList.add('hidden');
+      while (resultsContainer.firstChild) resultsContainer.removeChild(resultsContainer.firstChild);
+    }) as EventListener);
+  }
+
+  initClustersSearch();
+  initFanEffect();
+  document.addEventListener('astro:page-load', () => {
+    initClustersSearch();
+    initFanEffect();
+  });
+</script>

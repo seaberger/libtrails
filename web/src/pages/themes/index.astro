@@ -1,5 +1,6 @@
 ---
 import BaseLayout from '../../layouts/BaseLayout.astro';
+import SearchBar from '../../components/SearchBar.astro';
 import { getDomains, getCoverUrl } from '../../lib/api';
 import { url } from '../../lib/url';
 
@@ -15,6 +16,8 @@ const domains = await getDomains();
       Explore {domains.length} broad themes across your library
     </p>
   </header>
+
+  <SearchBar placeholder="Search themes (e.g., fantasy, philosophy, economics...)" scope="domains" />
 
   <div class="flex flex-col md:flex-row gap-6" id="domain-browser">
     <!-- Domain selector: horizontal scroll on mobile, vertical list on desktop -->
@@ -175,10 +178,75 @@ const domains = await getDomains();
     });
   }
 
+  function initThemeSearch() {
+    const items = document.querySelectorAll('.domain-item');
+    const details = document.querySelectorAll('.domain-detail');
+    const browser = document.getElementById('domain-browser');
+    if (!browser) return;
+
+    document.addEventListener('libtrails:search', ((e: CustomEvent) => {
+      if (e.detail.scope !== 'domains') return;
+      const { data } = e.detail;
+      const matchingIds = new Set(data.domains.map((d: any) => String(d.domain_id)));
+
+      if (matchingIds.size === 0) {
+        // Hide all
+        items.forEach(i => (i as HTMLElement).style.opacity = '0.3');
+        details.forEach(d => (d as HTMLElement).style.display = 'none');
+        return;
+      }
+
+      // Dim non-matching domains, highlight matching ones
+      items.forEach(item => {
+        const domainId = item.getAttribute('data-domain-id');
+        if (matchingIds.has(domainId!)) {
+          (item as HTMLElement).style.opacity = '1';
+        } else {
+          (item as HTMLElement).style.opacity = '0.3';
+        }
+      });
+
+      // Auto-select top matching domain
+      const topDomainId = String(data.domains[0].domain_id);
+      items.forEach(i => {
+        if (i.getAttribute('data-domain-id') === topDomainId) {
+          i.setAttribute('data-selected', 'true');
+        } else {
+          i.removeAttribute('data-selected');
+        }
+      });
+      details.forEach(d => {
+        (d as HTMLElement).style.display = d.getAttribute('data-domain-id') === topDomainId ? '' : 'none';
+      });
+    }) as EventListener);
+
+    document.addEventListener('libtrails:search-clear', ((e: CustomEvent) => {
+      if (e.detail.scope !== 'domains') return;
+      // Restore all domains to full opacity
+      items.forEach(i => (i as HTMLElement).style.opacity = '1');
+      // Re-select first domain
+      const firstId = items[0]?.getAttribute('data-domain-id');
+      if (firstId) {
+        items.forEach(i => {
+          if (i.getAttribute('data-domain-id') === firstId) {
+            i.setAttribute('data-selected', 'true');
+          } else {
+            i.removeAttribute('data-selected');
+          }
+        });
+        details.forEach(d => {
+          (d as HTMLElement).style.display = d.getAttribute('data-domain-id') === firstId ? '' : 'none';
+        });
+      }
+    }) as EventListener);
+  }
+
   initDomainBrowser();
   initChipsToggle();
+  initThemeSearch();
   document.addEventListener('astro:page-load', () => {
     initDomainBrowser();
     initChipsToggle();
+    initThemeSearch();
   });
 </script>

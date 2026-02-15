@@ -102,3 +102,46 @@ export interface UniverseData {
   clusters: UniverseCluster[];
   domains: UniverseDomain[];
 }
+
+// Hybrid search types
+
+export interface HybridBookResult {
+  book_id: number;
+  title: string;
+  author: string;
+  calibre_id: number | null;
+  score: number;
+  match_type: "keyword" | "content" | "semantic" | "topic";
+}
+
+export interface HybridClusterResult {
+  cluster_id: number;
+  label: string;
+  size: number;
+  book_count: number;
+  score: number;
+  sample_books: BookSummary[];
+}
+
+export interface HybridDomainResult {
+  domain_id: number;
+  label: string;
+  score: number;
+  matching_clusters: number;
+}
+
+export interface UniverseSearchResult {
+  cluster_id: number;
+  score: number;
+}
+
+export interface HybridSearchResponse {
+  query: string;
+  scope: string;
+  total: number;
+  timing_ms: number;
+  books: HybridBookResult[];
+  clusters: HybridClusterResult[];
+  domains: HybridDomainResult[];
+  universe: UniverseSearchResult[];
+}
