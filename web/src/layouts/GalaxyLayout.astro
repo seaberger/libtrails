@@ -103,6 +103,60 @@ const isActive = (path: string) => {
       .galaxy-nav .theme-toggle:hover {
         color: var(--color-accent);
       }
+      /* Mobile hamburger */
+      .galaxy-nav .hamburger-btn {
+        display: none;
+        background: none;
+        border: none;
+        padding: 0.25rem;
+        color: var(--color-text-muted);
+        cursor: pointer;
+        transition: color 0.15s ease;
+      }
+      .galaxy-nav .hamburger-btn:hover {
+        color: var(--color-accent);
+      }
+      .galaxy-mobile-menu {
+        display: none;
+        position: fixed;
+        top: 53px;
+        left: 0;
+        right: 0;
+        z-index: 49;
+        background: color-mix(in srgb, var(--color-surface) 95%, transparent);
+        backdrop-filter: blur(12px);
+        border-bottom: 1px solid var(--color-border);
+        flex-direction: column;
+        padding: 0.75rem 1.5rem;
+        gap: 0.25rem;
+      }
+      .galaxy-mobile-menu.open {
+        display: flex;
+      }
+      .galaxy-mobile-menu a,
+      .galaxy-mobile-menu button {
+        display: block;
+        padding: 0.5rem 0;
+        font-size: 0.875rem;
+        color: var(--color-text-muted);
+        text-decoration: none;
+        transition: color 0.15s ease;
+        background: none;
+        border: none;
+        cursor: pointer;
+        text-align: left;
+      }
+      .galaxy-mobile-menu a:hover,
+      .galaxy-mobile-menu button:hover {
+        color: var(--color-text);
+      }
+      .galaxy-mobile-menu a.active {
+        color: var(--color-accent);
+      }
+      @media (max-width: 767px) {
+        .galaxy-nav .links { display: none; }
+        .galaxy-nav .hamburger-btn { display: block; }
+      }
       /* Show/hide sun/moon icons based on theme */
       .theme-icon-moon { display: none; }
       [data-theme="light"] .theme-icon-sun { display: none; }
@@ -146,7 +200,46 @@ const isActive = (path: string) => {
           </svg>
         </button>
       </div>
+
+      <!-- Mobile hamburger button -->
+      <button class="hamburger-btn" id="galaxy-menu-btn" aria-label="Open menu">
+        <svg id="galaxy-hamburger-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="3" y1="6" x2="21" y2="6"></line>
+          <line x1="3" y1="12" x2="21" y2="12"></line>
+          <line x1="3" y1="18" x2="21" y2="18"></line>
+        </svg>
+        <svg id="galaxy-close-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:none;">
+          <line x1="18" y1="6" x2="6" y2="18"></line>
+          <line x1="6" y1="6" x2="18" y2="18"></line>
+        </svg>
+      </button>
     </nav>
+
+    <!-- Mobile dropdown menu -->
+    <div class="galaxy-mobile-menu" id="galaxy-mobile-menu">
+      <a href={url("/")} class:list={[isActive("/") && "active"]}>Universe</a>
+      <a href={url("/themes")} class:list={[isActive("/themes") && "active"]}>Themes</a>
+      <a href={url("/clusters")} class:list={[isActive("/clusters") && "active"]}>Clusters</a>
+      <a href={url("/books")} class:list={[isActive("/books") && "active"]}>Books</a>
+      <a href={url("/about")} class:list={[isActive("/about") && "active"]}>About</a>
+      <button id="galaxy-mobile-theme-toggle" style="display:flex;align-items:center;gap:0.5rem;">
+        <svg class="theme-icon-sun" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="5"></circle>
+          <line x1="12" y1="1" x2="12" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="23"></line>
+          <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+          <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+          <line x1="1" y1="12" x2="3" y2="12"></line>
+          <line x1="21" y1="12" x2="23" y2="12"></line>
+          <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+          <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+        </svg>
+        <svg class="theme-icon-moon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+        </svg>
+        <span>Toggle theme</span>
+      </button>
+    </div>
 
     <div class="galaxy-content">
       <slot />
@@ -154,19 +247,36 @@ const isActive = (path: string) => {
 
     <script is:inline>
       (function() {
-        const btn = document.getElementById('theme-toggle');
-        if (!btn) return;
-        btn.addEventListener('click', function() {
-          const html = document.documentElement;
-          const current = html.getAttribute('data-theme');
-          const next = current === 'light' ? 'dark' : 'light';
+        // Theme toggle
+        function toggleTheme() {
+          var html = document.documentElement;
+          var current = html.getAttribute('data-theme');
+          var next = current === 'light' ? 'dark' : 'light';
           if (next === 'dark') {
             html.removeAttribute('data-theme');
           } else {
             html.setAttribute('data-theme', next);
           }
           localStorage.setItem('libtrails-theme', next);
-        });
+        }
+        var btn = document.getElementById('theme-toggle');
+        if (btn) btn.addEventListener('click', toggleTheme);
+        var mobileThemeBtn = document.getElementById('galaxy-mobile-theme-toggle');
+        if (mobileThemeBtn) mobileThemeBtn.addEventListener('click', toggleTheme);
+
+        // Hamburger menu toggle
+        var menuBtn = document.getElementById('galaxy-menu-btn');
+        var mobileMenu = document.getElementById('galaxy-mobile-menu');
+        var hamburgerIcon = document.getElementById('galaxy-hamburger-icon');
+        var closeIcon = document.getElementById('galaxy-close-icon');
+        if (menuBtn && mobileMenu) {
+          menuBtn.addEventListener('click', function() {
+            var isOpen = mobileMenu.classList.contains('open');
+            mobileMenu.classList.toggle('open');
+            if (hamburgerIcon) hamburgerIcon.style.display = isOpen ? '' : 'none';
+            if (closeIcon) closeIcon.style.display = isOpen ? 'none' : '';
+          });
+        }
       })();
     </script>
   </body>

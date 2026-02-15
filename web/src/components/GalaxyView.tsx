@@ -18,6 +18,21 @@ const SIDEBAR_WIDTH = 340;
 const SCENE_BG_DARK = "#0f0f1a";
 const SCENE_BG_LIGHT = "#e8e8f0";
 
+function useIsMobile(breakpoint = 767) {
+  const [isMobile, setIsMobile] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return window.innerWidth <= breakpoint;
+  });
+  useEffect(() => {
+    const mql = window.matchMedia(`(max-width: ${breakpoint}px)`);
+    const handler = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    setIsMobile(mql.matches);
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, [breakpoint]);
+  return isMobile;
+}
+
 function useThemeMode() {
   const [theme, setTheme] = useState<"dark" | "light">(() => {
     if (typeof document === "undefined") return "dark";
@@ -282,6 +297,7 @@ interface SidebarProps {
   onSelectCluster: (cluster: UniverseCluster) => void;
   onClose: () => void;
   colors: SidebarColors;
+  isMobile: boolean;
 }
 
 function Sidebar({
@@ -295,6 +311,7 @@ function Sidebar({
   onSelectCluster,
   onClose,
   colors,
+  isMobile,
 }: SidebarProps) {
   const basePath = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 
@@ -304,9 +321,28 @@ function Sidebar({
     return m;
   }, [domains]);
 
-  return (
-    <div
-      style={{
+  const containerStyle: React.CSSProperties = isMobile
+    ? {
+        position: "absolute",
+        bottom: 0,
+        left: 0,
+        right: 0,
+        height: "60vh",
+        background: colors.bg,
+        borderTop: `1px solid ${colors.border}`,
+        backdropFilter: "blur(12px)",
+        zIndex: 45,
+        display: "flex",
+        flexDirection: "column",
+        fontFamily: "Inter, sans-serif",
+        color: colors.text,
+        overflowY: "auto",
+        overflowX: "hidden",
+        paddingTop: 0,
+        borderRadius: "16px 16px 0 0",
+        transition: "transform 0.2s ease, background 0.15s ease",
+      }
+    : {
         position: "absolute",
         top: 0,
         right: 0,
@@ -324,8 +360,30 @@ function Sidebar({
         overflowX: "hidden",
         paddingTop: 52,
         transition: "transform 0.2s ease, background 0.15s ease",
-      }}
-    >
+      };
+
+  return (
+    <div style={containerStyle}>
+      {/* Drag handle for mobile */}
+      {isMobile && (
+        <div
+          style={{
+            display: "flex",
+            justifyContent: "center",
+            padding: "10px 0 4px",
+            flexShrink: 0,
+          }}
+        >
+          <div
+            style={{
+              width: 36,
+              height: 4,
+              borderRadius: 2,
+              background: colors.textFaint,
+            }}
+          />
+        </div>
+      )}
       {selectedClusters.length === 1 ? (
         <ClusterPanel
           cluster={selectedClusters[0]}
@@ -352,6 +410,7 @@ function Sidebar({
           onToggle={onToggleDomain}
           onClear={onClearDomainFilter}
           colors={colors}
+          isMobile={isMobile}
         />
       )}
     </div>
@@ -1043,13 +1102,20 @@ function DomainLegend({
   onToggle,
   onClear,
   colors,
+  isMobile,
 }: {
   domains: UniverseDomain[];
   activeDomains: Set<number> | null;
   onToggle: (id: number) => void;
   onClear: () => void;
   colors: SidebarColors;
+  isMobile: boolean;
 }) {
+  const [expanded, setExpanded] = useState(!isMobile);
+  const MOBILE_LIMIT = 10;
+  const visibleDomains = expanded ? domains : domains.slice(0, MOBILE_LIMIT);
+  const hiddenCount = domains.length - MOBILE_LIMIT;
+
   return (
     <div style={{ padding: "16px" }}>
       <div
@@ -1081,7 +1147,7 @@ function DomainLegend({
           </button>
         )}
       </div>
-      {domains.map((d) => (
+      {visibleDomains.map((d) => (
         <div
           key={d.domain_id}
           onClick={() => onToggle(d.domain_id)}
@@ -1119,6 +1185,37 @@ function DomainLegend({
         </div>
       ))}
 
+      {isMobile && !expanded && hiddenCount > 0 && (
+        <button
+          onClick={() => setExpanded(true)}
+          style={{
+            background: "none",
+            border: "none",
+            color: colors.accent,
+            cursor: "pointer",
+            fontSize: "0.72rem",
+            padding: "6px 0",
+          }}
+        >
+          +{hiddenCount} more domains
+        </button>
+      )}
+      {isMobile && expanded && hiddenCount > 0 && (
+        <button
+          onClick={() => setExpanded(false)}
+          style={{
+            background: "none",
+            border: "none",
+            color: colors.accent,
+            cursor: "pointer",
+            fontSize: "0.72rem",
+            padding: "6px 0",
+          }}
+        >
+          Show less
+        </button>
+      )}
+
       <div
         style={{
           marginTop: 20,
@@ -1129,11 +1226,21 @@ function DomainLegend({
           lineHeight: 1.5,
         }}
       >
-        Click a sphere to explore
-        <br />
-        Shift+drag to select multiple
-        <br />
-        Drag to rotate · Scroll to zoom
+        {isMobile ? (
+          <>
+            Tap a sphere to explore
+            <br />
+            Pinch to zoom · Drag to rotate
+          </>
+        ) : (
+          <>
+            Click a sphere to explore
+            <br />
+            Shift+drag to select multiple
+            <br />
+            Drag to rotate · Scroll to zoom
+          </>
+        )}
       </div>
     </div>
   );
@@ -1164,6 +1271,7 @@ const EMPTY_SET = new Set<number>();
 
 export default function GalaxyView() {
   const themeMode = useThemeMode();
+  const isMobile = useIsMobile();
   const [data, setData] = useState<UniverseData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeDomains, setActiveDomains] = useState<Set<number> | null>(null);
@@ -1464,6 +1572,7 @@ export default function GalaxyView() {
         onSelectCluster={handleSelectSingleFromMulti}
         onClose={handleClickEmpty}
         colors={sidebarColors}
+        isMobile={isMobile}
       />
     </div>
   );
