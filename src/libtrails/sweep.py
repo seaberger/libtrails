@@ -5,14 +5,20 @@ scoring partitions with both NMI stability (adjacent partition similarity)
 and Significance (statistical quality vs. random graph).
 """
 
+from __future__ import annotations
+
 import json
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import igraph as ig
 import leidenalg
 import numpy as np
+
+if TYPE_CHECKING:
+    from rich.table import Table
 from sklearn.metrics import normalized_mutual_info_score
 
 from .config import (

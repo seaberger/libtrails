@@ -1,9 +1,8 @@
 """Tests for domain generation, disparity filter, and outlier detection."""
 
+import igraph as ig
 import numpy as np
 import pytest
-
-import igraph as ig
 
 from libtrails.domains import (
     compute_participation_coefficients,

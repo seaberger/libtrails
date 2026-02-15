@@ -1,7 +1,6 @@
 """Tests for multi-resolution Leiden CPM sweep."""
 
 import igraph as ig
-import leidenalg
 import numpy as np
 import pytest
 

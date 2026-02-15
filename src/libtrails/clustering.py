@@ -673,7 +673,7 @@ def sweep_resolutions(
         SWEEP_RESOLUTION_RANGE,
         SWEEP_SEED,
     )
-    from .sweep import format_sweep_table, log_spaced_resolutions, run_sweep, save_sweep_json
+    from .sweep import log_spaced_resolutions, run_sweep, save_sweep_json
     from .topic_graph import build_topic_graph, build_topic_graph_cooccurrence_only
 
     def log_progress(msg: str):

@@ -8,15 +8,21 @@ The process:
 3. Apply human-refined labels to create final domains
 """
 
+from __future__ import annotations
+
 import json
 import sqlite3
 from collections import defaultdict
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import numpy as np
 from sklearn.cluster import KMeans
 
 from .config import IPAD_DB_PATH
+
+if TYPE_CHECKING:
+    import igraph as ig
 
 # Default configuration
 DEFAULT_N_DOMAINS = 25
@@ -715,7 +721,7 @@ def generate_super_clusters_leiden(
     result = {}
 
     if sweep:
-        from .sweep import format_sweep_table, run_sweep, log_spaced_resolutions
+        from .sweep import log_spaced_resolutions, run_sweep
 
         resolutions = log_spaced_resolutions(
             low=DOMAIN_SWEEP_RESOLUTION_RANGE[0],
