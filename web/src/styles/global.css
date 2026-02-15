@@ -3,17 +3,29 @@
 /* LibTrails Design System - Inspired by trails.pieterma.es */
 
 @theme {
-  /* Warm, book-friendly color palette */
+  /* Dark theme (default) — matches Galaxy aesthetic */
+  --color-bg: #0f0f1a;
+  --color-surface: #1a1a2e;
+  --color-text: #e0e0e0;
+  --color-text-muted: #999999;
+  --color-accent: #a0a0ff;
+  --color-accent-hover: #c0c0ff;
+  --color-border: rgba(255, 255, 255, 0.1);
+  --color-primary: #a0a0ff;
+  --color-primary-hover: #c0c0ff;
+}
+
+/* Light theme overrides */
+[data-theme="light"] {
   --color-bg: #fafaf9;
   --color-surface: #ffffff;
   --color-text: #1c1917;
   --color-text-muted: #78716c;
-  --color-accent: #57534e;
+  --color-accent: #6366f1;
+  --color-accent-hover: #4f46e5;
   --color-border: #e7e5e4;
-
-  /* Semantic colors */
-  --color-primary: #78716c;
-  --color-primary-hover: #57534e;
+  --color-primary: #6366f1;
+  --color-primary-hover: #4f46e5;
 }
 
 /* Base styles */
@@ -40,6 +52,10 @@ h1, h2, h3, h4 {
 
 .card-hover:hover {
   transform: translateY(-2px);
+  box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.3), 0 4px 10px -5px rgba(0, 0, 0, 0.15);
+}
+
+[data-theme="light"] .card-hover:hover {
   box-shadow: 0 8px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 10px -5px rgba(0, 0, 0, 0.04);
 }
 

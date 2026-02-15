@@ -15,6 +15,64 @@ import type {
 const SPREAD = 40;
 const HIGHLIGHT_COLOR = "#f59e0b"; // amber for selected
 const SIDEBAR_WIDTH = 340;
+const SCENE_BG_DARK = "#0f0f1a";
+const SCENE_BG_LIGHT = "#e8e8f0";
+
+function useThemeMode() {
+  const [theme, setTheme] = useState<"dark" | "light">(() => {
+    if (typeof document === "undefined") return "dark";
+    return (document.documentElement.getAttribute("data-theme") as "light") === "light" ? "light" : "dark";
+  });
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      const t = document.documentElement.getAttribute("data-theme");
+      setTheme(t === "light" ? "light" : "dark");
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+    return () => observer.disconnect();
+  }, []);
+  return theme;
+}
+
+// Sidebar color palette that responds to theme
+interface SidebarColors {
+  bg: string;
+  border: string;
+  text: string;
+  textMuted: string;
+  textFaint: string;
+  accent: string;
+  chipBg: string;
+  chipBgHover: string;
+  ruleBorder: string;
+  coverFallbackBg: string;
+}
+
+const SIDEBAR_DARK: SidebarColors = {
+  bg: "rgba(12, 12, 22, 0.92)",
+  border: "rgba(255,255,255,0.08)",
+  text: "#e0e0e0",
+  textMuted: "#888",
+  textFaint: "rgba(255,255,255,0.3)",
+  accent: "#a0a0ff",
+  chipBg: "rgba(255,255,255,0.06)",
+  chipBgHover: "rgba(255,255,255,0.07)",
+  ruleBorder: "rgba(255,255,255,0.06)",
+  coverFallbackBg: "rgba(255,255,255,0.06)",
+};
+
+const SIDEBAR_LIGHT: SidebarColors = {
+  bg: "rgba(255, 255, 255, 0.92)",
+  border: "#e5e5e5",
+  text: "#1c1917",
+  textMuted: "#78716c",
+  textFaint: "#a8a29e",
+  accent: "#6366f1",
+  chipBg: "rgba(0,0,0,0.05)",
+  chipBgHover: "rgba(0,0,0,0.08)",
+  ruleBorder: "rgba(0,0,0,0.08)",
+  coverFallbackBg: "rgba(0,0,0,0.05)",
+};
 
 // ── Fetch theme detail (cluster info with books) ──
 
@@ -32,9 +90,11 @@ async function fetchThemeDetail(clusterId: number): Promise<ThemeDetail> {
 function BookCoverImg({
   calibreId,
   title,
+  colors,
 }: {
   calibreId: number | null;
   title: string;
+  colors: SidebarColors;
 }) {
   const [failed, setFailed] = useState(false);
   const src = getCoverUrl(calibreId);
@@ -46,12 +106,12 @@ function BookCoverImg({
           width: 56,
           height: 80,
           borderRadius: 3,
-          background: "rgba(255,255,255,0.06)",
+          background: colors.coverFallbackBg,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
           fontSize: "0.6rem",
-          color: "#888",
+          color: colors.textMuted,
           textAlign: "center",
           padding: 4,
           overflow: "hidden",
@@ -221,6 +281,7 @@ interface SidebarProps {
   onClearDomainFilter: () => void;
   onSelectCluster: (cluster: UniverseCluster) => void;
   onClose: () => void;
+  colors: SidebarColors;
 }
 
 function Sidebar({
@@ -233,6 +294,7 @@ function Sidebar({
   onClearDomainFilter,
   onSelectCluster,
   onClose,
+  colors,
 }: SidebarProps) {
   const basePath = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 
@@ -250,18 +312,18 @@ function Sidebar({
         right: 0,
         bottom: 0,
         width: SIDEBAR_WIDTH,
-        background: "rgba(12, 12, 22, 0.92)",
-        borderLeft: "1px solid rgba(255,255,255,0.08)",
+        background: colors.bg,
+        borderLeft: `1px solid ${colors.border}`,
         backdropFilter: "blur(12px)",
         zIndex: 45,
         display: "flex",
         flexDirection: "column",
         fontFamily: "Inter, sans-serif",
-        color: "#e0e0e0",
+        color: colors.text,
         overflowY: "auto",
         overflowX: "hidden",
         paddingTop: 52,
-        transition: "transform 0.2s ease",
+        transition: "transform 0.2s ease, background 0.15s ease",
       }}
     >
       {selectedClusters.length === 1 ? (
@@ -272,6 +334,7 @@ function Sidebar({
           domain={domainMap.get(selectedClusters[0].domain_id)}
           basePath={basePath}
           onClose={onClose}
+          colors={colors}
         />
       ) : selectedClusters.length > 1 ? (
         <MultiSelectPanel
@@ -280,6 +343,7 @@ function Sidebar({
           basePath={basePath}
           onSelectCluster={onSelectCluster}
           onClose={onClose}
+          colors={colors}
         />
       ) : (
         <DomainLegend
@@ -287,6 +351,7 @@ function Sidebar({
           activeDomains={activeDomains}
           onToggle={onToggleDomain}
           onClear={onClearDomainFilter}
+          colors={colors}
         />
       )}
     </div>
@@ -301,12 +366,14 @@ function MultiSelectPanel({
   basePath,
   onSelectCluster,
   onClose,
+  colors,
 }: {
   clusters: UniverseCluster[];
   domainMap: Map<number, UniverseDomain>;
   basePath: string;
   onSelectCluster: (cluster: UniverseCluster) => void;
   onClose: () => void;
+  colors: SidebarColors;
 }) {
   const [books, setBooks] = useState<BookSummary[]>([]);
   const [booksLoading, setBooksLoading] = useState(false);
@@ -416,7 +483,7 @@ function MultiSelectPanel({
           style={{
             background: "none",
             border: "none",
-            color: "#888",
+            color: colors.textMuted,
             cursor: "pointer",
             fontSize: "1.2rem",
             padding: "0 0 0 8px",
@@ -444,8 +511,8 @@ function MultiSelectPanel({
             key={label}
             style={{
               fontSize: "0.68rem",
-              color: "#aaa",
-              background: "rgba(255,255,255,0.06)",
+              color: colors.textMuted,
+              background: colors.chipBg,
               borderRadius: 4,
               padding: "2px 8px",
             }}
@@ -463,7 +530,7 @@ function MultiSelectPanel({
               fontSize: "0.65rem",
               textTransform: "uppercase",
               letterSpacing: "0.05em",
-              color: "#777",
+              color: colors.textMuted,
               marginBottom: 6,
             }}
           >
@@ -512,16 +579,16 @@ function MultiSelectPanel({
                     flexShrink: 0,
                   }}
                 />
-                <span style={{ color: "#ccc", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <span style={{ color: colors.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {domain?.label || `Domain ${domainId}`}
                 </span>
-                <span style={{ color: "#666", fontSize: "0.65rem", flexShrink: 0 }}>
+                <span style={{ color: colors.textMuted, fontSize: "0.65rem", flexShrink: 0 }}>
                   {count} clusters
                 </span>
               </div>
             ))}
             {hiddenDomainCount > 0 && (
-              <div style={{ fontSize: "0.65rem", color: "#666", paddingLeft: 14 }}>
+              <div style={{ fontSize: "0.65rem", color: colors.textMuted, paddingLeft: 14 }}>
                 +{hiddenDomainCount} more
               </div>
             )}
@@ -536,14 +603,14 @@ function MultiSelectPanel({
             fontSize: "0.65rem",
             textTransform: "uppercase",
             letterSpacing: "0.05em",
-            color: "#777",
+            color: colors.textMuted,
             marginBottom: 8,
           }}
         >
           Top Books
         </div>
         {booksLoading ? (
-          <div style={{ fontSize: "0.75rem", color: "#777", padding: "8px 0" }}>
+          <div style={{ fontSize: "0.75rem", color: colors.textMuted, padding: "8px 0" }}>
             Loading books...
           </div>
         ) : sortedBooks.length > 0 ? (
@@ -571,11 +638,12 @@ function MultiSelectPanel({
                   <BookCoverImg
                     calibreId={book.calibre_id}
                     title={book.title}
+                    colors={colors}
                   />
                   <span
                     style={{
                       fontSize: "0.6rem",
-                      color: "#aaa",
+                      color: colors.textMuted,
                       textAlign: "center",
                       lineHeight: 1.2,
                       maxWidth: 80,
@@ -596,7 +664,7 @@ function MultiSelectPanel({
                 style={{
                   background: "none",
                   border: "none",
-                  color: "#a0a0ff",
+                  color: colors.accent,
                   cursor: "pointer",
                   fontSize: "0.72rem",
                   padding: "8px 0 0",
@@ -609,7 +677,7 @@ function MultiSelectPanel({
             )}
           </>
         ) : (
-          <div style={{ fontSize: "0.7rem", color: "#666" }}>No book data available</div>
+          <div style={{ fontSize: "0.7rem", color: colors.textMuted }}>No book data available</div>
         )}
       </div>
 
@@ -621,7 +689,7 @@ function MultiSelectPanel({
               fontSize: "0.65rem",
               textTransform: "uppercase",
               letterSpacing: "0.05em",
-              color: "#777",
+              color: colors.textMuted,
               marginBottom: 6,
             }}
           >
@@ -632,16 +700,16 @@ function MultiSelectPanel({
               <span
                 key={topic}
                 style={{
-                  background: "rgba(255,255,255,0.07)",
+                  background: colors.chipBgHover,
                   borderRadius: 4,
                   padding: "3px 8px",
                   fontSize: "0.7rem",
-                  color: "#ccc",
+                  color: colors.text,
                 }}
               >
                 {topic}
                 {count > 1 && (
-                  <span style={{ color: "#666", marginLeft: 4, fontSize: "0.6rem" }}>
+                  <span style={{ color: colors.textMuted, marginLeft: 4, fontSize: "0.6rem" }}>
                     ×{count}
                   </span>
                 )}
@@ -654,7 +722,7 @@ function MultiSelectPanel({
       {/* ── 5. Cluster List (collapsible) ── */}
       <div
         style={{
-          borderTop: "1px solid rgba(255,255,255,0.06)",
+          borderTop: `1px solid ${colors.ruleBorder}`,
           paddingTop: 12,
         }}
       >
@@ -663,7 +731,7 @@ function MultiSelectPanel({
           style={{
             background: "none",
             border: "none",
-            color: "#a0a0ff",
+            color: colors.accent,
             cursor: "pointer",
             fontSize: "0.75rem",
             padding: 0,
@@ -702,14 +770,14 @@ function MultiSelectPanel({
                     padding: "6px 10px",
                     borderRadius: 6,
                     cursor: "pointer",
-                    background: "rgba(255,255,255,0.03)",
+                    background: colors.chipBg,
                     transition: "background 0.1s",
                   }}
                   onMouseEnter={(e) =>
-                    (e.currentTarget.style.background = "rgba(255,255,255,0.07)")
+                    (e.currentTarget.style.background = colors.chipBgHover)
                   }
                   onMouseLeave={(e) =>
-                    (e.currentTarget.style.background = "rgba(255,255,255,0.03)")
+                    (e.currentTarget.style.background = colors.chipBg)
                   }
                 >
                   {domain && (
@@ -728,7 +796,7 @@ function MultiSelectPanel({
                   <span style={{ fontSize: "0.78rem", fontWeight: 500 }}>
                     {c.label}
                   </span>
-                  <span style={{ fontSize: "0.68rem", color: "#777", marginLeft: 8 }}>
+                  <span style={{ fontSize: "0.68rem", color: colors.textMuted, marginLeft: 8 }}>
                     {c.book_count} books
                   </span>
                 </div>
@@ -750,6 +818,7 @@ function ClusterPanel({
   domain,
   basePath,
   onClose,
+  colors,
 }: {
   cluster: UniverseCluster;
   detail: ThemeDetail | null;
@@ -757,6 +826,7 @@ function ClusterPanel({
   domain: UniverseDomain | undefined;
   basePath: string;
   onClose: () => void;
+  colors: SidebarColors;
 }) {
   return (
     <div style={{ padding: "16px" }}>
@@ -805,7 +875,7 @@ function ClusterPanel({
           style={{
             background: "none",
             border: "none",
-            color: "#888",
+            color: colors.textMuted,
             cursor: "pointer",
             fontSize: "1.2rem",
             padding: "0 0 0 8px",
@@ -821,14 +891,14 @@ function ClusterPanel({
       <div
         style={{
           fontSize: "0.75rem",
-          color: "#999",
+          color: colors.textMuted,
           marginBottom: 14,
           display: "flex",
           gap: 8,
         }}
       >
         <span>{cluster.book_count} books</span>
-        <span style={{ color: "#555" }}>·</span>
+        <span>·</span>
         <span>{cluster.size} topics</span>
       </div>
 
@@ -840,7 +910,7 @@ function ClusterPanel({
               fontSize: "0.65rem",
               textTransform: "uppercase",
               letterSpacing: "0.05em",
-              color: "#777",
+              color: colors.textMuted,
               marginBottom: 6,
             }}
           >
@@ -851,11 +921,11 @@ function ClusterPanel({
               <span
                 key={t}
                 style={{
-                  background: "rgba(255,255,255,0.07)",
+                  background: colors.chipBgHover,
                   borderRadius: 4,
                   padding: "3px 8px",
                   fontSize: "0.7rem",
-                  color: "#ccc",
+                  color: colors.text,
                 }}
               >
                 {t}
@@ -867,7 +937,7 @@ function ClusterPanel({
 
       {/* Books */}
       {loading && (
-        <div style={{ fontSize: "0.75rem", color: "#777", padding: "8px 0" }}>
+        <div style={{ fontSize: "0.75rem", color: colors.textMuted, padding: "8px 0" }}>
           Loading books...
         </div>
       )}
@@ -879,7 +949,7 @@ function ClusterPanel({
               fontSize: "0.65rem",
               textTransform: "uppercase",
               letterSpacing: "0.05em",
-              color: "#777",
+              color: colors.textMuted,
               marginBottom: 8,
             }}
           >
@@ -902,6 +972,7 @@ function ClusterPanel({
                 <BookCoverImg
                   calibreId={book.calibre_id}
                   title={book.title}
+                  colors={colors}
                 />
               </a>
             ))}
@@ -917,7 +988,7 @@ function ClusterPanel({
               fontSize: "0.65rem",
               textTransform: "uppercase",
               letterSpacing: "0.05em",
-              color: "#777",
+              color: colors.textMuted,
               marginBottom: 6,
             }}
           >
@@ -928,15 +999,15 @@ function ClusterPanel({
               <span
                 key={t.id}
                 style={{
-                  background: "rgba(255,255,255,0.05)",
+                  background: colors.chipBg,
                   borderRadius: 4,
                   padding: "2px 7px",
                   fontSize: "0.65rem",
-                  color: "#aaa",
+                  color: colors.textMuted,
                 }}
               >
                 {t.label}
-                <span style={{ color: "#666", marginLeft: 4 }}>
+                <span style={{ color: colors.textFaint, marginLeft: 4 }}>
                   {t.count}
                 </span>
               </span>
@@ -953,7 +1024,7 @@ function ClusterPanel({
           alignItems: "center",
           gap: 6,
           fontSize: "0.8rem",
-          color: "#a0a0ff",
+          color: colors.accent,
           textDecoration: "none",
           padding: "8px 0",
         }}
@@ -971,11 +1042,13 @@ function DomainLegend({
   activeDomains,
   onToggle,
   onClear,
+  colors,
 }: {
   domains: UniverseDomain[];
   activeDomains: Set<number> | null;
   onToggle: (id: number) => void;
   onClear: () => void;
+  colors: SidebarColors;
 }) {
   return (
     <div style={{ padding: "16px" }}>
@@ -984,7 +1057,7 @@ function DomainLegend({
           fontSize: "0.7rem",
           textTransform: "uppercase",
           letterSpacing: "0.05em",
-          color: "#888",
+          color: colors.textMuted,
           marginBottom: 10,
           display: "flex",
           justifyContent: "space-between",
@@ -998,7 +1071,7 @@ function DomainLegend({
             style={{
               background: "none",
               border: "none",
-              color: "#a0a0ff",
+              color: colors.accent,
               cursor: "pointer",
               fontSize: "0.7rem",
               padding: 0,
@@ -1034,7 +1107,7 @@ function DomainLegend({
           />
           <span
             style={{
-              color: "#ccc",
+              color: colors.text,
               fontSize: "0.75rem",
               overflow: "hidden",
               textOverflow: "ellipsis",
@@ -1050,9 +1123,9 @@ function DomainLegend({
         style={{
           marginTop: 20,
           paddingTop: 14,
-          borderTop: "1px solid rgba(255,255,255,0.06)",
+          borderTop: `1px solid ${colors.ruleBorder}`,
           fontSize: "0.7rem",
-          color: "rgba(255,255,255,0.3)",
+          color: colors.textFaint,
           lineHeight: 1.5,
         }}
       >
@@ -1090,6 +1163,7 @@ function projectToScreen(
 const EMPTY_SET = new Set<number>();
 
 export default function GalaxyView() {
+  const themeMode = useThemeMode();
   const [data, setData] = useState<UniverseData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeDomains, setActiveDomains] = useState<Set<number> | null>(null);
@@ -1287,6 +1361,8 @@ export default function GalaxyView() {
     [data]
   );
 
+  const sidebarColors = themeMode === "light" ? SIDEBAR_LIGHT : SIDEBAR_DARK;
+
   if (error) {
     return (
       <div
@@ -1295,7 +1371,7 @@ export default function GalaxyView() {
           alignItems: "center",
           justifyContent: "center",
           height: "100%",
-          color: "#e0e0e0",
+          color: sidebarColors.text,
           fontFamily: "Inter, sans-serif",
           flexDirection: "column",
           gap: "1rem",
@@ -1304,7 +1380,7 @@ export default function GalaxyView() {
         }}
       >
         <p style={{ fontSize: "1.1rem" }}>Could not load universe data</p>
-        <p style={{ fontSize: "0.85rem", color: "#888" }}>{error}</p>
+        <p style={{ fontSize: "0.85rem", color: sidebarColors.textMuted }}>{error}</p>
       </div>
     );
   }
@@ -1317,7 +1393,7 @@ export default function GalaxyView() {
           alignItems: "center",
           justifyContent: "center",
           height: "100%",
-          color: "#e0e0e0",
+          color: sidebarColors.text,
           fontFamily: "Inter, sans-serif",
           position: "absolute",
           inset: 0,
@@ -1351,7 +1427,7 @@ export default function GalaxyView() {
         }}
       >
         <CameraRef cameraRef={cameraRef} />
-        <color attach="background" args={["#0f0f1a"]} />
+        <color attach="background" args={[themeMode === "light" ? SCENE_BG_LIGHT : SCENE_BG_DARK]} />
         <ambientLight intensity={0.4} />
         <directionalLight position={[50, 80, 60]} intensity={0.8} />
         <directionalLight position={[-40, -20, -50]} intensity={0.3} />
@@ -1387,6 +1463,7 @@ export default function GalaxyView() {
         onClearDomainFilter={() => setActiveDomains(null)}
         onSelectCluster={handleSelectSingleFromMulti}
         onClose={handleClickEmpty}
+        colors={sidebarColors}
       />
     </div>
   );
