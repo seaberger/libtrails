@@ -16,7 +16,10 @@ const { title, description = 'Discover books by themes and topics' } = Astro.pro
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/x-icon" href="/libtrails_favicon.ico" />
+    <link rel="icon" type="image/png" sizes="32x32" href="/libtrails_32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/libtrails_16.png" />
+    <link rel="apple-touch-icon" sizes="128x128" href="/libtrails_128.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -26,7 +29,8 @@ const { title, description = 'Discover books by themes and topics' } = Astro.pro
     <!-- Navigation -->
     <nav class="sticky top-0 z-50 bg-[var(--color-surface)] border-b border-[var(--color-border)]">
       <div class="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-        <a href={url("/")} class="text-xl font-medium text-[var(--color-text)] hover:text-[var(--color-accent)] transition-colors">
+        <a href={url("/")} class="flex items-center gap-2 text-xl font-medium text-[var(--color-text)] hover:text-[var(--color-accent)] transition-colors">
+          <img src="/libtrails_32.png" alt="" width="24" height="24" class="rounded" />
           LibTrails
         </a>
         <div class="flex items-center gap-6">
