@@ -43,6 +43,9 @@ data/covers/
 # Cached embedding models (large files)
 models/
 
+# Experiments (intermediate outputs)
+experiments/
+
 # Downloaded EPUBs (large, not source)
 gutenberg_epubs/
 
@@ -56,6 +59,7 @@ htmlcov/
 
 # Build
 *.log
+.astro/
 .playwright-mcp/
 
 # Environment variables (API keys)
