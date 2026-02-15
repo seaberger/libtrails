@@ -8,7 +8,16 @@ cd "$PROJECT_DIR"
 API_PORT=8000
 FRONTEND_PORT=4321
 
+# Database selection: demo (100 Gutenberg classics) or v2 (iPad library)
+export LIBTRAILS_DB="${LIBTRAILS_DB:-demo}"
+
+# Set Calibre library path for demo if not already set
+if [ "$LIBTRAILS_DB" = "demo" ] && [ -z "$CALIBRE_LIBRARY_PATH" ]; then
+    export CALIBRE_LIBRARY_PATH="$HOME/Calibre_Demo_Library"
+fi
+
 echo "=== LibTrails Service Manager ==="
+echo "  Database: $LIBTRAILS_DB"
 
 # --- Stop existing services ---
 echo ""

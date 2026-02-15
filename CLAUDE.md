@@ -484,6 +484,41 @@ With BGE + cosine distance, semantic search produces realistic scores:
 
 ---
 
+## Deployment (sbergman.net)
+
+### Quick Deploy (after local changes)
+
+```bash
+# 1. Commit and push locally
+git push
+
+# 2. Deploy to server (one command)
+ssh ubuntu@52.25.145.220 /home/ubuntu/projects/libtrails/deploy.sh
+```
+
+The deploy script does: `git pull` → `npm run build` → restart both systemd services.
+
+### Server Architecture
+
+| Component | How | Port |
+|-----------|-----|------|
+| **Caddy** | Reverse proxy + auto TLS | 80/443 |
+| **libtrails-web** | Astro SSR (`node dist/server/entry.mjs`) | 4321 |
+| **libtrails-api** | FastAPI (`uvicorn`, `LIBTRAILS_DB=demo`) | 8000 |
+
+- **Caddy routes**: `/libtrails/api/*` → uvicorn:8000, `/libtrails*` → node:4321
+- All 3 services are `systemd` enabled (auto-start on boot)
+- **Caddy never needs restarting** for code deploys — it just proxies
+- Project lives at `/home/ubuntu/projects/libtrails` on the server
+- SSH: `ubuntu@52.25.145.220`
+
+### Important: Build Memory Limit
+
+The server has only 1 GB RAM. The Vite client build OOMs without a heap limit.
+The deploy script sets `NODE_OPTIONS='--max-old-space-size=768'` automatically.
+
+---
+
 ## Known Issues & Fixes
 
 ### sqlite-vec k=? syntax

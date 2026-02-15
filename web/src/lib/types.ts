@@ -83,6 +83,7 @@ export interface UniverseCluster {
   label: string;
   size: number;
   book_count: number;
+  book_ids: number[];
   domain_id: number;
   domain_label: string;
   x: number;

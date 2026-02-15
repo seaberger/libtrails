@@ -1,11 +1,25 @@
 """Book API endpoints."""
 
-from fastapi import APIRouter, HTTPException, Query
+from fastapi import APIRouter, Body, HTTPException, Query
 
 from ..dependencies import DBConnection
 from ..schemas import BookDetail, BookSummary, RelatedBook, ThemeRef, TopicInfo
 
 router = APIRouter()
+
+
+@router.post("/books/batch", response_model=list[BookSummary])
+def get_books_batch(db: DBConnection, book_ids: list[int] = Body(...)):
+    """Get multiple books by ID for multi-select sidebar."""
+    if not book_ids or len(book_ids) > 50:
+        return []
+    placeholders = ",".join("?" * len(book_ids))
+    cursor = db.cursor()
+    cursor.execute(
+        f"SELECT id, title, author, calibre_id FROM books WHERE id IN ({placeholders})",
+        book_ids,
+    )
+    return [BookSummary(**dict(row)) for row in cursor.fetchall()]
 
 
 @router.get("/books", response_model=list[BookSummary])

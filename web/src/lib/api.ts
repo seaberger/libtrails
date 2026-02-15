@@ -59,6 +59,16 @@ export async function getBook(bookId: number): Promise<BookDetail> {
   return fetchJson(`/books/${bookId}`);
 }
 
+export async function getBooksBatch(bookIds: number[]): Promise<BookSummary[]> {
+  const response = await fetch(`${API_BASE}/books/batch`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(bookIds),
+  });
+  if (!response.ok) throw new Error(`API error: ${response.status}`);
+  return response.json();
+}
+
 export async function getRelatedBooks(
   bookId: number,
   limit = 10

@@ -37,20 +37,21 @@ def get_cluster_label(cursor: sqlite3.Cursor, cluster_id: int) -> str:
     return row["label"] if row else f"cluster_{cluster_id}"
 
 
-def get_cluster_book_count(cursor: sqlite3.Cursor, cluster_id: int) -> int:
-    """Get number of distinct books touching a cluster."""
+def get_cluster_book_ids(cursor: sqlite3.Cursor, cluster_id: int) -> list[int]:
+    """Get distinct book IDs touching a cluster."""
     cursor.execute(
         """
-        SELECT COUNT(DISTINCT b.id) as count
+        SELECT DISTINCT b.id
         FROM books b
         JOIN chunks c ON c.book_id = b.id
         JOIN chunk_topic_links ctl ON ctl.chunk_id = c.id
         JOIN topics t ON t.id = ctl.topic_id
         WHERE t.cluster_id = ?
+        ORDER BY b.id
     """,
         (cluster_id,),
     )
-    return cursor.fetchone()["count"]
+    return [row["id"] for row in cursor.fetchall()]
 
 
 def get_cluster_top_topics(cursor: sqlite3.Cursor, cluster_id: int, limit: int = 5) -> list[str]:
@@ -177,7 +178,7 @@ def generate_universe_data(
 
         if centroid is not None:
             label = get_cluster_label(cursor, cluster_id)
-            book_count = get_cluster_book_count(cursor, cluster_id)
+            book_ids = get_cluster_book_ids(cursor, cluster_id)
             top_topics = get_cluster_top_topics(cursor, cluster_id)
             domain_info = domain_assignments.get(
                 cluster_id, {"domain_id": -1, "domain_label": "Unknown"}
@@ -188,7 +189,8 @@ def generate_universe_data(
                     "cluster_id": cluster_id,
                     "label": label,
                     "size": row["size"],
-                    "book_count": book_count,
+                    "book_count": len(book_ids),
+                    "book_ids": book_ids,
                     "domain_id": domain_info["domain_id"],
                     "domain_label": domain_info["domain_label"],
                     "top_topics": top_topics,

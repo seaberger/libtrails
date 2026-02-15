@@ -120,6 +120,7 @@ class UniverseCluster(BaseModel):
     label: str
     size: int
     book_count: int
+    book_ids: list[int] = []
     domain_id: int
     domain_label: str
     x: float
