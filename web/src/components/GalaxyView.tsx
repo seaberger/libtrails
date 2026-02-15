@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Canvas } from "@react-three/fiber";
+import { Canvas, useThree } from "@react-three/fiber";
 import type { ThreeEvent } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
@@ -78,19 +78,29 @@ function BookCoverImg({
   );
 }
 
+// ── Expose Three.js camera via ref for screen projection ──
+
+function CameraRef({ cameraRef }: { cameraRef: React.MutableRefObject<THREE.Camera | null> }) {
+  const { camera } = useThree();
+  useEffect(() => {
+    cameraRef.current = camera;
+  }, [camera, cameraRef]);
+  return null;
+}
+
 // ── Cluster spheres using InstancedMesh ──
 
 interface ClusterSpheresProps {
   clusters: UniverseCluster[];
   colorMap: Map<number, string>;
-  selectedId: number | null;
+  selectedIds: Set<number>;
   onClickSphere: (cluster: UniverseCluster) => void;
 }
 
 function ClusterSpheres({
   clusters,
   colorMap,
-  selectedId,
+  selectedIds,
   onClickSphere,
 }: ClusterSpheresProps) {
   const meshRef = useRef<THREE.InstancedMesh>(null!);
@@ -107,7 +117,7 @@ function ClusterSpheres({
 
     for (let i = 0; i < clusters.length; i++) {
       const c = clusters[i];
-      const isSelected = c.cluster_id === selectedId;
+      const isSelected = selectedIds.has(c.cluster_id);
       dummy.position.set(c.x * SPREAD, c.y * SPREAD, (c.z ?? 0) * SPREAD);
       const base = 0.2 + 0.8 * Math.sqrt(c.book_count / maxBooks);
       dummy.scale.setScalar(isSelected ? base * 1.6 : base);
@@ -120,7 +130,7 @@ function ClusterSpheres({
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     mesh.computeBoundingSphere();
-  }, [clusters, colorMap, maxBooks, selectedId]);
+  }, [clusters, colorMap, maxBooks, selectedIds]);
 
   const handlePointerMove = useCallback(
     (e: ThreeEvent<PointerEvent>) => {
@@ -165,31 +175,72 @@ function ClusterSpheres({
   );
 }
 
+// ── Selection rectangle overlay ──
+
+interface SelectRect {
+  startX: number;
+  startY: number;
+  currentX: number;
+  currentY: number;
+}
+
+function SelectionOverlay({ rect }: { rect: SelectRect }) {
+  const left = Math.min(rect.startX, rect.currentX);
+  const top = Math.min(rect.startY, rect.currentY);
+  const width = Math.abs(rect.currentX - rect.startX);
+  const height = Math.abs(rect.currentY - rect.startY);
+
+  if (width < 3 && height < 3) return null;
+
+  return (
+    <div
+      style={{
+        position: "absolute",
+        left,
+        top,
+        width,
+        height,
+        border: "1.5px dashed rgba(245, 158, 11, 0.7)",
+        background: "rgba(245, 158, 11, 0.08)",
+        pointerEvents: "none",
+        zIndex: 30,
+      }}
+    />
+  );
+}
 
 // ── Sidebar panel ──
 
 interface SidebarProps {
-  selection: {
-    cluster: UniverseCluster;
-    detail: ThemeDetail | null;
-    loading: boolean;
-  } | null;
+  selectedClusters: UniverseCluster[];
+  singleDetail: ThemeDetail | null;
+  detailLoading: boolean;
   domains: UniverseDomain[];
   activeDomains: Set<number> | null;
   onToggleDomain: (id: number) => void;
   onClearDomainFilter: () => void;
+  onSelectCluster: (cluster: UniverseCluster) => void;
   onClose: () => void;
 }
 
 function Sidebar({
-  selection,
+  selectedClusters,
+  singleDetail,
+  detailLoading,
   domains,
   activeDomains,
   onToggleDomain,
   onClearDomainFilter,
+  onSelectCluster,
   onClose,
 }: SidebarProps) {
   const basePath = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+
+  const domainMap = useMemo(() => {
+    const m = new Map<number, UniverseDomain>();
+    for (const d of domains) m.set(d.domain_id, d);
+    return m;
+  }, [domains]);
 
   return (
     <div
@@ -213,13 +264,21 @@ function Sidebar({
         transition: "transform 0.2s ease",
       }}
     >
-      {selection ? (
+      {selectedClusters.length === 1 ? (
         <ClusterPanel
-          cluster={selection.cluster}
-          detail={selection.detail}
-          loading={selection.loading}
-          domain={domains.find((d) => d.domain_id === selection.cluster.domain_id)}
+          cluster={selectedClusters[0]}
+          detail={singleDetail}
+          loading={detailLoading}
+          domain={domainMap.get(selectedClusters[0].domain_id)}
           basePath={basePath}
+          onClose={onClose}
+        />
+      ) : selectedClusters.length > 1 ? (
+        <MultiSelectPanel
+          clusters={selectedClusters}
+          domainMap={domainMap}
+          basePath={basePath}
+          onSelectCluster={onSelectCluster}
           onClose={onClose}
         />
       ) : (
@@ -234,7 +293,114 @@ function Sidebar({
   );
 }
 
-// ── Cluster detail panel (when a sphere is selected) ──
+// ── Multi-select panel (list of selected clusters) ──
+
+function MultiSelectPanel({
+  clusters,
+  domainMap,
+  basePath,
+  onSelectCluster,
+  onClose,
+}: {
+  clusters: UniverseCluster[];
+  domainMap: Map<number, UniverseDomain>;
+  basePath: string;
+  onSelectCluster: (cluster: UniverseCluster) => void;
+  onClose: () => void;
+}) {
+  const totalBooks = useMemo(
+    () => clusters.reduce((sum, c) => sum + c.book_count, 0),
+    [clusters]
+  );
+
+  return (
+    <div style={{ padding: "16px" }}>
+      {/* Header */}
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          marginBottom: 12,
+        }}
+      >
+        <div>
+          <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 600 }}>
+            {clusters.length} clusters selected
+          </h3>
+          <div style={{ fontSize: "0.75rem", color: "#999", marginTop: 4 }}>
+            {totalBooks} books total
+          </div>
+        </div>
+        <button
+          onClick={onClose}
+          style={{
+            background: "none",
+            border: "none",
+            color: "#888",
+            cursor: "pointer",
+            fontSize: "1.2rem",
+            padding: "0 0 0 8px",
+            lineHeight: 1,
+          }}
+          aria-label="Clear selection"
+        >
+          ×
+        </button>
+      </div>
+
+      {/* Cluster list */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
+        {clusters.map((c) => {
+          const domain = domainMap.get(c.domain_id);
+          return (
+            <div
+              key={c.cluster_id}
+              onClick={() => onSelectCluster(c)}
+              style={{
+                padding: "8px 10px",
+                borderRadius: 6,
+                cursor: "pointer",
+                background: "rgba(255,255,255,0.03)",
+                transition: "background 0.1s",
+              }}
+              onMouseEnter={(e) =>
+                (e.currentTarget.style.background = "rgba(255,255,255,0.07)")
+              }
+              onMouseLeave={(e) =>
+                (e.currentTarget.style.background = "rgba(255,255,255,0.03)")
+              }
+            >
+              {domain && (
+                <span
+                  style={{
+                    display: "inline-block",
+                    width: 8,
+                    height: 8,
+                    borderRadius: "50%",
+                    background: domain.color,
+                    marginRight: 6,
+                    verticalAlign: "middle",
+                  }}
+                />
+              )}
+              <span style={{ fontSize: "0.8rem", fontWeight: 500 }}>
+                {c.label}
+              </span>
+              <span
+                style={{ fontSize: "0.7rem", color: "#777", marginLeft: 8 }}
+              >
+                {c.book_count} books
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+// ── Cluster detail panel (single selection) ──
 
 function ClusterPanel({
   cluster,
@@ -551,27 +717,53 @@ function DomainLegend({
       >
         Click a sphere to explore
         <br />
-        Drag to rotate · Scroll to zoom
+        Shift+drag to select multiple
         <br />
-        Right-drag to pan
+        Drag to rotate · Scroll to zoom
       </div>
     </div>
   );
 }
 
+// ── Project 3D cluster position to 2D screen coordinates ──
+
+function projectToScreen(
+  cluster: UniverseCluster,
+  camera: THREE.Camera,
+  canvasRect: DOMRect
+): { x: number; y: number } {
+  const vec = new THREE.Vector3(
+    cluster.x * SPREAD,
+    cluster.y * SPREAD,
+    (cluster.z ?? 0) * SPREAD
+  );
+  vec.project(camera);
+  return {
+    x: ((vec.x + 1) / 2) * canvasRect.width + canvasRect.left,
+    y: ((-vec.y + 1) / 2) * canvasRect.height + canvasRect.top,
+  };
+}
+
 // ── Main component ──
+
+const EMPTY_SET = new Set<number>();
 
 export default function GalaxyView() {
   const [data, setData] = useState<UniverseData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [activeDomains, setActiveDomains] = useState<Set<number> | null>(null);
 
-  // Selection state
-  const [selectedId, setSelectedId] = useState<number | null>(null);
-  const [selectedCluster, setSelectedCluster] =
-    useState<UniverseCluster | null>(null);
-  const [clusterDetail, setClusterDetail] = useState<ThemeDetail | null>(null);
+  // Selection state (supports single and multi-select)
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(EMPTY_SET);
+  const [singleDetail, setSingleDetail] = useState<ThemeDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+
+  // Shift+drag rectangle selection
+  const [selectRect, setSelectRect] = useState<SelectRect | null>(null);
+  const isDraggingRef = useRef(false);
+  const cameraRef = useRef<THREE.Camera | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const orbitControlsRef = useRef<any>(null);
 
   useEffect(() => {
     getUniverse()
@@ -592,34 +784,150 @@ export default function GalaxyView() {
       : data.clusters;
   }, [data, activeDomains]);
 
-  // Click a sphere → select it and fetch detail
+  const selectedClusters = useMemo(() => {
+    if (selectedIds.size === 0) return [];
+    return visibleClusters.filter((c) => selectedIds.has(c.cluster_id));
+  }, [visibleClusters, selectedIds]);
+
+  // Fetch detail when exactly one cluster is selected
+  useEffect(() => {
+    if (selectedIds.size !== 1) {
+      setSingleDetail(null);
+      setDetailLoading(false);
+      return;
+    }
+    const id = [...selectedIds][0];
+    setSingleDetail(null);
+    setDetailLoading(true);
+    fetchThemeDetail(id)
+      .then(setSingleDetail)
+      .catch(() => {})
+      .finally(() => setDetailLoading(false));
+  }, [selectedIds]);
+
+  // Click a sphere → single select (or toggle)
   const handleClickSphere = useCallback(
     (cluster: UniverseCluster) => {
-      // Toggle off if clicking the already-selected cluster
-      if (selectedId === cluster.cluster_id) {
-        setSelectedId(null);
-        setSelectedCluster(null);
-        setClusterDetail(null);
-        return;
-      }
-      setSelectedId(cluster.cluster_id);
-      setSelectedCluster(cluster);
-      setClusterDetail(null);
-      setDetailLoading(true);
-      fetchThemeDetail(cluster.cluster_id)
-        .then(setClusterDetail)
-        .catch(() => {}) // silently fail, cluster info from universe data is still shown
-        .finally(() => setDetailLoading(false));
+      setSelectedIds((prev) => {
+        if (prev.size === 1 && prev.has(cluster.cluster_id)) {
+          return EMPTY_SET;
+        }
+        return new Set([cluster.cluster_id]);
+      });
     },
-    [selectedId]
+    []
   );
 
-  // Click empty space → deselect
+  // Click on a cluster in multi-select list → drill into single select
+  const handleSelectSingleFromMulti = useCallback(
+    (cluster: UniverseCluster) => {
+      setSelectedIds(new Set([cluster.cluster_id]));
+    },
+    []
+  );
+
+  // Click empty space → deselect all
   const handleClickEmpty = useCallback(() => {
-    setSelectedId(null);
-    setSelectedCluster(null);
-    setClusterDetail(null);
+    setSelectedIds(EMPTY_SET);
   }, []);
+
+  // ── Shift+drag handlers ──
+
+  const handleMouseDown = useCallback(
+    (e: React.MouseEvent) => {
+      if (!e.shiftKey) return;
+      e.preventDefault();
+      // Disable orbit controls during shift-drag
+      if (orbitControlsRef.current) {
+        orbitControlsRef.current.enabled = false;
+      }
+      isDraggingRef.current = true;
+      setSelectRect({
+        startX: e.clientX,
+        startY: e.clientY,
+        currentX: e.clientX,
+        currentY: e.clientY,
+      });
+    },
+    []
+  );
+
+  const handleMouseMove = useCallback(
+    (e: React.MouseEvent) => {
+      if (!isDraggingRef.current || !selectRect) return;
+      setSelectRect((prev) =>
+        prev ? { ...prev, currentX: e.clientX, currentY: e.clientY } : null
+      );
+    },
+    [selectRect]
+  );
+
+  const handleMouseUp = useCallback(
+    (e: React.MouseEvent) => {
+      // Re-enable orbit controls
+      if (orbitControlsRef.current) {
+        orbitControlsRef.current.enabled = true;
+      }
+      if (!isDraggingRef.current || !selectRect) return;
+      isDraggingRef.current = false;
+
+      const camera = cameraRef.current;
+      const container = containerRef.current;
+      if (!camera || !container) {
+        setSelectRect(null);
+        return;
+      }
+
+      const canvas = container.querySelector("canvas");
+      if (!canvas) {
+        setSelectRect(null);
+        return;
+      }
+      const canvasRect = canvas.getBoundingClientRect();
+
+      // Compute selection bounds
+      const left = Math.min(selectRect.startX, e.clientX);
+      const right = Math.max(selectRect.startX, e.clientX);
+      const top = Math.min(selectRect.startY, e.clientY);
+      const bottom = Math.max(selectRect.startY, e.clientY);
+
+      // Skip if too small (was just a click, not a drag)
+      if (right - left < 5 && bottom - top < 5) {
+        setSelectRect(null);
+        return;
+      }
+
+      // Find clusters within the rectangle
+      const hits = new Set<number>();
+      for (const c of visibleClusters) {
+        const screen = projectToScreen(c, camera, canvasRect);
+        if (
+          screen.x >= left &&
+          screen.x <= right &&
+          screen.y >= top &&
+          screen.y <= bottom
+        ) {
+          hits.add(c.cluster_id);
+        }
+      }
+
+      if (hits.size > 0) {
+        // Ctrl+Shift adds to existing selection
+        if (e.ctrlKey || e.metaKey) {
+          setSelectedIds((prev) => {
+            const next = new Set(prev);
+            for (const id of hits) next.add(id);
+            return next;
+          });
+        } else {
+          setSelectedIds(hits);
+        }
+      }
+
+      setSelectRect(null);
+    },
+    [selectRect, visibleClusters]
+  );
 
   const toggleDomain = useCallback(
     (domainId: number) => {
@@ -679,12 +987,17 @@ export default function GalaxyView() {
     );
   }
 
-  const selection = selectedCluster
-    ? { cluster: selectedCluster, detail: clusterDetail, loading: detailLoading }
-    : null;
-
   return (
-    <div style={{ position: "absolute", inset: 0, overflow: "hidden" }}>
+    <div
+      ref={containerRef}
+      style={{ position: "absolute", inset: 0, overflow: "hidden" }}
+      onMouseDown={handleMouseDown}
+      onMouseMove={handleMouseMove}
+      onMouseUp={handleMouseUp}
+    >
+      {/* Selection rectangle overlay */}
+      {selectRect && <SelectionOverlay rect={selectRect} />}
+
       {/* 3D Canvas */}
       <Canvas
         camera={{ position: [0, 20, 70], fov: 60, near: 0.1, far: 500 }}
@@ -696,6 +1009,7 @@ export default function GalaxyView() {
           inset: 0,
         }}
       >
+        <CameraRef cameraRef={cameraRef} />
         <color attach="background" args={["#0f0f1a"]} />
         <ambientLight intensity={0.4} />
         <directionalLight position={[50, 80, 60]} intensity={0.8} />
@@ -704,11 +1018,12 @@ export default function GalaxyView() {
           <ClusterSpheres
             clusters={visibleClusters}
             colorMap={colorMap}
-            selectedId={selectedId}
+            selectedIds={selectedIds}
             onClickSphere={handleClickSphere}
           />
         )}
         <OrbitControls
+          ref={orbitControlsRef}
           enableDamping
           dampingFactor={0.05}
           rotateSpeed={0.5}
@@ -722,11 +1037,14 @@ export default function GalaxyView() {
 
       {/* Sidebar */}
       <Sidebar
-        selection={selection}
+        selectedClusters={selectedClusters}
+        singleDetail={singleDetail}
+        detailLoading={detailLoading}
         domains={data.domains}
         activeDomains={activeDomains}
         onToggleDomain={toggleDomain}
         onClearDomainFilter={() => setActiveDomains(null)}
+        onSelectCluster={handleSelectSingleFromMulti}
         onClose={handleClickEmpty}
       />
     </div>
