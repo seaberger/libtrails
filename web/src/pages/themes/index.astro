@@ -16,10 +16,34 @@ const domains = await getDomains();
     </p>
   </header>
 
-  <div class="flex gap-6" id="domain-browser">
-    <!-- Left panel: Domain list -->
-    <div class="w-64 flex-shrink-0">
-      <div class="sticky top-24 space-y-1">
+  <div class="flex flex-col md:flex-row gap-6" id="domain-browser">
+    <!-- Domain selector: horizontal scroll on mobile, vertical list on desktop -->
+    <div class="w-full md:w-64 md:flex-shrink-0">
+      <!-- Mobile: wrapping chip layout with show more -->
+      <div class="flex md:hidden flex-wrap gap-1.5 pb-3" id="mobile-chips">
+        {domains.map((domain, index) => (
+          <button
+            class:list={[
+              "domain-item px-2.5 py-1 rounded-full text-xs font-medium transition-all duration-200 border whitespace-nowrap data-[selected]:bg-[var(--color-accent)] data-[selected]:text-white data-[selected]:border-[var(--color-accent)] bg-[var(--color-surface)] text-[var(--color-text)] border-[var(--color-border)]",
+              index >= 8 && "mobile-chip-overflow hidden"
+            ]}
+            data-domain-id={domain.domain_id}
+            data-selected={index === 0 ? "true" : undefined}
+          >
+            {domain.label}
+          </button>
+        ))}
+        {domains.length > 8 && (
+          <button
+            id="mobile-chips-toggle"
+            class="px-2.5 py-1 rounded-full text-xs font-medium border border-[var(--color-border)] text-[var(--color-accent)] bg-transparent transition-colors hover:bg-[var(--color-surface)]"
+          >
+            +{domains.length - 8} more
+          </button>
+        )}
+      </div>
+      <!-- Desktop: vertical list -->
+      <div class="hidden md:block sticky top-24 space-y-1">
         {domains.map((domain, index) => (
           <button
             class="domain-item w-full text-left px-4 py-3 rounded-lg transition-all duration-200 hover:bg-[var(--color-surface)] border border-transparent data-[selected]:bg-[var(--color-surface)] data-[selected]:border-[var(--color-accent)]"
@@ -73,7 +97,7 @@ const domains = await getDomains();
             <!-- Sample books -->
             <div>
               <h3 class="text-sm font-medium text-[var(--color-text)] mb-3">Featured Books</h3>
-              <div class="grid grid-cols-5 gap-3">
+              <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                 {domain.sample_books.slice(0, 5).map((book: any) => (
                   <a href={url(`/books/${book.id}`)} class="group">
                     <div class="aspect-[2/3] bg-[var(--color-bg)] rounded overflow-hidden mb-2">
@@ -117,9 +141,14 @@ const domains = await getDomains();
       item.addEventListener('click', () => {
         const domainId = item.getAttribute('data-domain-id');
 
-        // Update selected state
-        items.forEach(i => i.removeAttribute('data-selected'));
-        item.setAttribute('data-selected', 'true');
+        // Update selected state on ALL domain items (both mobile chips and desktop list)
+        items.forEach(i => {
+          if (i.getAttribute('data-domain-id') === domainId) {
+            i.setAttribute('data-selected', 'true');
+          } else {
+            i.removeAttribute('data-selected');
+          }
+        });
 
         // Show corresponding detail
         details.forEach(d => {
@@ -133,6 +162,23 @@ const domains = await getDomains();
     });
   }
 
+  // Mobile chips show more/less toggle
+  function initChipsToggle() {
+    const toggle = document.getElementById('mobile-chips-toggle');
+    if (!toggle) return;
+    const overflowChips = document.querySelectorAll('.mobile-chip-overflow');
+    let expanded = false;
+    toggle.addEventListener('click', () => {
+      expanded = !expanded;
+      overflowChips.forEach(chip => chip.classList.toggle('hidden', !expanded));
+      toggle.textContent = expanded ? 'Show less' : `+${overflowChips.length} more`;
+    });
+  }
+
   initDomainBrowser();
-  document.addEventListener('astro:page-load', initDomainBrowser);
+  initChipsToggle();
+  document.addEventListener('astro:page-load', () => {
+    initDomainBrowser();
+    initChipsToggle();
+  });
 </script>
