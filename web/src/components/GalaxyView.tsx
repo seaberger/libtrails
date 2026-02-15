@@ -3,7 +3,7 @@ import { Canvas, useThree } from "@react-three/fiber";
 import type { ThreeEvent } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
-import { getCoverUrl, getUniverse } from "../lib/api";
+import { getBooksBatch, getCoverUrl, getUniverse } from "../lib/api";
 import type {
   BookSummary,
   ThemeDetail,
@@ -293,7 +293,7 @@ function Sidebar({
   );
 }
 
-// ── Multi-select panel (list of selected clusters) ──
+// ── Multi-select panel (rich overview of selected clusters) ──
 
 function MultiSelectPanel({
   clusters,
@@ -308,30 +308,109 @@ function MultiSelectPanel({
   onSelectCluster: (cluster: UniverseCluster) => void;
   onClose: () => void;
 }) {
-  const totalBooks = useMemo(
-    () => clusters.reduce((sum, c) => sum + c.book_count, 0),
+  const [books, setBooks] = useState<BookSummary[]>([]);
+  const [booksLoading, setBooksLoading] = useState(false);
+  const [showAllBooks, setShowAllBooks] = useState(false);
+  const [showAllClusters, setShowAllClusters] = useState(false);
+
+  // ── Derived data ──
+
+  const uniqueBookIds = useMemo(() => {
+    const ids = new Set<number>();
+    for (const c of clusters) {
+      if (c.book_ids) for (const id of c.book_ids) ids.add(id);
+    }
+    return ids;
+  }, [clusters]);
+
+  const totalTopics = useMemo(
+    () => clusters.reduce((sum, c) => sum + c.size, 0),
     [clusters]
   );
 
+  // Domain breakdown: group clusters by domain, sorted by count desc
+  const domainBreakdown = useMemo(() => {
+    const counts = new Map<number, number>();
+    for (const c of clusters) {
+      counts.set(c.domain_id, (counts.get(c.domain_id) || 0) + 1);
+    }
+    return [...counts.entries()]
+      .map(([domainId, count]) => ({
+        domainId,
+        count,
+        domain: domainMap.get(domainId),
+      }))
+      .sort((a, b) => b.count - a.count);
+  }, [clusters, domainMap]);
+
+  // Top books: ranked by how many selected clusters they appear in
+  const topBookIds = useMemo(() => {
+    const freq = new Map<number, number>();
+    for (const c of clusters) {
+      if (c.book_ids) {
+        for (const id of c.book_ids) {
+          freq.set(id, (freq.get(id) || 0) + 1);
+        }
+      }
+    }
+    return [...freq.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 50)
+      .map(([id]) => id);
+  }, [clusters]);
+
+  // Top topics: aggregate top_topics across clusters, count frequency
+  const topTopics = useMemo(() => {
+    const freq = new Map<string, number>();
+    for (const c of clusters) {
+      for (const t of c.top_topics) {
+        freq.set(t, (freq.get(t) || 0) + 1);
+      }
+    }
+    return [...freq.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 15);
+  }, [clusters]);
+
+  // Fetch book details when selection changes
+  useEffect(() => {
+    if (topBookIds.length === 0) {
+      setBooks([]);
+      return;
+    }
+    setBooksLoading(true);
+    getBooksBatch(topBookIds)
+      .then(setBooks)
+      .catch(() => setBooks([]))
+      .finally(() => setBooksLoading(false));
+  }, [topBookIds]);
+
+  // Sort fetched books to match frequency order
+  const sortedBooks = useMemo(() => {
+    const order = new Map(topBookIds.map((id, i) => [id, i]));
+    return [...books].sort(
+      (a, b) => (order.get(a.id) ?? 99) - (order.get(b.id) ?? 99)
+    );
+  }, [books, topBookIds]);
+
+  const MAX_DOMAINS_SHOWN = 6;
+  const visibleDomains = domainBreakdown.slice(0, MAX_DOMAINS_SHOWN);
+  const hiddenDomainCount = domainBreakdown.length - MAX_DOMAINS_SHOWN;
+
   return (
     <div style={{ padding: "16px" }}>
-      {/* Header */}
+      {/* ── 1. Header + Stats ── */}
       <div
         style={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "flex-start",
-          marginBottom: 12,
+          marginBottom: 6,
         }}
       >
-        <div>
-          <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 600 }}>
-            {clusters.length} clusters selected
-          </h3>
-          <div style={{ fontSize: "0.75rem", color: "#999", marginTop: 4 }}>
-            {totalBooks} books total
-          </div>
-        </div>
+        <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 600 }}>
+          {clusters.length} clusters selected
+        </h3>
         <button
           onClick={onClose}
           style={{
@@ -348,53 +427,315 @@ function MultiSelectPanel({
           ×
         </button>
       </div>
+      <div
+        style={{
+          display: "flex",
+          gap: 6,
+          flexWrap: "wrap",
+          marginBottom: 16,
+        }}
+      >
+        {[
+          `${uniqueBookIds.size} books`,
+          `${totalTopics} topics`,
+          `${domainBreakdown.length} domains`,
+        ].map((label) => (
+          <span
+            key={label}
+            style={{
+              fontSize: "0.68rem",
+              color: "#aaa",
+              background: "rgba(255,255,255,0.06)",
+              borderRadius: 4,
+              padding: "2px 8px",
+            }}
+          >
+            {label}
+          </span>
+        ))}
+      </div>
 
-      {/* Cluster list */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-        {clusters.map((c) => {
-          const domain = domainMap.get(c.domain_id);
-          return (
-            <div
-              key={c.cluster_id}
-              onClick={() => onSelectCluster(c)}
-              style={{
-                padding: "8px 10px",
-                borderRadius: 6,
-                cursor: "pointer",
-                background: "rgba(255,255,255,0.03)",
-                transition: "background 0.1s",
-              }}
-              onMouseEnter={(e) =>
-                (e.currentTarget.style.background = "rgba(255,255,255,0.07)")
-              }
-              onMouseLeave={(e) =>
-                (e.currentTarget.style.background = "rgba(255,255,255,0.03)")
-              }
-            >
-              {domain && (
+      {/* ── 2. Domain Breakdown ── */}
+      {domainBreakdown.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <div
+            style={{
+              fontSize: "0.65rem",
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+              color: "#777",
+              marginBottom: 6,
+            }}
+          >
+            Domain Breakdown
+          </div>
+          {/* Stacked bar */}
+          <div
+            style={{
+              display: "flex",
+              height: 6,
+              borderRadius: 3,
+              overflow: "hidden",
+              marginBottom: 8,
+            }}
+          >
+            {domainBreakdown.map(({ domainId, count, domain }) => (
+              <div
+                key={domainId}
+                style={{
+                  flex: count,
+                  background: domain?.color || "#555",
+                  minWidth: 2,
+                }}
+                title={`${domain?.label || `Domain ${domainId}`}: ${count} clusters`}
+              />
+            ))}
+          </div>
+          {/* Domain list */}
+          <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+            {visibleDomains.map(({ domainId, count, domain }) => (
+              <div
+                key={domainId}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 6,
+                  fontSize: "0.72rem",
+                }}
+              >
                 <span
                   style={{
-                    display: "inline-block",
                     width: 8,
                     height: 8,
                     borderRadius: "50%",
-                    background: domain.color,
-                    marginRight: 6,
-                    verticalAlign: "middle",
+                    background: domain?.color || "#555",
+                    flexShrink: 0,
                   }}
                 />
-              )}
-              <span style={{ fontSize: "0.8rem", fontWeight: 500 }}>
-                {c.label}
-              </span>
-              <span
-                style={{ fontSize: "0.7rem", color: "#777", marginLeft: 8 }}
-              >
-                {c.book_count} books
-              </span>
+                <span style={{ color: "#ccc", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {domain?.label || `Domain ${domainId}`}
+                </span>
+                <span style={{ color: "#666", fontSize: "0.65rem", flexShrink: 0 }}>
+                  {count} clusters
+                </span>
+              </div>
+            ))}
+            {hiddenDomainCount > 0 && (
+              <div style={{ fontSize: "0.65rem", color: "#666", paddingLeft: 14 }}>
+                +{hiddenDomainCount} more
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* ── 3. Top Books (cover grid) ── */}
+      <div style={{ marginBottom: 16 }}>
+        <div
+          style={{
+            fontSize: "0.65rem",
+            textTransform: "uppercase",
+            letterSpacing: "0.05em",
+            color: "#777",
+            marginBottom: 8,
+          }}
+        >
+          Top Books
+        </div>
+        {booksLoading ? (
+          <div style={{ fontSize: "0.75rem", color: "#777", padding: "8px 0" }}>
+            Loading books...
+          </div>
+        ) : sortedBooks.length > 0 ? (
+          <>
+            <div
+              style={{
+                display: "grid",
+                gridTemplateColumns: "repeat(3, 1fr)",
+                gap: 8,
+              }}
+            >
+              {(showAllBooks ? sortedBooks : sortedBooks.slice(0, 9)).map((book) => (
+                <a
+                  key={book.id}
+                  href={`${basePath}/books/${book.id}`}
+                  title={`${book.title} — ${book.author}`}
+                  style={{
+                    display: "flex",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    textDecoration: "none",
+                    gap: 4,
+                  }}
+                >
+                  <BookCoverImg
+                    calibreId={book.calibre_id}
+                    title={book.title}
+                  />
+                  <span
+                    style={{
+                      fontSize: "0.6rem",
+                      color: "#aaa",
+                      textAlign: "center",
+                      lineHeight: 1.2,
+                      maxWidth: 80,
+                      overflow: "hidden",
+                      display: "-webkit-box",
+                      WebkitLineClamp: 2,
+                      WebkitBoxOrient: "vertical",
+                    }}
+                  >
+                    {book.title}
+                  </span>
+                </a>
+              ))}
             </div>
-          );
-        })}
+            {sortedBooks.length > 9 && (
+              <button
+                onClick={() => setShowAllBooks((v) => !v)}
+                style={{
+                  background: "none",
+                  border: "none",
+                  color: "#a0a0ff",
+                  cursor: "pointer",
+                  fontSize: "0.72rem",
+                  padding: "8px 0 0",
+                }}
+              >
+                {showAllBooks
+                  ? "Show less"
+                  : `Show all ${sortedBooks.length} books →`}
+              </button>
+            )}
+          </>
+        ) : (
+          <div style={{ fontSize: "0.7rem", color: "#666" }}>No book data available</div>
+        )}
+      </div>
+
+      {/* ── 4. Top Topics ── */}
+      {topTopics.length > 0 && (
+        <div style={{ marginBottom: 16 }}>
+          <div
+            style={{
+              fontSize: "0.65rem",
+              textTransform: "uppercase",
+              letterSpacing: "0.05em",
+              color: "#777",
+              marginBottom: 6,
+            }}
+          >
+            Top Topics
+          </div>
+          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
+            {topTopics.map(([topic, count]) => (
+              <span
+                key={topic}
+                style={{
+                  background: "rgba(255,255,255,0.07)",
+                  borderRadius: 4,
+                  padding: "3px 8px",
+                  fontSize: "0.7rem",
+                  color: "#ccc",
+                }}
+              >
+                {topic}
+                {count > 1 && (
+                  <span style={{ color: "#666", marginLeft: 4, fontSize: "0.6rem" }}>
+                    ×{count}
+                  </span>
+                )}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ── 5. Cluster List (collapsible) ── */}
+      <div
+        style={{
+          borderTop: "1px solid rgba(255,255,255,0.06)",
+          paddingTop: 12,
+        }}
+      >
+        <button
+          onClick={() => setShowAllClusters((v) => !v)}
+          style={{
+            background: "none",
+            border: "none",
+            color: "#a0a0ff",
+            cursor: "pointer",
+            fontSize: "0.75rem",
+            padding: 0,
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+          }}
+        >
+          <span
+            style={{
+              display: "inline-block",
+              transition: "transform 0.15s",
+              transform: showAllClusters ? "rotate(90deg)" : "rotate(0deg)",
+            }}
+          >
+            ▸
+          </span>
+          {showAllClusters ? "Hide" : "View all"} {clusters.length} clusters
+        </button>
+        {showAllClusters && (
+          <div
+            style={{
+              display: "flex",
+              flexDirection: "column",
+              gap: 2,
+              marginTop: 8,
+            }}
+          >
+            {clusters.map((c) => {
+              const domain = domainMap.get(c.domain_id);
+              return (
+                <div
+                  key={c.cluster_id}
+                  onClick={() => onSelectCluster(c)}
+                  style={{
+                    padding: "6px 10px",
+                    borderRadius: 6,
+                    cursor: "pointer",
+                    background: "rgba(255,255,255,0.03)",
+                    transition: "background 0.1s",
+                  }}
+                  onMouseEnter={(e) =>
+                    (e.currentTarget.style.background = "rgba(255,255,255,0.07)")
+                  }
+                  onMouseLeave={(e) =>
+                    (e.currentTarget.style.background = "rgba(255,255,255,0.03)")
+                  }
+                >
+                  {domain && (
+                    <span
+                      style={{
+                        display: "inline-block",
+                        width: 8,
+                        height: 8,
+                        borderRadius: "50%",
+                        background: domain.color,
+                        marginRight: 6,
+                        verticalAlign: "middle",
+                      }}
+                    />
+                  )}
+                  <span style={{ fontSize: "0.78rem", fontWeight: 500 }}>
+                    {c.label}
+                  </span>
+                  <span style={{ fontSize: "0.68rem", color: "#777", marginLeft: 8 }}>
+                    {c.book_count} books
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
     </div>
   );

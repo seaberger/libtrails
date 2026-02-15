@@ -43,9 +43,72 @@ import { url } from '../../lib/url';
       </ul>
     </section>
 
+    <!-- The Library -->
+    <section>
+      <h2 class="text-lg font-medium text-[var(--color-text)] mb-3">The Library</h2>
+      <p class="text-[var(--color-text-muted)] mb-4">
+        This demo runs on a curated collection of 100 Project Gutenberg classics spanning nearly 3,000 years of
+        written thought — from Homer's <em>Iliad</em> (~800 BC) and Sun Tzu's <em>The Art of War</em> (~500 BC)
+        through to F. Scott Fitzgerald's <em>The Great Gatsby</em> (1925).
+      </p>
+      <p class="text-[var(--color-text-muted)] mb-4">
+        The selection was designed to maximize thematic bridge density — books that connect across categories to
+        produce rich, interconnected Leiden clusters. Every title is a recognizable classic, chosen for how it
+        links to others in the collection rather than just its individual significance.
+      </p>
+      <div class="grid grid-cols-3 gap-3 mb-4">
+        {[
+          ["100", "Books"],
+          ["66,307", "Topics"],
+          ["~3,000 yrs", "~800 BC – 1925 AD"],
+        ].map(([value, label]) => (
+          <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg px-4 py-3 text-center">
+            <div class="text-lg font-medium text-[var(--color-text)]">{value}</div>
+            <div class="text-xs text-[var(--color-text-muted)]">{label}</div>
+          </div>
+        ))}
+      </div>
+      <div class="space-y-2 text-[var(--color-text-muted)]">
+        {[
+          ["Victorian British Fiction", "Austen, Dickens, the Brontes, Hardy, Eliot, Wilde"],
+          ["American Classics", "Melville, Twain, Hawthorne, Fitzgerald, Wharton, Thoreau"],
+          ["Russian Literature", "Dostoevsky, Tolstoy, Turgenev, Gogol, Lermontov"],
+          ["Early Sci-Fi & Gothic", "Shelley, Stoker, Wells, Verne, Poe, Stevenson"],
+          ["Philosophy & Essays", "Plato, Aristotle, Machiavelli, Nietzsche, Mill, Emerson"],
+          ["World Classics", "Homer, Dante, Cervantes, Hugo, Dumas, Flaubert"],
+          ["Drama", "Shakespeare, Ibsen, Wilde, Chekhov"],
+          ["Nonfiction & Political Thought", "Darwin, Paine, Marx, Wollstonecraft, Du Bois"],
+        ].map(([category, authors]) => (
+          <div class="flex items-baseline gap-2 text-sm">
+            <span class="font-medium text-[var(--color-text)] whitespace-nowrap">{category}</span>
+            <span class="text-[var(--color-text-muted)]">— {authors}</span>
+          </div>
+        ))}
+      </div>
+      <p class="text-[var(--color-text-muted)] mt-4 text-sm">
+        Author diversity is capped at four titles per author, each chosen for thematic distinctness.
+        The result is a library where Dostoevsky's guilt and redemption connect to Hugo and Shakespeare's tragedies,
+        Darwin's naturalism links to London and Thoreau's wilderness writing, and Ibsen's gender critique
+        echoes across the Brontes, Chopin, and Wollstonecraft.
+      </p>
+    </section>
+
     <!-- Pipeline -->
     <section>
       <h2 class="text-lg font-medium text-[var(--color-text)] mb-3">The Pipeline</h2>
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+        {[
+          ["~31,800", "Text chunks"],
+          ["66,307", "Deduped topics"],
+          ["2,468", "Leiden clusters"],
+          ["26", "Super-clusters"],
+        ].map(([value, label]) => (
+          <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg px-4 py-3 text-center">
+            <div class="text-lg font-medium text-[var(--color-text)]">{value}</div>
+            <div class="text-xs text-[var(--color-text-muted)]">{label}</div>
+          </div>
+        ))}
+      </div>
 
       <!-- Stage 1: Topic Extraction -->
       <h3 class="text-sm font-medium text-[var(--color-text)] uppercase tracking-wide text-[var(--color-text-muted)] mt-6 mb-3">Stage 1: Topic Extraction</h3>

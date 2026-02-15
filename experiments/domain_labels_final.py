@@ -9,50 +9,52 @@ Usage:
 import json
 from pathlib import Path
 
-SUPER_CLUSTERS_PATH = Path(__file__).parent / "super_clusters_new.json"
+SUPER_CLUSTERS_PATH = Path(__file__).parent / "domains_outliers_only.json"
 OUTPUT_PATH = Path(__file__).parent / "domain_labels_final.json"
 
 # Human-refined labels for demo library (100 Gutenberg classics)
-# Generated from Leiden domain clustering at resolution 0.006 (26 domains)
+# Generated from Leiden domain clustering at resolution 0.006 (27 domains)
+# With occurrence_count bug fix + outlier detection (84 clusters reassigned)
 # Maps super_cluster_id -> final label
 REFINED_LABELS = {
     # === Literary Worlds ===
-    0: "Chivalric & Heroic Romance",    # Don Quixote, musketeers, heroic code, Sancho Panza
-    1: "Adventure & Human Folly",       # Candide, Voltaire, rapid-paced adventure, human weakness
-    2: "Voyages & Exploration",         # Captain Nemo, submarine, Pacific Ocean, seafaring
-    4: "Psychological Portraits",       # Lady Glyde, Dorian Gray, Nastasia, Hester Prynne, Scarlet Letter
-    19: "Character Types",              # young man, wise man, coachman, provincial ladies
+    0: "Literary Classics & Philosophy", # Montaigne, Plato, Nietzsche, Don Quixote, Emerson, Marcus Aurelius
+    3: "Heroic & Military Epic",         # Musketeers, Achilles, swordsmanship, Bronze Age warfare, French Revolution
+    1: "Voyages & Exploration",          # Captain Nemo, submarine, Pacific Ocean, Yorkshire moors, seafaring
+    2: "Psychological Portraits",        # Lady Glyde, Nastasia, Jean Valjean, Scarlet Letter, Dorian Gray
+    5: "Adventure & Human Folly",        # Candide, Voltaire, Nietzsche's higher men, cynicism, social disillusionment
+    7: "Psychology & Personal Struggle", # Return to homeland, epilepsy, Anna Karenina, personal feelings, trauma
 
     # === Ideas & Belief ===
-    5: "Religion & Spirituality",       # divine intervention, worship, sacrifice, convent life
-    16: "Ethics & Morality",            # moral compromise, ethical conduct, slave morality, virtue
-    18: "Death & Mortality",            # dying man, immortality, impending death, grief
+    8: "Religion & Spirituality",        # divine intervention, sacrifice, worship, convent life, church & state
+    13: "Culture & Moral Inquiry",       # Grace Poole, Klondike, opera, moral compromise, general happiness
+    19: "Archetypes & Aging",            # old man, young man, wise man, effects of aging, timocratical man
+    20: "Death & Mortality",             # dying man, immortality, poisoning, impending death, grave digger
 
     # === Society & Power ===
-    3: "Economics & Industry",          # financial manipulation, industrial army, mercantile system, tax
-    7: "Race & Social Justice",         # social inequality, Tuskegee, racial dynamics, suppressed desires
-    10: "Revolution & Political Theory", # French Revolution, Napoleon, federal republic, Articles of Confederation
-    11: "War & Military",              # civil war, military discipline, dueling, standing armies
-    12: "Law & Governance",            # implied warranties, property, courts of justice, intellectual property
+    4: "Economics & Industry",           # financial manipulation, mercantile system, tax, stock market, political economy
+    14: "Politics & Governance",         # political corruption, Articles of Confederation, federal republic, Dead Souls
+    26: "Politics & Governance",         # plurality in executive, magistracy, Baskerville legacy — MERGED into 14
+    9: "Race & Social Justice",          # post-convict rehabilitation, poverty, Tuskegee, social inequality
+    12: "Law & Civil Society",           # implied warranties, intellectual property, courts of justice, filial duty
 
     # === Daily Life & Setting ===
-    6: "Material Culture & Leisure",    # capital, beauty, chess, diamond, silver, Paris salons
-    8: "Domestic & Social Life",        # district council, customs, hospitality, public execution, wine
-    9: "Crime & Intrigue",             # moral decay, asylum, body identification, investigation, secrets
-    14: "Family & Medicine",           # maternal abandonment, family honor, doctor-patient, infant care
-    20: "Travel & Transport",          # hussar regiment, hotel, railway, carriage, homeward journey
-    21: "Night & Atmosphere",          # moonlight, churchyard, darkness, lightning, midnight
+    6: "Objects & Aesthetics",           # beauty, chess, diamonds, silver, Paris salons, human imperfection
+    11: "Domestic & Social Life",        # hussar regiment, street urchin, customs, hospitality, public execution
+    10: "Nature & Rural Life",           # hunting techniques, birds, district council, Spanish wine, guanaco
+    15: "Crime & Intrigue",              # moral decay, body identification, Porfiry's investigation, clandestine meetings
+    18: "Family & Kinship",              # maternal abandonment, family honor, childhood innocence, Countess Olenska
+    25: "Sport & Physical Culture",      # horseback riding, athletic competition, gymnastics, physical strength
 
     # === Expression & Knowledge ===
-    13: "Letters & Communication",      # literary criticism, telegraph, love letters, speech, poetry
-    15: "Love & Desire",               # erotic desire, personal fulfillment, romance, divorce, passion
-    22: "Education & Intellect",        # education of children, university, classical literature, discipline
-    25: "Theater & Performance",        # Grace Poole, Klondike, opera, theatrical innovation, nihilism
+    16: "Love & Desire",                 # erotic desire, secret rendezvous, sympotic rituals, passion
+    17: "Letters & Communication",       # telegram, love letters, speech, letter delivery, chivalry orders
+    22: "Education & Intellect",         # education of children, university, classical literature, Atlanta University
+    24: "Medicine & Health",             # doctor-patient, medical treatment, surgery, sick man's bedside
 
     # === Nature & Survival ===
-    17: "Nature & Animals",            # hunting techniques, bird species, guanaco, horseback riding
-    23: "Slavery & Desolation",        # freedmen's bureau, free labor, blight of slavery, ruins
-    24: "Ships & the Sea",            # shipwreck, ship's crew, naval, maritime trade, Captain Smollett
+    23: "Slavery & Desolation",          # freedmen's bureau, free labor, blight of slavery, Indian ruins
+    21: "Ships & the Sea",              # shipwreck, ship's crew, Captain Smollett, maritime trade
 }
 
 
