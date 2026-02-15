@@ -349,7 +349,6 @@ class TestMergeGroupsBatch:
         assert result["groups_merged"] == 2
         assert result["topics_merged"] == 3  # 1 + 2 duplicates
 
-
     @patch("libtrails.vector_search.get_vec_db")
     @patch("libtrails.deduplication.sqlite3")
     def test_occurrence_count_recalculated_not_summed(self, mock_sqlite3, mock_vec_db):
@@ -379,18 +378,14 @@ class TestMergeGroupsBatch:
         # Verify that occurrence_count is recalculated via subquery, not added
         execute_calls = [str(call) for call in mock_cursor.execute.call_args_list]
         recalculate_calls = [
-            c for c in execute_calls
-            if "SELECT COUNT(*) FROM chunk_topic_links" in c
+            c for c in execute_calls if "SELECT COUNT(*) FROM chunk_topic_links" in c
         ]
         assert len(recalculate_calls) > 0, (
             "Expected occurrence_count to be recalculated from chunk_topic_links"
         )
 
         # Verify NO additive update pattern exists
-        additive_calls = [
-            c for c in execute_calls
-            if "occurrence_count = occurrence_count +" in c
-        ]
+        additive_calls = [c for c in execute_calls if "occurrence_count = occurrence_count +" in c]
         assert len(additive_calls) == 0, (
             "Should not use additive occurrence_count update (data bug)"
         )

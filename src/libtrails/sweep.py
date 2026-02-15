@@ -190,9 +190,7 @@ def compute_significance(
 
     scores = []
     for r in results:
-        sig_part = leidenalg.SignificanceVertexPartition(
-            g_uw, initial_membership=r.membership
-        )
+        sig_part = leidenalg.SignificanceVertexPartition(g_uw, initial_membership=r.membership)
         scores.append(sig_part.quality())
     return scores
 
@@ -314,9 +312,7 @@ def run_sweep(
         threshold=plateau_threshold,
         min_length=min_plateau_length,
     )
-    rec_res, rec_idx = recommend_resolution(
-        results, nmi_scores, plateaus, significance_scores
-    )
+    rec_res, rec_idx = recommend_resolution(results, nmi_scores, plateaus, significance_scores)
 
     return SweepSummary(
         results=results,
@@ -355,9 +351,7 @@ def format_sweep_table(summary: SweepSummary) -> "Table":
             plateau_indices.add(i)
 
     # Find peak significance index for marking
-    peak_sig_idx = (
-        int(np.argmax(summary.significance_scores)) if has_sig else -1
-    )
+    peak_sig_idx = int(np.argmax(summary.significance_scores)) if has_sig else -1
 
     for i, r in enumerate(summary.results):
         nmi_str = f"{summary.nmi_scores[i]:.3f}" if i < len(summary.nmi_scores) else ""
@@ -378,11 +372,13 @@ def format_sweep_table(summary: SweepSummary) -> "Table":
             if i == peak_sig_idx:
                 sig_str = f"[bold]{sig_str}[/bold]"
             row.append(sig_str)
-        row.extend([
-            nmi_str,
-            f"{r.elapsed:.2f}",
-            " ".join(markers),
-        ])
+        row.extend(
+            [
+                nmi_str,
+                f"{r.elapsed:.2f}",
+                " ".join(markers),
+            ]
+        )
         table.add_row(*row)
 
     return table

@@ -777,9 +777,7 @@ def sweep_resolutions(
 
     # Auto-select: apply recommended resolution
     if auto_select and summary.recommended_resolution is not None:
-        log_progress(
-            f"Auto-selecting resolution {summary.recommended_resolution:.6f}..."
-        )
+        log_progress(f"Auto-selecting resolution {summary.recommended_resolution:.6f}...")
         cluster_result = cluster_topics(
             mode=mode,
             partition_type="cpm",

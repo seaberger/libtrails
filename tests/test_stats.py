@@ -1,6 +1,5 @@
 """Tests for book_cluster_relevance scoring function."""
 
-
 import pytest
 
 from libtrails.stats import book_cluster_relevance

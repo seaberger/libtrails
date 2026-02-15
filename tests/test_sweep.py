@@ -66,10 +66,7 @@ class TestComputeStability:
         assert nmi[0] < 0.5
 
     def test_output_length(self):
-        results = [
-            SweepResult(r, 3, 1.0, [0, 1, 2, 0, 1, 2], 0.01)
-            for r in [0.1, 0.2, 0.3, 0.4]
-        ]
+        results = [SweepResult(r, 3, 1.0, [0, 1, 2, 0, 1, 2], 0.01) for r in [0.1, 0.2, 0.3, 0.4]]
         nmi = compute_stability(results)
         assert len(nmi) == 3  # n-1
 

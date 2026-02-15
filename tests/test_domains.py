@@ -41,7 +41,9 @@ class TestDisparityFilter:
         # Strong edge (0,1) should survive
         assert result.ecount() >= 1
         # Check that the strong edge is present
-        strong_edges = [(e.source, e.target) for e in result.es if result.es[e.index]["weight"] > 0.5]
+        strong_edges = [
+            (e.source, e.target) for e in result.es if result.es[e.index]["weight"] > 0.5
+        ]
         assert len(strong_edges) >= 1
 
     def test_weak_edges_pruned_on_high_degree_nodes(self):
@@ -136,9 +138,21 @@ class TestComputeRobustCentroid:
     def test_centroid_is_unit_norm(self):
         """Centroid should be L2 normalized."""
         topics = [
-            {"label": "topic one", "embedding": np.array([1.0, 0.0, 0.0], dtype=np.float32), "occurrence_count": 10},
-            {"label": "topic two", "embedding": np.array([0.0, 1.0, 0.0], dtype=np.float32), "occurrence_count": 5},
-            {"label": "topic three", "embedding": np.array([0.0, 0.0, 1.0], dtype=np.float32), "occurrence_count": 3},
+            {
+                "label": "topic one",
+                "embedding": np.array([1.0, 0.0, 0.0], dtype=np.float32),
+                "occurrence_count": 10,
+            },
+            {
+                "label": "topic two",
+                "embedding": np.array([0.0, 1.0, 0.0], dtype=np.float32),
+                "occurrence_count": 5,
+            },
+            {
+                "label": "topic three",
+                "embedding": np.array([0.0, 0.0, 1.0], dtype=np.float32),
+                "occurrence_count": 3,
+            },
         ]
         centroid = compute_robust_centroid(topics)
         assert centroid is not None
@@ -148,8 +162,16 @@ class TestComputeRobustCentroid:
     def test_too_few_topics_returns_none(self):
         """Fewer than 3 topics returns None."""
         topics = [
-            {"label": "topic one", "embedding": np.array([1.0, 0.0], dtype=np.float32), "occurrence_count": 10},
-            {"label": "topic two", "embedding": np.array([0.0, 1.0], dtype=np.float32), "occurrence_count": 5},
+            {
+                "label": "topic one",
+                "embedding": np.array([1.0, 0.0], dtype=np.float32),
+                "occurrence_count": 10,
+            },
+            {
+                "label": "topic two",
+                "embedding": np.array([0.0, 1.0], dtype=np.float32),
+                "occurrence_count": 5,
+            },
         ]
         centroid = compute_robust_centroid(topics)
         assert centroid is None
@@ -157,10 +179,26 @@ class TestComputeRobustCentroid:
     def test_short_labels_filtered(self):
         """Topics with short labels are filtered out."""
         topics = [
-            {"label": "a", "embedding": np.array([1.0, 0.0], dtype=np.float32), "occurrence_count": 100},
-            {"label": "be", "embedding": np.array([0.0, 1.0], dtype=np.float32), "occurrence_count": 50},
-            {"label": "topic one", "embedding": np.array([1.0, 0.0], dtype=np.float32), "occurrence_count": 10},
-            {"label": "topic two", "embedding": np.array([0.0, 1.0], dtype=np.float32), "occurrence_count": 5},
+            {
+                "label": "a",
+                "embedding": np.array([1.0, 0.0], dtype=np.float32),
+                "occurrence_count": 100,
+            },
+            {
+                "label": "be",
+                "embedding": np.array([0.0, 1.0], dtype=np.float32),
+                "occurrence_count": 50,
+            },
+            {
+                "label": "topic one",
+                "embedding": np.array([1.0, 0.0], dtype=np.float32),
+                "occurrence_count": 10,
+            },
+            {
+                "label": "topic two",
+                "embedding": np.array([0.0, 1.0], dtype=np.float32),
+                "occurrence_count": 5,
+            },
         ]
         # Only 2 valid topics after filtering (less than 3) → None
         centroid = compute_robust_centroid(topics)

@@ -102,9 +102,7 @@ def refresh_cluster_stats(conn: sqlite3.Connection) -> int:
         cursor.execute("DELETE FROM cluster_stats")
 
         # Total corpus size for PPMI calculation (sum of all topic counts)
-        total_corpus_row = cursor.execute(
-            "SELECT SUM(topic_count) FROM cluster_books"
-        ).fetchone()
+        total_corpus_row = cursor.execute("SELECT SUM(topic_count) FROM cluster_books").fetchone()
         total_corpus = total_corpus_row[0] if total_corpus_row[0] else 1
 
         # Get all clusters with their sizes
@@ -177,8 +175,12 @@ def refresh_cluster_stats(conn: sqlite3.Connection) -> int:
                 scored.append((score, r))
             scored.sort(key=lambda x: x[0], reverse=True)
             sample_books = [
-                {"id": r["id"], "title": r["title"], "author": r["author"],
-                 "calibre_id": r["calibre_id"]}
+                {
+                    "id": r["id"],
+                    "title": r["title"],
+                    "author": r["author"],
+                    "calibre_id": r["calibre_id"],
+                }
                 for _, r in scored[:5]
             ]
 
@@ -218,9 +220,7 @@ def refresh_domain_stats(conn: sqlite3.Connection) -> int:
         cursor.execute("DELETE FROM domain_stats")
 
         # Total corpus for PPMI (computed once)
-        total_corpus_row = cursor.execute(
-            "SELECT SUM(topic_count) FROM cluster_books"
-        ).fetchone()
+        total_corpus_row = cursor.execute("SELECT SUM(topic_count) FROM cluster_books").fetchone()
         total_corpus = total_corpus_row[0] if total_corpus_row[0] else 1
 
         cursor.execute("SELECT id FROM domains")
@@ -295,8 +295,12 @@ def refresh_domain_stats(conn: sqlite3.Connection) -> int:
                 scored.append((score, r))
             scored.sort(key=lambda x: x[0], reverse=True)
             sample_books = [
-                {"id": r["id"], "title": r["title"], "author": r["author"],
-                 "calibre_id": r["calibre_id"]}
+                {
+                    "id": r["id"],
+                    "title": r["title"],
+                    "author": r["author"],
+                    "calibre_id": r["calibre_id"],
+                }
                 for _, r in scored[:5]
             ]
 
