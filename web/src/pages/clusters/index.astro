@@ -19,7 +19,7 @@ const basePath = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
     </p>
   </header>
 
-  <SearchBar placeholder="Search clusters (e.g., stoic philosophy, machine learning, family drama...)" scope="clusters" />
+  <SearchBar placeholder="Search clusters..." scope="clusters" />
 
   <!-- Search results grid (hidden by default) -->
   <div id="clusters-search-results" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 hidden" data-base-path={basePath}></div>

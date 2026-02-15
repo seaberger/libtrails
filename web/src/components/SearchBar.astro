@@ -13,13 +13,13 @@ const basePath = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
   <form class="search-bar-form relative" onsubmit="return false">
     <input
       type="text"
-      class="search-bar-input w-full px-4 py-3 pl-12 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] placeholder-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
+      class="search-bar-input w-full px-4 py-3 pl-10 pr-10 bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg text-[var(--color-text)] placeholder-[var(--color-text-muted)] focus:outline-none focus:border-[var(--color-accent)] transition-colors"
       placeholder={placeholder}
       autocomplete="off"
     />
     <!-- Search icon -->
     <svg
-      class="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--color-text-muted)]"
+      class="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--color-text-muted)]"
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
