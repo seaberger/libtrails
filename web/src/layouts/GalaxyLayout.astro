@@ -7,6 +7,12 @@ interface Props {
 }
 
 const { title } = Astro.props;
+
+const currentPath = Astro.url.pathname.replace(/\/$/, '') || '/';
+const isActive = (path: string) => {
+  const resolved = url(path).replace(/\/$/, '') || '/';
+  return currentPath === resolved;
+};
 ---
 
 <!doctype html>
@@ -15,14 +21,19 @@ const { title } = Astro.props;
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content="Galaxy map of your book library" />
-    <link rel="icon" type="image/x-icon" href="/libtrails_favicon.ico" />
-    <link rel="icon" type="image/png" sizes="32x32" href="/libtrails_32.png" />
-    <link rel="icon" type="image/png" sizes="16x16" href="/libtrails_16.png" />
-    <link rel="apple-touch-icon" sizes="128x128" href="/libtrails_128.png" />
+    <link rel="icon" type="image/svg+xml" href="/libtrails_vector.svg" />
+    <link rel="icon" type="image/x-icon" href="/libtrails_favicon_transparent.ico" />
+    <link rel="apple-touch-icon" sizes="128x128" href="/libtrails_transparent_128.png" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet" />
     <title>LibTrails {title}</title>
+    <script is:inline>
+      (function() {
+        const t = localStorage.getItem('libtrails-theme');
+        if (t) document.documentElement.setAttribute('data-theme', t);
+      })();
+    </script>
     <style>
       html, body {
         margin: 0;
@@ -31,6 +42,10 @@ const { title } = Astro.props;
         overflow: hidden;
         background: radial-gradient(ellipse at center, #1a1a2e 0%, #0f0f1a 100%);
         color: #e0e0e0;
+      }
+      [data-theme="light"], [data-theme="light"] body {
+        background: radial-gradient(ellipse at center, #e8e8f0 0%, #d8d8e8 100%);
+        color: #1c1917;
       }
       *, *::before, *::after {
         box-sizing: border-box;
@@ -44,22 +59,23 @@ const { title } = Astro.props;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0.75rem 1.5rem;
-        background: rgba(15, 15, 26, 0.7);
+        padding: 0.35rem 1.5rem;
+        background: color-mix(in srgb, var(--color-surface) 70%, transparent);
         backdrop-filter: blur(8px);
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        border-bottom: 1px solid var(--color-border);
       }
       .galaxy-nav a {
         text-decoration: none;
         transition: color 0.15s ease;
       }
       .galaxy-nav .brand {
-        font-size: 1.15rem;
-        font-weight: 500;
-        color: #e0e0e0;
+        font-size: 1rem;
+        font-weight: 400;
+        color: var(--color-accent);
+        letter-spacing: 0.03em;
       }
       .galaxy-nav .brand:hover {
-        color: #a0a0ff;
+        color: var(--color-accent-hover);
       }
       .galaxy-nav .links {
         display: flex;
@@ -68,14 +84,29 @@ const { title } = Astro.props;
       }
       .galaxy-nav .links a {
         font-size: 0.875rem;
-        color: rgba(224, 224, 224, 0.6);
+        color: var(--color-text-muted);
       }
       .galaxy-nav .links a:hover {
-        color: #e0e0e0;
+        color: var(--color-text);
       }
       .galaxy-nav .links a.active {
-        color: #a0a0ff;
+        color: var(--color-accent);
       }
+      .galaxy-nav .theme-toggle {
+        background: none;
+        border: none;
+        padding: 0.25rem;
+        color: var(--color-text-muted);
+        cursor: pointer;
+        transition: color 0.15s ease;
+      }
+      .galaxy-nav .theme-toggle:hover {
+        color: var(--color-accent);
+      }
+      /* Show/hide sun/moon icons based on theme */
+      .theme-icon-moon { display: none; }
+      [data-theme="light"] .theme-icon-sun { display: none; }
+      [data-theme="light"] .theme-icon-moon { display: block; }
       .galaxy-content {
         position: absolute;
         top: 0;
@@ -89,20 +120,54 @@ const { title } = Astro.props;
   <body>
     <nav class="galaxy-nav">
       <a href={url("/")} class="brand" style="display:flex;align-items:center;gap:0.5rem;">
-        <img src="/libtrails_32.png" alt="" width="24" height="24" style="border-radius:4px;" />
+        <img src="/libtrails_transparent_128.png" alt="" width="44" height="44" style="border-radius:9px;" />
         LibTrails
       </a>
       <div class="links">
-        <a href={url("/")} class="active">Universe</a>
-        <a href={url("/themes")}>Themes</a>
-        <a href={url("/clusters")}>Clusters</a>
-        <a href={url("/books")}>Books</a>
-        <a href={url("/about")}>About</a>
+        <a href={url("/")} class:list={[isActive("/") && "active"]}>Universe</a>
+        <a href={url("/themes")} class:list={[isActive("/themes") && "active"]}>Themes</a>
+        <a href={url("/clusters")} class:list={[isActive("/clusters") && "active"]}>Clusters</a>
+        <a href={url("/books")} class:list={[isActive("/books") && "active"]}>Books</a>
+        <a href={url("/about")} class:list={[isActive("/about") && "active"]}>About</a>
+        <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
+          <svg class="theme-icon-sun" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg class="theme-icon-moon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
       </div>
     </nav>
 
     <div class="galaxy-content">
       <slot />
     </div>
+
+    <script is:inline>
+      (function() {
+        const btn = document.getElementById('theme-toggle');
+        if (!btn) return;
+        btn.addEventListener('click', function() {
+          const html = document.documentElement;
+          const current = html.getAttribute('data-theme');
+          const next = current === 'light' ? 'dark' : 'light';
+          if (next === 'dark') {
+            html.removeAttribute('data-theme');
+          } else {
+            html.setAttribute('data-theme', next);
+          }
+          localStorage.setItem('libtrails-theme', next);
+        });
+      })();
+    </script>
   </body>
 </html>
