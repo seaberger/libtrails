@@ -1,27 +1,35 @@
 # Hybrid Search Architecture
 
-LibTrails uses a 7-signal hybrid search system that combines full-text keyword search (FTS5) with semantic vector search (sqlite-vec) via Reciprocal Rank Fusion (RRF). This document describes the architecture, the signals, the data tables, and the fusion algorithm.
+LibTrails uses a multi-signal hybrid search system that combines full-text keyword search (FTS5) with semantic vector search (sqlite-vec) via Reciprocal Rank Fusion (RRF). The system supports four search scopes — books (7 signals), clusters (5 signals), domains (cluster aggregation + direct label match), and universe (3D highlighting). This document describes the architecture, the signals, the data tables, and the fusion algorithm.
 
 ## Overview
 
-The search system answers the question: *"Given a user query, which books are most relevant?"* It attacks this from multiple angles — keyword matches in titles, semantic similarity across 837K extracted topics, 7K LLM-generated book themes, 335K text chunks, and whole-book metadata vectors — then fuses the results into a single ranked list.
+The search system supports four scopes, each optimized for its use case:
+
+- **Books** (7 signals): *"Which books are most relevant?"* — attacks from multiple angles: keyword matches in titles, semantic similarity across 837K extracted topics, 7K LLM-generated book themes, 335K text chunks, and whole-book metadata vectors.
+- **Clusters** (5 signals): *"Which topic clusters match?"* — combines topic-level signals with chunk content and direct cluster label matching.
+- **Domains** (cluster aggregation + label match): *"Which high-level domains are relevant?"* — aggregates cluster results by domain plus direct domain label matching.
+- **Universe** (inherits cluster signals): *"Which clusters to highlight in 3D?"* — minimal response for GPU rendering.
 
 ```text
 User Query: "dystopian fiction"
         │
-        ├──► FTS5 keyword search (3 signals)
-        │    ├── books_fts:  title, author, description, series, themes
-        │    ├── topics_fts: 837K normalized topic labels
-        │    └── chunks_fts: 335K text chunks → mapped to books
+        ├──► Book Search (7 signals → RRF)
+        │    ├── FTS5: books_fts, topics_fts→books, chunks_fts→books
+        │    └── Semantic: topic_vectors→books, book_theme_vectors→books,
+        │                  book_vectors (direct), chunk_vectors→books
         │
-        ├──► Semantic vector search (4 signals)
-        │    ├── topic_vectors:      837K topic embeddings → mapped to books
-        │    ├── book_theme_vectors:  7K theme embeddings → mapped to books
-        │    ├── book_vectors:        926 whole-book embeddings
-        │    └── chunk_vectors:       335K chunk embeddings → mapped to books
+        ├──► Cluster Search (5 signals → RRF)
+        │    ├── FTS5: topics_fts→clusters, chunks_fts→clusters
+        │    ├── Semantic: topic_vectors→clusters, chunk_vectors→clusters
+        │    └── Direct: cluster label text match (LIKE)
         │
-        └──► Reciprocal Rank Fusion (k=60)
-             └── Final ranked list: [(book_id, rrf_score)]
+        ├──► Domain Search (cluster aggregation + label match)
+        │    ├── Aggregates cluster results by domain (best score per domain)
+        │    └── Direct: domain label text match (LIKE)
+        │
+        └──► Universe Search (inherits cluster search)
+             └── Returns minimal {cluster_id, score} for 3D highlighting
 ```
 
 ## The 7 Search Signals
@@ -216,6 +224,10 @@ All vec0 tables use `FLOAT[384] distance_metric=cosine`.
 | `chunk_topic_links` | Many-to-many: chunks ↔ normalized topics | chunk_id, topic_id |
 | `topics` | Normalized, deduplicated topic labels with embeddings | id, label, embedding, cluster_id |
 | `chunks` | ~500-word text blocks from parsed EPUBs | id, book_id, text |
+| `cluster_stats` | Materialized per-cluster metrics | cluster_id, size, book_count, top_label, sample_books_json |
+| `cluster_labels` | LLM-generated cluster labels | cluster_id, label |
+| `cluster_domains` | Cluster → domain mapping | cluster_id, domain_id |
+| `domains` | High-level super-cluster categories (~20-25) | id, label, cluster_count |
 
 ## Code Locations
 
@@ -232,10 +244,14 @@ All vec0 tables use `FLOAT[384] distance_metric=cosine`.
 | `_semantic_search_books_direct()` | `hybrid_search.py` | Signal 6: vec search on whole-book vectors |
 | `_topics_to_books()` | `hybrid_search.py` | Map topic scores to book scores |
 | `_topics_to_clusters()` | `hybrid_search.py` | Map topic scores to cluster scores |
-| `hybrid_search_books()` | `hybrid_search.py` | Main entry point: fuses all 7 signals |
-| `hybrid_search_clusters()` | `hybrid_search.py` | Cluster-level search (2 signals) |
-| `hybrid_search_domains()` | `hybrid_search.py` | Domain-level search (aggregates clusters) |
-| `hybrid_search_universe()` | `hybrid_search.py` | 3D visualization search |
+| `_search_cluster_labels()` | `hybrid_search.py` | Direct LIKE search on cluster labels |
+| `_fts_chunks_to_clusters()` | `hybrid_search.py` | FTS chunk search → cluster mapping |
+| `_semantic_chunks_to_clusters()` | `hybrid_search.py` | Semantic chunk search → cluster mapping |
+| `_search_domain_labels()` | `hybrid_search.py` | Direct LIKE search on domain labels |
+| `hybrid_search_books()` | `hybrid_search.py` | Book search: fuses all 7 signals |
+| `hybrid_search_clusters()` | `hybrid_search.py` | Cluster search: fuses 5 signals |
+| `hybrid_search_domains()` | `hybrid_search.py` | Domain search: cluster aggregation + label match |
+| `hybrid_search_universe()` | `hybrid_search.py` | 3D visualization search (wraps cluster search) |
 | `init_vector_search()` | `vector_search.py` | Create all vec0 tables |
 | `rebuild_book_theme_index()` | `vector_search.py` | Build book_theme_entries + book_theme_vectors |
 | `rebuild_book_vector_index()` | `vector_search.py` | Build book_vectors from metadata |
@@ -291,13 +307,41 @@ uv run libtrails embed --chunks
 uv run libtrails embed --all
 ```
 
+## Cluster Search (5 Signals)
+
+The cluster search answers: *"Which topic clusters are most relevant to this query?"* It uses 5 signals fused via RRF, then looks up cluster metadata from the materialized `cluster_stats` table.
+
+| # | Signal | Type | How it works |
+|---|--------|------|-------------|
+| 1 | FTS topics → clusters | Keyword | `topics_fts` matches → map via `topics.cluster_id` |
+| 2 | Semantic topics → clusters | Vector | `topic_vectors` similarity → map via `topics.cluster_id` |
+| 3 | Cluster label match | Text | LIKE search on `cluster_labels.label` / `cluster_stats.top_label` |
+| 4 | FTS chunks → clusters | Keyword | `chunks_fts` matches → `chunk_topic_links` → `topics.cluster_id` |
+| 5 | Semantic chunks → clusters | Vector | `chunk_vectors` similarity → `chunk_topic_links` → `topics.cluster_id` |
+
+The chunk-level signals (4 & 5) map through a 2-hop join: chunk → topic (via `chunk_topic_links`) → cluster (via `topics.cluster_id`). This is direct since chunks literally contain the topics that form the clusters.
+
+The cluster label signal (3) uses simple LIKE matching against the cluster's human-readable label (LLM-generated `cluster_labels.label` or the fallback `cluster_stats.top_label`). With only ~2,500 clusters, LIKE is fast enough — no FTS index needed.
+
+## Domain Search (Cluster Aggregation + Label Match)
+
+Domain search aggregates cluster results by their parent domain (super-cluster), with two components:
+
+1. **Cluster aggregation**: Calls `hybrid_search_clusters(limit=100)`, maps each result to its domain via `cluster_domains`, and keeps the best cluster score per domain plus a count of matching clusters.
+
+2. **Direct domain label match**: LIKE search on `domains.label` (e.g., searching "economics" directly matches "Economics & Industry"). This signal surfaces domains even if none of their clusters scored high individually.
+
+## Universe Search
+
+Universe search wraps `hybrid_search_clusters()` and returns minimal `{cluster_id, score}` pairs for 3D highlighting in the galaxy visualization. It inherits all 5 cluster search signals automatically.
+
 ## Graceful Degradation
 
 All semantic search functions wrap their vec0 queries in try/except blocks, returning an empty list if the vector table doesn't exist or isn't populated. This means the search system works at any stage of the build process:
 
-- **No vectors built**: Pure FTS search (signals 1-3 only)
-- **Topics only**: FTS + topic semantic (signals 1-4)
-- **Full build**: All 7 signals active
+- **No vectors built**: Pure FTS search (book search: signals 1-3, cluster search: signal 1 + label match)
+- **Topics only**: FTS + topic semantic (book search: signals 1-4, cluster search: signals 1-3)
+- **Full build**: All signals active (book search: 7, cluster search: 5, domain search: cluster aggregation + label match)
 
 ## References
 
