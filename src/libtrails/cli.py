@@ -1190,25 +1190,29 @@ def formats():
 @main.command()
 @click.option("--force", is_flag=True, help="Regenerate all embeddings (use after model change)")
 @click.option("--themes", is_flag=True, help="Embed book themes → book_theme_vectors")
+@click.option("--books", is_flag=True, help="Embed books (title+desc+themes) → book_vectors")
 @click.option("--chunks", is_flag=True, help="Embed chunks → chunk_vectors (~15-30 min)")
-@click.option("--all", "embed_all", is_flag=True, help="Embed topics + themes + chunks")
-def embed(force: bool, themes: bool, chunks: bool, embed_all: bool):
-    """Generate embeddings for topics, book themes, and/or chunks.
+@click.option("--all", "embed_all", is_flag=True, help="Embed topics + themes + books + chunks")
+def embed(force: bool, themes: bool, books: bool, chunks: bool, embed_all: bool):
+    """Generate embeddings for topics, book themes, books, and/or chunks.
 
     By default, embeds topics only. Use --themes for book themes,
-    --chunks for chunk content, or --all for everything.
+    --books for whole-book vectors, --chunks for chunk content,
+    or --all for everything.
     """
     from .database import get_db
     from .embeddings import embed_texts, embedding_to_bytes, get_model_info
     from .vector_search import (
         get_vec_db,
         rebuild_book_theme_index,
+        rebuild_book_vector_index,
         rebuild_vector_index,
     )
 
     # Determine what to embed
-    do_topics = not themes and not chunks or embed_all
+    do_topics = not themes and not books and not chunks or embed_all
     do_themes = themes or embed_all
+    do_books = books or embed_all
     do_chunks = chunks or embed_all
 
     # Ensure tables exist
@@ -1293,6 +1297,15 @@ def embed(force: bool, themes: bool, chunks: bool, embed_all: bool):
             count = rebuild_book_theme_index(conn)
             conn.close()
         console.print(f"[green]Indexed {count} book theme vectors[/green]")
+
+    # ── Book vectors (title + description + themes) ──
+    if do_books:
+        console.print("\n[bold]Embedding books (title+desc+themes) → book_vectors...[/bold]")
+        with console.status("Building book vectors..."):
+            conn = get_vec_db()
+            count = rebuild_book_vector_index(conn)
+            conn.close()
+        console.print(f"[green]Indexed {count} book vectors[/green]")
 
     # ── Chunk embeddings ──
     if do_chunks:

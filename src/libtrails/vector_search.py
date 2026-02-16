@@ -26,6 +26,7 @@ def init_vector_search(conn: sqlite3.Connection, force_recreate: bool = False):
         # Drop existing tables to recreate with new settings
         conn.execute("DROP TABLE IF EXISTS topic_vectors")
         conn.execute("DROP TABLE IF EXISTS book_theme_vectors")
+        conn.execute("DROP TABLE IF EXISTS book_vectors")
         conn.execute("DROP TABLE IF EXISTS chunk_vectors")
 
     # Create with cosine distance metric for semantic similarity
@@ -38,6 +39,12 @@ def init_vector_search(conn: sqlite3.Connection, force_recreate: bool = False):
     conn.execute(f"""
         CREATE VIRTUAL TABLE IF NOT EXISTS book_theme_vectors USING vec0(
             theme_id INTEGER PRIMARY KEY,
+            embedding FLOAT[{dim}] distance_metric=cosine
+        )
+    """)
+    conn.execute(f"""
+        CREATE VIRTUAL TABLE IF NOT EXISTS book_vectors USING vec0(
+            book_id INTEGER PRIMARY KEY,
             embedding FLOAT[{dim}] distance_metric=cosine
         )
     """)
@@ -149,6 +156,63 @@ def rebuild_book_theme_index(conn: sqlite3.Connection) -> int:
         )
     conn.commit()
     return len(theme_ids)
+
+
+def rebuild_book_vector_index(conn: sqlite3.Connection) -> int:
+    """
+    Build book_vectors from title + description + themes per book.
+
+    Constructs a metadata-rich text blob per book and embeds it as a single
+    384-dim vector. This captures the book's overall "vibe" without the
+    dilution problem of averaging hundreds of chunk embeddings.
+
+    Returns the number of book vectors indexed.
+    """
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT id, title, author, description, book_themes FROM books WHERE calibre_id IS NOT NULL"
+    )
+    rows = cursor.fetchall()
+    if not rows:
+        return 0
+
+    book_ids = []
+    texts = []
+    for row in rows:
+        book_id, title, author, description, themes_json = row
+        parts = []
+        if title:
+            parts.append(title)
+        if author:
+            parts.append(f"by {author}")
+        if description:
+            # Truncate description to ~150 words to stay within 512 token limit
+            words = description.split()
+            parts.append(" ".join(words[:150]))
+        if themes_json:
+            try:
+                themes = json.loads(themes_json)
+                parts.append("Themes: " + ", ".join(themes))
+            except (json.JSONDecodeError, TypeError):
+                pass
+        if not parts:
+            continue
+        book_ids.append(book_id)
+        texts.append(". ".join(parts))
+
+    if not texts:
+        return 0
+
+    embeddings = embed_texts(texts, batch_size=64)
+
+    conn.execute("DELETE FROM book_vectors")
+    for book_id, emb in zip(book_ids, embeddings):
+        conn.execute(
+            "INSERT INTO book_vectors (book_id, embedding) VALUES (?, ?)",
+            (book_id, embedding_to_bytes(emb)),
+        )
+    conn.commit()
+    return len(book_ids)
 
 
 def rebuild_chunk_vector_index(conn: sqlite3.Connection, batch_size: int = 256) -> int:

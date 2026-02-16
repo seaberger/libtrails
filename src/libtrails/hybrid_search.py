@@ -193,6 +193,27 @@ def _semantic_search_chunks(
     return sorted(best.items(), key=lambda x: x[1], reverse=True)
 
 
+def _semantic_search_books_direct(
+    conn: sqlite3.Connection, query: str, limit: int = 50
+) -> list[tuple[int, float]]:
+    """sqlite-vec cosine search on book_vectors. Returns [(book_id, similarity)]."""
+    query_embedding = embed_text(query)
+    query_bytes = embedding_to_bytes(query_embedding)
+    try:
+        rows = conn.execute(
+            """
+            SELECT book_id, distance
+            FROM book_vectors
+            WHERE embedding MATCH ? AND k = ?
+            ORDER BY distance
+            """,
+            (query_bytes, limit),
+        ).fetchall()
+    except Exception:
+        return []
+    return [(row[0], 1.0 - row[1]) for row in rows]
+
+
 def _topics_to_books(
     conn: sqlite3.Connection, topic_scores: list[tuple[int, float]]
 ) -> list[tuple[int, float]]:
@@ -265,9 +286,10 @@ def hybrid_search_books(conn: sqlite3.Connection, query: str, limit: int = 20) -
     sem_topics = _semantic_search_topics(conn, query)
     sem_topic_books = _topics_to_books(conn, sem_topics)
     sem_theme_books = _semantic_search_book_themes(conn, query)
+    sem_book_direct = _semantic_search_books_direct(conn, query)
     sem_chunk_books = _semantic_search_chunks(conn, query)
 
-    # RRF fusion over all 6 signals
+    # RRF fusion over all 7 signals
     fused = rrf_fuse(
         [
             fts_books,
@@ -275,6 +297,7 @@ def hybrid_search_books(conn: sqlite3.Connection, query: str, limit: int = 20) -
             fts_chunk_books,
             sem_topic_books,
             sem_theme_books,
+            sem_book_direct,
             sem_chunk_books,
         ]
     )[:limit]
@@ -294,8 +317,9 @@ def hybrid_search_books(conn: sqlite3.Connection, query: str, limit: int = 20) -
 
     book_map = {row[0]: dict(row) for row in rows}
 
-    # Determine match_type per book (priority: keyword > theme > content > chunk_semantic > semantic > topic)
+    # Determine match_type per book
     fts_book_ids = {bid for bid, _ in fts_books}
+    sem_book_ids = {bid for bid, _ in sem_book_direct}
     sem_theme_ids = {bid for bid, _ in sem_theme_books}
     fts_chunk_ids = {bid for bid, _ in fts_chunk_books}
     sem_chunk_ids = {bid for bid, _ in sem_chunk_books}
@@ -308,6 +332,8 @@ def hybrid_search_books(conn: sqlite3.Connection, query: str, limit: int = 20) -
         b = book_map[book_id]
         if book_id in fts_book_ids:
             match_type = "keyword"
+        elif book_id in sem_book_ids:
+            match_type = "book"
         elif book_id in sem_theme_ids:
             match_type = "theme"
         elif book_id in fts_chunk_ids:
