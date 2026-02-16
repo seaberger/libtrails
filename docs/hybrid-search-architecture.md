@@ -2,11 +2,13 @@
 
 LibTrails uses a multi-signal hybrid search system that combines full-text keyword search (FTS5) with semantic vector search (sqlite-vec) via Reciprocal Rank Fusion (RRF). The system supports four search scopes — books (7 signals), clusters (5 signals), domains (cluster aggregation + direct label match), and universe (3D highlighting). This document describes the architecture, the signals, the data tables, and the fusion algorithm.
 
+> **Note on counts**: This document references the V2 production library (927 books, 837K topics, 335K chunks, 7K themes). The deployed demo at libtrails.app uses a 100-book Gutenberg collection (121K topics, 31K chunks, 2.5K clusters, 26 domains). The architecture is identical — only the data volume differs.
+
 ## Overview
 
 The search system supports four scopes, each optimized for its use case:
 
-- **Books** (7 signals): *"Which books are most relevant?"* — attacks from multiple angles: keyword matches in titles, semantic similarity across 837K extracted topics, 7K LLM-generated book themes, 335K text chunks, and whole-book metadata vectors.
+- **Books** (7 signals): *"Which books are most relevant?"* — attacks from multiple angles: keyword matches in titles, semantic similarity across extracted topics, LLM-generated book themes, text chunks, and whole-book metadata vectors.
 - **Clusters** (5 signals): *"Which topic clusters match?"* — combines topic-level signals with chunk content and direct cluster label matching.
 - **Domains** (cluster aggregation + label match): *"Which high-level domains are relevant?"* — aggregates cluster results by domain plus direct domain label matching.
 - **Universe** (inherits cluster signals): *"Which clusters to highlight in 3D?"* — minimal response for GPU rendering.
