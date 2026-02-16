@@ -190,6 +190,57 @@ import { url } from '../../lib/url';
       </div>
     </section>
 
+    <!-- Search -->
+    <section>
+      <h2 class="text-lg font-medium text-[var(--color-text)] mb-3">Hybrid Search</h2>
+      <p class="text-[var(--color-text-muted)] mb-4">
+        Every tab has a search bar that combines multiple retrieval signals into a single ranked result set.
+        Rather than choosing between keyword search or semantic search, LibTrails runs both in parallel and
+        fuses them with Reciprocal Rank Fusion (RRF).
+      </p>
+      <div class="space-y-4 text-[var(--color-text-muted)]">
+        <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5">
+          <h4 class="text-sm font-medium text-[var(--color-text)] mb-2">Three Search Signals</h4>
+          <ul class="space-y-2 text-sm">
+            <li class="flex items-start gap-2">
+              <span class="text-[var(--color-accent)] mt-0.5 flex-shrink-0 font-medium">1.</span>
+              <span><strong class="text-[var(--color-text)]">Keyword (FTS5)</strong> — Full-text search across book titles, authors, descriptions, topic labels, and chunk content using SQLite FTS5 with BM25 ranking</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-[var(--color-accent)] mt-0.5 flex-shrink-0 font-medium">2.</span>
+              <span><strong class="text-[var(--color-text)]">Semantic (sqlite-vec)</strong> — The query is embedded with BGE-small-en-v1.5 and matched against 66,000+ topic embeddings using cosine distance</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-[var(--color-accent)] mt-0.5 flex-shrink-0 font-medium">3.</span>
+              <span><strong class="text-[var(--color-text)]">Content (FTS5)</strong> — Direct full-text search across ~31,800 chunk passages, finding books where query terms appear in the actual text</span>
+            </li>
+          </ul>
+        </div>
+        <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5">
+          <h4 class="text-sm font-medium text-[var(--color-text)] mb-2">Reciprocal Rank Fusion</h4>
+          <p class="text-sm">
+            Each signal produces its own ranked list. RRF combines them by scoring each result as
+            <code class="px-1.5 py-0.5 bg-[var(--color-bg)] rounded text-xs">1/(k+rank)</code> across all lists,
+            where <code class="px-1.5 py-0.5 bg-[var(--color-bg)] rounded text-xs">k=60</code>.
+            This means a book that ranks #1 in keyword search and #5 in semantic search scores higher than one
+            that ranks #2 in both — rewarding results that excel in at least one signal without requiring
+            score normalization across different retrieval methods.
+          </p>
+        </div>
+        <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5">
+          <h4 class="text-sm font-medium text-[var(--color-text)] mb-2">Scope-Aware Results</h4>
+          <p class="text-sm">
+            Search adapts to each tab. On <strong class="text-[var(--color-text)]">Books</strong>, results are
+            ranked books with match-type badges. On <strong class="text-[var(--color-text)]">Clusters</strong>,
+            topic scores are aggregated to surface the most relevant topic groups. On
+            <strong class="text-[var(--color-text)]">Themes</strong>, cluster scores roll up to highlight
+            matching domains. On the <strong class="text-[var(--color-text)]">Universe</strong>, matching clusters
+            glow amber in the 3D view with a ranked sidebar list.
+          </p>
+        </div>
+      </div>
+    </section>
+
     <!-- Features -->
     <section>
       <h2 class="text-lg font-medium text-[var(--color-text)] mb-3">Features</h2>
@@ -198,7 +249,7 @@ import { url } from '../../lib/url';
           ["Two-Pass Extraction", "Book themes contextualize chunk topics for domain-specific results"],
           ["Multi-Provider LLM", "Ollama, Gemini API, or LM Studio — swap with a CLI flag"],
           ["3D Galaxy", "Interactive Three.js universe with semantic domain colors"],
-          ["Semantic Search", "Find topics by meaning, not keywords (sqlite-vec cosine)"],
+          ["Hybrid Search", "Combines FTS5 keyword matching with semantic vector search, fused via Reciprocal Rank Fusion (RRF) — search across books, clusters, themes, and the universe view"],
           ["Smart Deduplication", "Two-tier merging prevents cross-domain conflation"],
           ["Leiden Clustering", "Community detection with hub removal for clean topic groups"],
         ].map(([title, desc]) => (
@@ -219,7 +270,7 @@ import { url } from '../../lib/url';
             {[
               ["Topic extraction", "gemma3 via Ollama / Gemini / LM Studio"],
               ["Embeddings", "BGE-small-en-v1.5 (384 dims)"],
-              ["Vector search", "sqlite-vec (cosine distance)"],
+              ["Search", "Hybrid: FTS5 (BM25) + sqlite-vec (cosine) + RRF fusion"],
               ["Clustering", "Leiden (python-igraph + leidenalg)"],
               ["3D projection", "UMAP + PCA semantic colors"],
               ["Backend", "FastAPI + SQLite"],
