@@ -59,7 +59,7 @@ import { url } from '../../lib/url';
       <div class="grid grid-cols-3 gap-3 mb-4">
         {[
           ["100", "Books"],
-          ["66,307", "Topics"],
+          ["121,118", "Topics"],
           ["~3,000 yrs", "~800 BC – 1925 AD"],
         ].map(([value, label]) => (
           <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg px-4 py-3 text-center">
@@ -99,7 +99,7 @@ import { url } from '../../lib/url';
       <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
         {[
           ["~31,800", "Text chunks"],
-          ["66,307", "Deduped topics"],
+          ["121,118", "Deduped topics"],
           ["2,468", "Leiden clusters"],
           ["26", "Super-clusters"],
         ].map(([value, label]) => (
@@ -159,14 +159,14 @@ import { url } from '../../lib/url';
           <p class="text-sm">
             High-degree "hub" topics (95th percentile) are removed before clustering — these generic terms
             would create artificially large, incoherent communities. The Leiden algorithm then runs with the
-            CPM (Constant Potts Model) partition type at resolution 0.001, producing ~1,200 coherent topic clusters
+            CPM (Constant Potts Model) partition type at resolution 0.001, producing ~2,500 coherent topic clusters
             with more even sizes than modularity-based approaches.
           </p>
         </div>
         <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5">
           <h4 class="text-sm font-medium text-[var(--color-text)] mb-2">Super-Clusters & Domain Labels</h4>
           <p class="text-sm">
-            K-means groups the ~1,200 Leiden clusters into ~29 high-level domains based on their centroid
+            K-means groups the ~2,500 Leiden clusters into ~26 high-level domains based on their centroid
             embeddings (weighted average of each cluster's top-15 topics). An LLM auto-generates domain labels
             from constituent topics, which are then human-refined into names like "Adventure & Human Folly,"
             "Literary Classics & Philosophy," or "Nature & Rural Life."
@@ -200,21 +200,24 @@ import { url } from '../../lib/url';
       </p>
       <div class="space-y-4 text-[var(--color-text-muted)]">
         <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5">
-          <h4 class="text-sm font-medium text-[var(--color-text)] mb-2">Three Search Signals</h4>
+          <h4 class="text-sm font-medium text-[var(--color-text)] mb-2">Multi-Signal Search</h4>
           <ul class="space-y-2 text-sm">
             <li class="flex items-start gap-2">
               <span class="text-[var(--color-accent)] mt-0.5 flex-shrink-0 font-medium">1.</span>
-              <span><strong class="text-[var(--color-text)]">Keyword (FTS5)</strong> — Full-text search across book titles, authors, descriptions, topic labels, and chunk content using SQLite FTS5 with BM25 ranking</span>
+              <span><strong class="text-[var(--color-text)]">Keyword (FTS5)</strong> — Full-text search across book metadata, 121K topic labels, and ~31,800 chunk passages using BM25 ranking</span>
             </li>
             <li class="flex items-start gap-2">
               <span class="text-[var(--color-accent)] mt-0.5 flex-shrink-0 font-medium">2.</span>
-              <span><strong class="text-[var(--color-text)]">Semantic (sqlite-vec)</strong> — The query is embedded with BGE-small-en-v1.5 and matched against 66,000+ topic embeddings using cosine distance</span>
+              <span><strong class="text-[var(--color-text)]">Semantic (sqlite-vec)</strong> — The query is embedded with BGE-small-en-v1.5 and matched against topic, book theme, whole-book, and chunk embedding vectors using cosine distance</span>
             </li>
             <li class="flex items-start gap-2">
               <span class="text-[var(--color-accent)] mt-0.5 flex-shrink-0 font-medium">3.</span>
-              <span><strong class="text-[var(--color-text)]">Content (FTS5)</strong> — Direct full-text search across ~31,800 chunk passages, finding books where query terms appear in the actual text</span>
+              <span><strong class="text-[var(--color-text)]">Label matching</strong> — Direct text matching on cluster and domain labels for instant categorical hits</span>
             </li>
           </ul>
+          <p class="text-sm text-[var(--color-text-muted)] mt-3">
+            Book search fuses <strong class="text-[var(--color-text)]">7 signals</strong>, cluster/universe search fuses <strong class="text-[var(--color-text)]">5 signals</strong>, and domain search adds direct label matching on top of cluster aggregation.
+          </p>
         </div>
         <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5">
           <h4 class="text-sm font-medium text-[var(--color-text)] mb-2">Reciprocal Rank Fusion</h4>
