@@ -278,6 +278,171 @@ def _topics_to_clusters(
     return sorted(best.items(), key=lambda x: x[1], reverse=True)
 
 
+def _search_cluster_labels(
+    conn: sqlite3.Connection, query: str, limit: int = 50
+) -> list[tuple[int, float]]:
+    """Search cluster labels directly via LIKE. Returns [(cluster_id, score)]."""
+    tokens = re.sub(r"[^\w\s]", " ", query).lower().split()
+    if not tokens:
+        return []
+
+    conditions = " OR ".join("LOWER(COALESCE(cl.label, cs.top_label, '')) LIKE ?" for _ in tokens)
+    params = [f"%{t}%" for t in tokens]
+
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT cs.cluster_id,
+                   COALESCE(cl.label, cs.top_label, '') as label
+            FROM cluster_stats cs
+            LEFT JOIN cluster_labels cl ON cl.cluster_id = cs.cluster_id
+            WHERE {conditions}
+            LIMIT ?
+            """,
+            [*params, limit],
+        ).fetchall()
+    except Exception:
+        return []
+
+    results = []
+    for row in rows:
+        label = row[1].lower()
+        matched = sum(1 for t in tokens if t in label)
+        results.append((row[0], matched / len(tokens)))
+    return sorted(results, key=lambda x: x[1], reverse=True)
+
+
+def _fts_chunks_to_clusters(
+    conn: sqlite3.Connection, query: str, limit: int = 200
+) -> list[tuple[int, float]]:
+    """FTS5 chunk search mapped to clusters. Returns [(cluster_id, best_score)]."""
+    safe_q = _fts5_safe_query(query)
+    try:
+        rows = conn.execute(
+            """
+            SELECT chunks_fts.rowid, bm25(chunks_fts) as score
+            FROM chunks_fts
+            WHERE chunks_fts MATCH ?
+            ORDER BY score
+            LIMIT ?
+            """,
+            (safe_q, limit),
+        ).fetchall()
+    except Exception:
+        return []
+
+    if not rows:
+        return []
+
+    chunk_scores = {row[0]: -row[1] for row in rows}
+    chunk_ids = list(chunk_scores.keys())
+    placeholders = ",".join("?" * len(chunk_ids))
+
+    try:
+        topic_rows = conn.execute(
+            f"""
+            SELECT ctl.chunk_id, t.cluster_id
+            FROM chunk_topic_links ctl
+            JOIN topics t ON ctl.topic_id = t.id
+            WHERE ctl.chunk_id IN ({placeholders}) AND t.cluster_id IS NOT NULL
+            """,
+            chunk_ids,
+        ).fetchall()
+    except Exception:
+        return []
+
+    best: dict[int, float] = {}
+    for row in topic_rows:
+        chunk_id, cluster_id = row[0], row[1]
+        score = chunk_scores.get(chunk_id, 0.0)
+        if cluster_id not in best or score > best[cluster_id]:
+            best[cluster_id] = score
+    return sorted(best.items(), key=lambda x: x[1], reverse=True)
+
+
+def _semantic_chunks_to_clusters(
+    conn: sqlite3.Connection, query: str, limit: int = 100, query_bytes: bytes | None = None
+) -> list[tuple[int, float]]:
+    """Semantic chunk search mapped to clusters. Returns [(cluster_id, best_similarity)]."""
+    if query_bytes is None:
+        query_bytes = embedding_to_bytes(embed_text(query))
+    try:
+        rows = conn.execute(
+            """
+            WITH knn AS (
+                SELECT chunk_id, distance
+                FROM chunk_vectors
+                WHERE embedding MATCH ? AND k = ?
+            )
+            SELECT knn.chunk_id, knn.distance
+            FROM knn
+            ORDER BY knn.distance
+            """,
+            (query_bytes, limit),
+        ).fetchall()
+    except Exception:
+        return []
+
+    if not rows:
+        return []
+
+    chunk_scores = {row[0]: 1.0 - row[1] for row in rows}
+    chunk_ids = list(chunk_scores.keys())
+    placeholders = ",".join("?" * len(chunk_ids))
+
+    try:
+        topic_rows = conn.execute(
+            f"""
+            SELECT ctl.chunk_id, t.cluster_id
+            FROM chunk_topic_links ctl
+            JOIN topics t ON ctl.topic_id = t.id
+            WHERE ctl.chunk_id IN ({placeholders}) AND t.cluster_id IS NOT NULL
+            """,
+            chunk_ids,
+        ).fetchall()
+    except Exception:
+        return []
+
+    best: dict[int, float] = {}
+    for row in topic_rows:
+        chunk_id, cluster_id = row[0], row[1]
+        score = chunk_scores.get(chunk_id, 0.0)
+        if cluster_id not in best or score > best[cluster_id]:
+            best[cluster_id] = score
+    return sorted(best.items(), key=lambda x: x[1], reverse=True)
+
+
+def _search_domain_labels(
+    conn: sqlite3.Connection, query: str, limit: int = 26
+) -> list[tuple[int, float]]:
+    """Search domain labels directly via LIKE. Returns [(domain_id, score)]."""
+    tokens = re.sub(r"[^\w\s]", " ", query).lower().split()
+    if not tokens:
+        return []
+
+    conditions = " OR ".join("LOWER(label) LIKE ?" for _ in tokens)
+    params = [f"%{t}%" for t in tokens]
+
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT id, label FROM domains
+            WHERE {conditions}
+            LIMIT ?
+            """,
+            [*params, limit],
+        ).fetchall()
+    except Exception:
+        return []
+
+    results = []
+    for row in rows:
+        label = row[1].lower()
+        matched = sum(1 for t in tokens if t in label)
+        results.append((row[0], matched / len(tokens)))
+    return sorted(results, key=lambda x: x[1], reverse=True)
+
+
 # ── Scope-specific hybrid search functions ──
 
 
@@ -370,14 +535,29 @@ def hybrid_search_books(conn: sqlite3.Connection, query: str, limit: int = 20) -
 
 
 def hybrid_search_clusters(conn: sqlite3.Connection, query: str, limit: int = 20) -> list[dict]:
-    """Hybrid cluster search: fuses FTS5 topic→cluster + semantic topic→cluster."""
+    """Hybrid cluster search: fuses 5 signals — topic FTS/semantic, cluster labels, chunk FTS/semantic."""
 
+    # Embed query once for all semantic signals
+    query_bytes = embedding_to_bytes(embed_text(query))
+
+    # 5 signals
     fts_topics = _fts_search_topics(conn, query)
-    fts_clusters = _topics_to_clusters(conn, fts_topics)
-    sem_topics = _semantic_search_topics(conn, query)
-    sem_clusters = _topics_to_clusters(conn, sem_topics)
+    fts_topic_clusters = _topics_to_clusters(conn, fts_topics)
+    sem_topics = _semantic_search_topics(conn, query, query_bytes=query_bytes)
+    sem_topic_clusters = _topics_to_clusters(conn, sem_topics)
+    fts_label_clusters = _search_cluster_labels(conn, query)
+    fts_chunk_clusters = _fts_chunks_to_clusters(conn, query)
+    sem_chunk_clusters = _semantic_chunks_to_clusters(conn, query, query_bytes=query_bytes)
 
-    fused = rrf_fuse([fts_clusters, sem_clusters])[:limit]
+    fused = rrf_fuse(
+        [
+            fts_topic_clusters,
+            sem_topic_clusters,
+            fts_label_clusters,
+            fts_chunk_clusters,
+            sem_chunk_clusters,
+        ]
+    )[:limit]
     if not fused:
         return []
 
@@ -419,45 +599,74 @@ def hybrid_search_clusters(conn: sqlite3.Connection, query: str, limit: int = 20
 
 
 def hybrid_search_domains(conn: sqlite3.Connection, query: str, limit: int = 20) -> list[dict]:
-    """Hybrid domain search: aggregates cluster results by domain."""
+    """Hybrid domain search: aggregates cluster results by domain + direct domain label match."""
     # Get more clusters than needed, then aggregate
     cluster_results = hybrid_search_clusters(conn, query, limit=100)
-    if not cluster_results:
-        return []
 
-    cluster_ids = [c["cluster_id"] for c in cluster_results]
-    placeholders = ",".join("?" * len(cluster_ids))
+    # Direct domain label search as additional signal
+    domain_label_matches = _search_domain_labels(conn, query)
+    domain_label_scores = dict(domain_label_matches)
 
-    rows = conn.execute(
-        f"""
-        SELECT cd.cluster_id, cd.domain_id, d.label
-        FROM cluster_domains cd
-        JOIN domains d ON d.id = cd.domain_id
-        WHERE cd.cluster_id IN ({placeholders})
-        """,
-        cluster_ids,
-    ).fetchall()
+    # Build domain→label mapping from DB for label matches not found via clusters
+    domain_labels: dict[int, str] = {}
+    if domain_label_matches:
+        domain_ids = [did for did, _ in domain_label_matches]
+        placeholders_d = ",".join("?" * len(domain_ids))
+        label_rows = conn.execute(
+            f"SELECT id, label FROM domains WHERE id IN ({placeholders_d})",
+            domain_ids,
+        ).fetchall()
+        domain_labels = {row[0]: row[1] for row in label_rows}
 
-    cluster_to_domain = {row[0]: (row[1], row[2]) for row in rows}
-    cluster_score_map = {c["cluster_id"]: c["score"] for c in cluster_results}
-
-    # Aggregate: best score per domain + count of matching clusters
+    # Aggregate cluster results by domain
     domain_scores: dict[int, dict] = {}
-    for cluster_id, score in cluster_score_map.items():
-        if cluster_id not in cluster_to_domain:
-            continue
-        domain_id, domain_label = cluster_to_domain[cluster_id]
-        if domain_id not in domain_scores:
+
+    if cluster_results:
+        cluster_ids = [c["cluster_id"] for c in cluster_results]
+        placeholders = ",".join("?" * len(cluster_ids))
+
+        rows = conn.execute(
+            f"""
+            SELECT cd.cluster_id, cd.domain_id, d.label
+            FROM cluster_domains cd
+            JOIN domains d ON d.id = cd.domain_id
+            WHERE cd.cluster_id IN ({placeholders})
+            """,
+            cluster_ids,
+        ).fetchall()
+
+        cluster_to_domain = {row[0]: (row[1], row[2]) for row in rows}
+        cluster_score_map = {c["cluster_id"]: c["score"] for c in cluster_results}
+
+        for cluster_id, score in cluster_score_map.items():
+            if cluster_id not in cluster_to_domain:
+                continue
+            domain_id, domain_label = cluster_to_domain[cluster_id]
+            if domain_id not in domain_scores:
+                domain_scores[domain_id] = {
+                    "domain_id": domain_id,
+                    "label": domain_label,
+                    "score": score,
+                    "matching_clusters": 1,
+                }
+            else:
+                d = domain_scores[domain_id]
+                d["score"] = max(d["score"], score)
+                d["matching_clusters"] += 1
+
+    # Merge direct domain label matches (additive boost scaled to RRF range)
+    # RRF scores are ~0.01-0.1; label scores are 0-1. Scale label to RRF range.
+    label_boost = 0.02  # ~1/(k+1) = 0.0164 for k=60
+    for domain_id, label_score in domain_label_scores.items():
+        if domain_id in domain_scores:
+            domain_scores[domain_id]["score"] += label_boost * label_score
+        elif domain_id in domain_labels:
             domain_scores[domain_id] = {
                 "domain_id": domain_id,
-                "label": domain_label,
-                "score": score,
-                "matching_clusters": 1,
+                "label": domain_labels[domain_id],
+                "score": label_boost * label_score,
+                "matching_clusters": 0,
             }
-        else:
-            d = domain_scores[domain_id]
-            d["score"] = max(d["score"], score)
-            d["matching_clusters"] += 1
 
     results = sorted(domain_scores.values(), key=lambda x: x["score"], reverse=True)
     for r in results:
