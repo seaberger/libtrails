@@ -142,11 +142,15 @@ def _semantic_search_book_themes(
     try:
         rows = conn.execute(
             """
-            SELECT btv.theme_id, btv.distance, bte.book_id
-            FROM book_theme_vectors btv
-            JOIN book_theme_entries bte ON bte.id = btv.theme_id
-            WHERE btv.embedding MATCH ? AND k = ?
-            ORDER BY btv.distance
+            WITH knn AS (
+                SELECT theme_id, distance
+                FROM book_theme_vectors
+                WHERE embedding MATCH ? AND k = ?
+            )
+            SELECT knn.theme_id, knn.distance, bte.book_id
+            FROM knn
+            JOIN book_theme_entries bte ON bte.id = knn.theme_id
+            ORDER BY knn.distance
             """,
             (query_bytes, limit),
         ).fetchall()
@@ -172,11 +176,15 @@ def _semantic_search_chunks(
     try:
         rows = conn.execute(
             """
-            SELECT cv.chunk_id, cv.distance, c.book_id
-            FROM chunk_vectors cv
-            JOIN chunks c ON c.id = cv.chunk_id
-            WHERE cv.embedding MATCH ? AND k = ?
-            ORDER BY cv.distance
+            WITH knn AS (
+                SELECT chunk_id, distance
+                FROM chunk_vectors
+                WHERE embedding MATCH ? AND k = ?
+            )
+            SELECT knn.chunk_id, knn.distance, c.book_id
+            FROM knn
+            JOIN chunks c ON c.id = knn.chunk_id
+            ORDER BY knn.distance
             """,
             (query_bytes, limit),
         ).fetchall()

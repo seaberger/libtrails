@@ -281,19 +281,23 @@ def search_topics_semantic(query: str, limit: int = 20, db_path: Path = IPAD_DB_
     query_embedding = embed_text(query)
     query_bytes = embedding_to_bytes(query_embedding)
 
-    # Vector similarity search - sqlite-vec requires k=? in WHERE clause
+    # Vector similarity search - CTE pattern per sqlite-vec docs
     cursor.execute(
         """
+        WITH knn AS (
+            SELECT topic_id, distance
+            FROM topic_vectors
+            WHERE embedding MATCH ? AND k = ?
+        )
         SELECT
-            tv.topic_id,
-            tv.distance,
+            knn.topic_id,
+            knn.distance,
             t.label,
             t.occurrence_count,
             t.cluster_id
-        FROM topic_vectors tv
-        JOIN topics t ON tv.topic_id = t.id
-        WHERE tv.embedding MATCH ? AND k = ?
-        ORDER BY tv.distance
+        FROM knn
+        JOIN topics t ON knn.topic_id = t.id
+        ORDER BY knn.distance
     """,
         (query_bytes, limit),
     )
@@ -341,14 +345,18 @@ def search_books_by_topic_semantic(
     query_embedding = embed_text(query)
     query_bytes = embedding_to_bytes(query_embedding)
 
-    # Find matching topics first - sqlite-vec requires k=? in WHERE clause
+    # Find matching topics first - CTE pattern per sqlite-vec docs
     cursor.execute(
         """
-        SELECT tv.topic_id, tv.distance, t.label
-        FROM topic_vectors tv
-        JOIN topics t ON tv.topic_id = t.id
-        WHERE tv.embedding MATCH ? AND k = 50
-        ORDER BY tv.distance
+        WITH knn AS (
+            SELECT topic_id, distance
+            FROM topic_vectors
+            WHERE embedding MATCH ? AND k = 50
+        )
+        SELECT knn.topic_id, knn.distance, t.label
+        FROM knn
+        JOIN topics t ON knn.topic_id = t.id
+        ORDER BY knn.distance
     """,
         (query_bytes,),
     )
