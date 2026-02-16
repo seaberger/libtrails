@@ -112,7 +112,7 @@ def _fts_search_chunks(
 
 
 def _semantic_search_topics(
-    conn: sqlite3.Connection, query: str, limit: int = 50
+    conn: sqlite3.Connection, query: str, limit: int = 200
 ) -> list[tuple[int, float]]:
     """sqlite-vec cosine search on topic_vectors. Returns [(topic_id, similarity)]."""
     query_embedding = embed_text(query)
@@ -131,6 +131,66 @@ def _semantic_search_topics(
         return []
     # Convert cosine distance to similarity
     return [(row[0], 1.0 - row[1]) for row in rows]
+
+
+def _semantic_search_book_themes(
+    conn: sqlite3.Connection, query: str, limit: int = 50
+) -> list[tuple[int, float]]:
+    """sqlite-vec cosine search on book_theme_vectors. Returns [(book_id, best_similarity)]."""
+    query_embedding = embed_text(query)
+    query_bytes = embedding_to_bytes(query_embedding)
+    try:
+        rows = conn.execute(
+            """
+            SELECT btv.theme_id, btv.distance, bte.book_id
+            FROM book_theme_vectors btv
+            JOIN book_theme_entries bte ON bte.id = btv.theme_id
+            WHERE btv.embedding MATCH ? AND k = ?
+            ORDER BY btv.distance
+            """,
+            (query_bytes, limit),
+        ).fetchall()
+    except Exception:
+        return []
+
+    # Aggregate best similarity per book
+    best: dict[int, float] = {}
+    for row in rows:
+        book_id = row[2]
+        similarity = 1.0 - row[1]
+        if book_id not in best or similarity > best[book_id]:
+            best[book_id] = similarity
+    return sorted(best.items(), key=lambda x: x[1], reverse=True)
+
+
+def _semantic_search_chunks(
+    conn: sqlite3.Connection, query: str, limit: int = 100
+) -> list[tuple[int, float]]:
+    """sqlite-vec cosine search on chunk_vectors. Returns [(book_id, best_similarity)]."""
+    query_embedding = embed_text(query)
+    query_bytes = embedding_to_bytes(query_embedding)
+    try:
+        rows = conn.execute(
+            """
+            SELECT cv.chunk_id, cv.distance, c.book_id
+            FROM chunk_vectors cv
+            JOIN chunks c ON c.id = cv.chunk_id
+            WHERE cv.embedding MATCH ? AND k = ?
+            ORDER BY cv.distance
+            """,
+            (query_bytes, limit),
+        ).fetchall()
+    except Exception:
+        return []
+
+    # Aggregate best similarity per book
+    best: dict[int, float] = {}
+    for row in rows:
+        book_id = row[2]
+        similarity = 1.0 - row[1]
+        if book_id not in best or similarity > best[book_id]:
+            best[book_id] = similarity
+    return sorted(best.items(), key=lambda x: x[1], reverse=True)
 
 
 def _topics_to_books(
@@ -194,7 +254,7 @@ def _topics_to_clusters(
 
 def hybrid_search_books(conn: sqlite3.Connection, query: str, limit: int = 20) -> list[dict]:
     """
-    Hybrid book search: fuses FTS5 book + FTS5 topic→book + FTS5 chunk→book + semantic topic→book.
+    Hybrid book search: fuses FTS5 + semantic signals across books, topics, themes, and chunks.
     """
 
     # Gather ranked lists
@@ -204,9 +264,20 @@ def hybrid_search_books(conn: sqlite3.Connection, query: str, limit: int = 20) -
     fts_chunk_books = _fts_search_chunks(conn, query)
     sem_topics = _semantic_search_topics(conn, query)
     sem_topic_books = _topics_to_books(conn, sem_topics)
+    sem_theme_books = _semantic_search_book_themes(conn, query)
+    sem_chunk_books = _semantic_search_chunks(conn, query)
 
-    # RRF fusion
-    fused = rrf_fuse([fts_books, fts_topic_books, fts_chunk_books, sem_topic_books])[:limit]
+    # RRF fusion over all 6 signals
+    fused = rrf_fuse(
+        [
+            fts_books,
+            fts_topic_books,
+            fts_chunk_books,
+            sem_topic_books,
+            sem_theme_books,
+            sem_chunk_books,
+        ]
+    )[:limit]
     if not fused:
         return []
 
@@ -223,10 +294,12 @@ def hybrid_search_books(conn: sqlite3.Connection, query: str, limit: int = 20) -
 
     book_map = {row[0]: dict(row) for row in rows}
 
-    # Determine match_type per book
+    # Determine match_type per book (priority: keyword > theme > content > chunk_semantic > semantic > topic)
     fts_book_ids = {bid for bid, _ in fts_books}
+    sem_theme_ids = {bid for bid, _ in sem_theme_books}
     fts_chunk_ids = {bid for bid, _ in fts_chunk_books}
-    sem_book_ids = {bid for bid, _ in sem_topic_books}
+    sem_chunk_ids = {bid for bid, _ in sem_chunk_books}
+    sem_topic_ids = {bid for bid, _ in sem_topic_books}
 
     results = []
     for book_id, score in fused:
@@ -235,9 +308,13 @@ def hybrid_search_books(conn: sqlite3.Connection, query: str, limit: int = 20) -
         b = book_map[book_id]
         if book_id in fts_book_ids:
             match_type = "keyword"
+        elif book_id in sem_theme_ids:
+            match_type = "theme"
         elif book_id in fts_chunk_ids:
             match_type = "content"
-        elif book_id in sem_book_ids:
+        elif book_id in sem_chunk_ids:
+            match_type = "chunk_semantic"
+        elif book_id in sem_topic_ids:
             match_type = "semantic"
         else:
             match_type = "topic"

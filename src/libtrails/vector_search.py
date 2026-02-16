@@ -1,10 +1,11 @@
 """Vector search using sqlite-vec for semantic topic search."""
 
+import json
 import sqlite3
 from pathlib import Path
 
 from .config import IPAD_DB_PATH
-from .embeddings import embed_text, embedding_to_bytes, get_embedding_dimension
+from .embeddings import embed_text, embed_texts, embedding_to_bytes, get_embedding_dimension
 
 
 def init_vector_search(conn: sqlite3.Connection, force_recreate: bool = False):
@@ -22,13 +23,27 @@ def init_vector_search(conn: sqlite3.Connection, force_recreate: bool = False):
     dim = get_embedding_dimension()
 
     if force_recreate:
-        # Drop existing table to recreate with new settings
+        # Drop existing tables to recreate with new settings
         conn.execute("DROP TABLE IF EXISTS topic_vectors")
+        conn.execute("DROP TABLE IF EXISTS book_theme_vectors")
+        conn.execute("DROP TABLE IF EXISTS chunk_vectors")
 
     # Create with cosine distance metric for semantic similarity
     conn.execute(f"""
         CREATE VIRTUAL TABLE IF NOT EXISTS topic_vectors USING vec0(
             topic_id INTEGER PRIMARY KEY,
+            embedding FLOAT[{dim}] distance_metric=cosine
+        )
+    """)
+    conn.execute(f"""
+        CREATE VIRTUAL TABLE IF NOT EXISTS book_theme_vectors USING vec0(
+            theme_id INTEGER PRIMARY KEY,
+            embedding FLOAT[{dim}] distance_metric=cosine
+        )
+    """)
+    conn.execute(f"""
+        CREATE VIRTUAL TABLE IF NOT EXISTS chunk_vectors USING vec0(
+            chunk_id INTEGER PRIMARY KEY,
             embedding FLOAT[{dim}] distance_metric=cosine
         )
     """)
@@ -83,6 +98,102 @@ def rebuild_vector_index(conn: sqlite3.Connection, force_recreate: bool = False)
 
     conn.commit()
     return count
+
+
+def rebuild_book_theme_index(conn: sqlite3.Connection) -> int:
+    """
+    Parse book_themes JSON, populate book_theme_entries, and build book_theme_vectors.
+
+    Returns the number of theme vectors indexed.
+    """
+    cursor = conn.cursor()
+
+    # Clear and repopulate book_theme_entries
+    conn.execute("DELETE FROM book_theme_entries")
+    cursor.execute("SELECT id, book_themes FROM books WHERE book_themes IS NOT NULL")
+
+    entries = []
+    for row in cursor.fetchall():
+        book_id = row[0]
+        try:
+            themes = json.loads(row[1])
+        except (json.JSONDecodeError, TypeError):
+            continue
+        for theme in themes:
+            theme = theme.strip()
+            if theme:
+                entries.append((book_id, theme))
+
+    if not entries:
+        conn.commit()
+        return 0
+
+    conn.executemany("INSERT INTO book_theme_entries (book_id, theme) VALUES (?, ?)", entries)
+    conn.commit()
+
+    # Get all entries with their IDs
+    cursor.execute("SELECT id, theme FROM book_theme_entries ORDER BY id")
+    theme_rows = cursor.fetchall()
+    theme_ids = [r[0] for r in theme_rows]
+    theme_texts = [r[1] for r in theme_rows]
+
+    # Batch embed all themes
+    embeddings = embed_texts(theme_texts, batch_size=64)
+
+    # Clear and rebuild vector index
+    conn.execute("DELETE FROM book_theme_vectors")
+    for theme_id, emb in zip(theme_ids, embeddings):
+        conn.execute(
+            "INSERT INTO book_theme_vectors (theme_id, embedding) VALUES (?, ?)",
+            (theme_id, embedding_to_bytes(emb)),
+        )
+    conn.commit()
+    return len(theme_ids)
+
+
+def rebuild_chunk_vector_index(conn: sqlite3.Connection, batch_size: int = 256) -> int:
+    """
+    Build chunk_vectors from all chunks.
+
+    Returns the number of chunk vectors indexed.
+    """
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM chunks")
+    total = cursor.fetchone()[0]
+    if total == 0:
+        return 0
+
+    # Clear existing
+    conn.execute("DELETE FROM chunk_vectors")
+    conn.commit()
+
+    # Process in batches to avoid loading all chunks into memory
+    offset = 0
+    indexed = 0
+    while offset < total:
+        cursor.execute(
+            "SELECT id, text FROM chunks ORDER BY id LIMIT ? OFFSET ?",
+            (batch_size, offset),
+        )
+        rows = cursor.fetchall()
+        if not rows:
+            break
+
+        chunk_ids = [r[0] for r in rows]
+        texts = [r[1] for r in rows]
+
+        embeddings = embed_texts(texts, batch_size=64)
+
+        for chunk_id, emb in zip(chunk_ids, embeddings):
+            conn.execute(
+                "INSERT INTO chunk_vectors (chunk_id, embedding) VALUES (?, ?)",
+                (chunk_id, embedding_to_bytes(emb)),
+            )
+        conn.commit()
+        indexed += len(rows)
+        offset += batch_size
+
+    return indexed
 
 
 def search_topics_semantic(query: str, limit: int = 20, db_path: Path = IPAD_DB_PATH) -> list[dict]:
