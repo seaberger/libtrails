@@ -1356,11 +1356,10 @@ def embed(force: bool, themes: bool, books: bool, chunks: bool, embed_all: bool)
 
                     embs = embed_texts(texts, batch_size=64)
 
-                    for chunk_id, emb in zip(chunk_ids, embs):
-                        conn.execute(
-                            "INSERT INTO chunk_vectors (chunk_id, embedding) VALUES (?, ?)",
-                            (chunk_id, embedding_to_bytes(emb)),
-                        )
+                    conn.executemany(
+                        "INSERT INTO chunk_vectors (chunk_id, embedding) VALUES (?, ?)",
+                        [(cid, embedding_to_bytes(emb)) for cid, emb in zip(chunk_ids, embs)],
+                    )
                     conn.commit()
 
                     batch_count = len(rows)

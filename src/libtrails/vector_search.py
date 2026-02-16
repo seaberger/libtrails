@@ -149,11 +149,10 @@ def rebuild_book_theme_index(conn: sqlite3.Connection) -> int:
 
     # Clear and rebuild vector index
     conn.execute("DELETE FROM book_theme_vectors")
-    for theme_id, emb in zip(theme_ids, embeddings):
-        conn.execute(
-            "INSERT INTO book_theme_vectors (theme_id, embedding) VALUES (?, ?)",
-            (theme_id, embedding_to_bytes(emb)),
-        )
+    conn.executemany(
+        "INSERT INTO book_theme_vectors (theme_id, embedding) VALUES (?, ?)",
+        [(tid, embedding_to_bytes(emb)) for tid, emb in zip(theme_ids, embeddings)],
+    )
     conn.commit()
     return len(theme_ids)
 
@@ -206,11 +205,10 @@ def rebuild_book_vector_index(conn: sqlite3.Connection) -> int:
     embeddings = embed_texts(texts, batch_size=64)
 
     conn.execute("DELETE FROM book_vectors")
-    for book_id, emb in zip(book_ids, embeddings):
-        conn.execute(
-            "INSERT INTO book_vectors (book_id, embedding) VALUES (?, ?)",
-            (book_id, embedding_to_bytes(emb)),
-        )
+    conn.executemany(
+        "INSERT INTO book_vectors (book_id, embedding) VALUES (?, ?)",
+        [(bid, embedding_to_bytes(emb)) for bid, emb in zip(book_ids, embeddings)],
+    )
     conn.commit()
     return len(book_ids)
 
@@ -249,11 +247,10 @@ def rebuild_chunk_vector_index(conn: sqlite3.Connection, batch_size: int = 256) 
 
         embeddings = embed_texts(texts, batch_size=64)
 
-        for chunk_id, emb in zip(chunk_ids, embeddings):
-            conn.execute(
-                "INSERT INTO chunk_vectors (chunk_id, embedding) VALUES (?, ?)",
-                (chunk_id, embedding_to_bytes(emb)),
-            )
+        conn.executemany(
+            "INSERT INTO chunk_vectors (chunk_id, embedding) VALUES (?, ?)",
+            [(cid, embedding_to_bytes(emb)) for cid, emb in zip(chunk_ids, embeddings)],
+        )
         conn.commit()
         indexed += len(rows)
 
@@ -416,15 +413,31 @@ def search_books_by_topic_semantic(
 
 
 def get_vector_index_stats(db_path: Path = IPAD_DB_PATH) -> dict:
-    """Get statistics about the vector index."""
+    """Get statistics about all vector indexes."""
     try:
         conn = get_vec_db(db_path)
         cursor = conn.cursor()
 
         cursor.execute("SELECT COUNT(*) FROM topic_vectors")
-        indexed = cursor.fetchone()[0]
+        topic_count = cursor.fetchone()[0]
+
+        theme_count = book_count = chunk_count = 0
+        try:
+            cursor.execute("SELECT COUNT(*) FROM book_theme_vectors")
+            theme_count = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM book_vectors")
+            book_count = cursor.fetchone()[0]
+            cursor.execute("SELECT COUNT(*) FROM chunk_vectors")
+            chunk_count = cursor.fetchone()[0]
+        except Exception:
+            pass
 
         conn.close()
-        return {"indexed_vectors": indexed}
+        return {
+            "indexed_vectors": topic_count,
+            "theme_vectors": theme_count,
+            "book_vectors": book_count,
+            "chunk_vectors": chunk_count,
+        }
     except Exception as e:
         return {"indexed_vectors": 0, "error": str(e)}
