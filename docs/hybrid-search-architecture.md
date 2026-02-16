@@ -339,8 +339,8 @@ Universe search wraps `hybrid_search_clusters()` and returns minimal `{cluster_i
 
 All semantic search functions wrap their vec0 queries in try/except blocks, returning an empty list if the vector table doesn't exist or isn't populated. This means the search system works at any stage of the build process:
 
-- **No vectors built**: Pure FTS search (book search: signals 1-3, cluster search: signal 1 + label match)
-- **Topics only**: FTS + topic semantic (book search: signals 1-4, cluster search: signals 1-3)
+- **No vectors built**: Pure FTS search (book search: signals 1-3, cluster search: signals 1, 3, 4)
+- **Topics only**: FTS + topic semantic (book search: signals 1-4, cluster search: signals 1-4)
 - **Full build**: All signals active (book search: 7, cluster search: 5, domain search: cluster aggregation + label match)
 
 ## References

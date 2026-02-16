@@ -654,16 +654,17 @@ def hybrid_search_domains(conn: sqlite3.Connection, query: str, limit: int = 20)
                 d["score"] = max(d["score"], score)
                 d["matching_clusters"] += 1
 
-    # Merge direct domain label matches (boost domains that match by name)
+    # Merge direct domain label matches (additive boost scaled to RRF range)
+    # RRF scores are ~0.01-0.1; label scores are 0-1. Scale label to RRF range.
+    label_boost = 0.02  # ~1/(k+1) = 0.0164 for k=60
     for domain_id, label_score in domain_label_scores.items():
         if domain_id in domain_scores:
-            # Boost existing score
-            domain_scores[domain_id]["score"] = max(domain_scores[domain_id]["score"], label_score)
+            domain_scores[domain_id]["score"] += label_boost * label_score
         elif domain_id in domain_labels:
             domain_scores[domain_id] = {
                 "domain_id": domain_id,
                 "label": domain_labels[domain_id],
-                "score": label_score,
+                "score": label_boost * label_score,
                 "matching_clusters": 0,
             }
 
