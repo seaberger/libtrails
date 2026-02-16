@@ -711,16 +711,22 @@ def rebuild_fts_indexes(conn: sqlite3.Connection) -> dict[str, int]:
             content='', tokenize='porter unicode61'
         )
     """)
-    cursor.execute("""
-        INSERT INTO books_fts(rowid, title, author, description, series, themes)
-        SELECT b.id,
-               COALESCE(b.title, ''),
-               COALESCE(b.author, ''),
-               COALESCE(b.description, ''),
-               COALESCE(b.series, ''),
-               COALESCE(b.book_themes, '')
-        FROM books b
-    """)
+    # Insert with JSON-parsed themes (strip brackets/quotes from book_themes JSON)
+    rows = cursor.execute(
+        "SELECT id, title, author, description, series, book_themes FROM books"
+    ).fetchall()
+    for row in rows:
+        book_id, title, author, desc, series, themes_json = row
+        themes_text = ""
+        if themes_json:
+            try:
+                themes_text = ", ".join(json.loads(themes_json))
+            except (json.JSONDecodeError, TypeError):
+                themes_text = ""
+        cursor.execute(
+            "INSERT INTO books_fts(rowid, title, author, description, series, themes) VALUES (?,?,?,?,?,?)",
+            (book_id, title or "", author or "", desc or "", series or "", themes_text),
+        )
     cursor.execute("SELECT COUNT(*) FROM books_fts")
     books_count = cursor.fetchone()[0]
 

@@ -231,13 +231,13 @@ def rebuild_chunk_vector_index(conn: sqlite3.Connection, batch_size: int = 256) 
     conn.execute("DELETE FROM chunk_vectors")
     conn.commit()
 
-    # Process in batches to avoid loading all chunks into memory
-    offset = 0
+    # Process in batches using keyset pagination (avoids O(n²) OFFSET scans)
+    last_id = -1
     indexed = 0
-    while offset < total:
+    while True:
         cursor.execute(
-            "SELECT id, text FROM chunks ORDER BY id LIMIT ? OFFSET ?",
-            (batch_size, offset),
+            "SELECT id, text FROM chunks WHERE id > ? ORDER BY id LIMIT ?",
+            (last_id, batch_size),
         )
         rows = cursor.fetchall()
         if not rows:
@@ -245,6 +245,7 @@ def rebuild_chunk_vector_index(conn: sqlite3.Connection, batch_size: int = 256) 
 
         chunk_ids = [r[0] for r in rows]
         texts = [r[1] for r in rows]
+        last_id = chunk_ids[-1]
 
         embeddings = embed_texts(texts, batch_size=64)
 
@@ -255,7 +256,6 @@ def rebuild_chunk_vector_index(conn: sqlite3.Connection, batch_size: int = 256) 
             )
         conn.commit()
         indexed += len(rows)
-        offset += batch_size
 
     return indexed
 

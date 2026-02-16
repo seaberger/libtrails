@@ -1209,8 +1209,8 @@ def embed(force: bool, themes: bool, books: bool, chunks: bool, embed_all: bool)
         rebuild_vector_index,
     )
 
-    # Determine what to embed
-    do_topics = not themes and not books and not chunks or embed_all
+    # Determine what to embed (topics is default when no flags specified)
+    do_topics = (not themes and not books and not chunks) or embed_all
     do_themes = themes or embed_all
     do_books = books or embed_all
     do_chunks = chunks or embed_all
@@ -1285,8 +1285,10 @@ def embed(force: bool, themes: bool, books: bool, chunks: bool, embed_all: bool)
         console.print("\n[bold]Building topic vector index...[/bold]")
         with console.status("Rebuilding topic vector index..."):
             conn = get_vec_db()
-            count = rebuild_vector_index(conn, force_recreate=force)
-            conn.close()
+            try:
+                count = rebuild_vector_index(conn, force_recreate=force)
+            finally:
+                conn.close()
         console.print(f"[green]Indexed {count} topic vectors[/green]")
 
     # ── Book theme embeddings ──
@@ -1294,8 +1296,10 @@ def embed(force: bool, themes: bool, books: bool, chunks: bool, embed_all: bool)
         console.print("\n[bold]Embedding book themes → book_theme_vectors...[/bold]")
         with console.status("Building book theme vectors..."):
             conn = get_vec_db()
-            count = rebuild_book_theme_index(conn)
-            conn.close()
+            try:
+                count = rebuild_book_theme_index(conn)
+            finally:
+                conn.close()
         console.print(f"[green]Indexed {count} book theme vectors[/green]")
 
     # ── Book vectors (title + description + themes) ──
@@ -1303,66 +1307,69 @@ def embed(force: bool, themes: bool, books: bool, chunks: bool, embed_all: bool)
         console.print("\n[bold]Embedding books (title+desc+themes) → book_vectors...[/bold]")
         with console.status("Building book vectors..."):
             conn = get_vec_db()
-            count = rebuild_book_vector_index(conn)
-            conn.close()
+            try:
+                count = rebuild_book_vector_index(conn)
+            finally:
+                conn.close()
         console.print(f"[green]Indexed {count} book vectors[/green]")
 
     # ── Chunk embeddings ──
     if do_chunks:
         conn = get_vec_db()
-        cursor = conn.cursor()
-        cursor.execute("SELECT COUNT(*) FROM chunks")
-        total_chunks = cursor.fetchone()[0]
-        console.print(f"\n[bold]Embedding {total_chunks:,} chunks → chunk_vectors...[/bold]")
-        console.print("[dim]This may take 15-30 minutes on Apple Silicon.[/dim]")
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM chunks")
+            total_chunks = cursor.fetchone()[0]
+            console.print(f"\n[bold]Embedding {total_chunks:,} chunks → chunk_vectors...[/bold]")
+            console.print("[dim]This may take 15-30 minutes on Apple Silicon.[/dim]")
 
-        use_rich = console.is_terminal
-        batch_size = 256
-        offset = 0
-        indexed = 0
+            use_rich = console.is_terminal
+            batch_size = 256
+            last_id = -1
+            indexed = 0
 
-        # Clear existing
-        conn.execute("DELETE FROM chunk_vectors")
-        conn.commit()
+            # Clear existing
+            conn.execute("DELETE FROM chunk_vectors")
+            conn.commit()
 
-        with Progress(
-            SpinnerColumn(),
-            TextColumn("[progress.description]{task.description}"),
-            BarColumn(),
-            TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-            console=console,
-            disable=not use_rich,
-        ) as progress:
-            task = progress.add_task("Embedding chunks", total=total_chunks)
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+                console=console,
+                disable=not use_rich,
+            ) as progress:
+                task = progress.add_task("Embedding chunks", total=total_chunks)
 
-            while offset < total_chunks:
-                rows = conn.execute(
-                    "SELECT id, text FROM chunks ORDER BY id LIMIT ? OFFSET ?",
-                    (batch_size, offset),
-                ).fetchall()
-                if not rows:
-                    break
+                while True:
+                    rows = conn.execute(
+                        "SELECT id, text FROM chunks WHERE id > ? ORDER BY id LIMIT ?",
+                        (last_id, batch_size),
+                    ).fetchall()
+                    if not rows:
+                        break
 
-                chunk_ids = [r[0] for r in rows]
-                texts = [r[1] for r in rows]
+                    chunk_ids = [r[0] for r in rows]
+                    texts = [r[1] for r in rows]
+                    last_id = chunk_ids[-1]
 
-                embs = embed_texts(texts, batch_size=64)
+                    embs = embed_texts(texts, batch_size=64)
 
-                for chunk_id, emb in zip(chunk_ids, embs):
-                    conn.execute(
-                        "INSERT INTO chunk_vectors (chunk_id, embedding) VALUES (?, ?)",
-                        (chunk_id, embedding_to_bytes(emb)),
-                    )
-                conn.commit()
+                    for chunk_id, emb in zip(chunk_ids, embs):
+                        conn.execute(
+                            "INSERT INTO chunk_vectors (chunk_id, embedding) VALUES (?, ?)",
+                            (chunk_id, embedding_to_bytes(emb)),
+                        )
+                    conn.commit()
 
-                batch_count = len(rows)
-                indexed += batch_count
-                offset += batch_size
-                progress.advance(task, batch_count)
-                if not use_rich and indexed % 1000 < batch_size:
-                    console.print(f"  Chunks: {indexed:,}/{total_chunks:,}")
-
-        conn.close()
+                    batch_count = len(rows)
+                    indexed += batch_count
+                    progress.advance(task, batch_count)
+                    if not use_rich and indexed % 1000 < batch_size:
+                        console.print(f"  Chunks: {indexed:,}/{total_chunks:,}")
+        finally:
+            conn.close()
         console.print(f"[green]Indexed {indexed:,} chunk vectors[/green]")
 
 

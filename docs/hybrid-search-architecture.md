@@ -6,7 +6,7 @@ LibTrails uses a 7-signal hybrid search system that combines full-text keyword s
 
 The search system answers the question: *"Given a user query, which books are most relevant?"* It attacks this from multiple angles — keyword matches in titles, semantic similarity across 837K extracted topics, 7K LLM-generated book themes, 335K text chunks, and whole-book metadata vectors — then fuses the results into a single ranked list.
 
-```
+```text
 User Query: "dystopian fiction"
         │
         ├──► FTS5 keyword search (3 signals)
@@ -219,28 +219,28 @@ All vec0 tables use `FLOAT[384] distance_metric=cosine`.
 
 ## Code Locations
 
-| Function | File | Line | Purpose |
-|----------|------|------|---------|
-| `rrf_fuse()` | `hybrid_search.py` | 9 | Reciprocal Rank Fusion algorithm |
-| `_fts5_safe_query()` | `hybrid_search.py` | 23 | Sanitize user input for FTS5 MATCH |
-| `_fts_search_books()` | `hybrid_search.py` | 38 | Signal 1: FTS on book metadata |
-| `_fts_search_topics()` | `hybrid_search.py` | 60 | Signal 2 (partial): FTS on topic labels |
-| `_fts_search_chunks()` | `hybrid_search.py` | 81 | Signal 3: FTS on chunk text |
-| `_semantic_search_topics()` | `hybrid_search.py` | 114 | Signal 4 (partial): vec search on topics |
-| `_semantic_search_book_themes()` | `hybrid_search.py` | 136 | Signal 5: vec search on book themes |
-| `_semantic_search_chunks()` | `hybrid_search.py` | 166 | Signal 7: vec search on chunks |
-| `_semantic_search_books_direct()` | `hybrid_search.py` | 196 | Signal 6: vec search on whole-book vectors |
-| `_topics_to_books()` | `hybrid_search.py` | 217 | Map topic scores → book scores |
-| `_topics_to_clusters()` | `hybrid_search.py` | 246 | Map topic scores → cluster scores |
-| `hybrid_search_books()` | `hybrid_search.py` | 276 | Main entry point: fuses all 7 signals |
-| `hybrid_search_clusters()` | `hybrid_search.py` | 361 | Cluster-level search (2 signals) |
-| `hybrid_search_domains()` | `hybrid_search.py` | 410 | Domain-level search (aggregates clusters) |
-| `hybrid_search_universe()` | `hybrid_search.py` | 457 | 3D visualization search |
-| `init_vector_search()` | `vector_search.py` | 11 | Create all vec0 tables |
-| `rebuild_book_theme_index()` | `vector_search.py` | 110 | Build book_theme_entries + book_theme_vectors |
-| `rebuild_book_vector_index()` | `vector_search.py` | 161 | Build book_vectors from metadata |
-| `rebuild_chunk_vector_index()` | `vector_search.py` | 218 | Build chunk_vectors from text |
-| `rebuild_fts_indexes()` | `database.py` | ~689 | Rebuild all 3 FTS5 tables |
+| Function | File | Purpose |
+|----------|------|---------|
+| `rrf_fuse()` | `hybrid_search.py` | Reciprocal Rank Fusion algorithm |
+| `_fts5_safe_query()` | `hybrid_search.py` | Sanitize user input for FTS5 MATCH |
+| `_fts_search_books()` | `hybrid_search.py` | Signal 1: FTS on book metadata |
+| `_fts_search_topics()` | `hybrid_search.py` | Signal 2 (partial): FTS on topic labels |
+| `_fts_search_chunks()` | `hybrid_search.py` | Signal 3: FTS on chunk text |
+| `_semantic_search_topics()` | `hybrid_search.py` | Signal 4 (partial): vec search on topics |
+| `_semantic_search_book_themes()` | `hybrid_search.py` | Signal 5: vec search on book themes |
+| `_semantic_search_chunks()` | `hybrid_search.py` | Signal 7: vec search on chunks |
+| `_semantic_search_books_direct()` | `hybrid_search.py` | Signal 6: vec search on whole-book vectors |
+| `_topics_to_books()` | `hybrid_search.py` | Map topic scores to book scores |
+| `_topics_to_clusters()` | `hybrid_search.py` | Map topic scores to cluster scores |
+| `hybrid_search_books()` | `hybrid_search.py` | Main entry point: fuses all 7 signals |
+| `hybrid_search_clusters()` | `hybrid_search.py` | Cluster-level search (2 signals) |
+| `hybrid_search_domains()` | `hybrid_search.py` | Domain-level search (aggregates clusters) |
+| `hybrid_search_universe()` | `hybrid_search.py` | 3D visualization search |
+| `init_vector_search()` | `vector_search.py` | Create all vec0 tables |
+| `rebuild_book_theme_index()` | `vector_search.py` | Build book_theme_entries + book_theme_vectors |
+| `rebuild_book_vector_index()` | `vector_search.py` | Build book_vectors from metadata |
+| `rebuild_chunk_vector_index()` | `vector_search.py` | Build chunk_vectors from text |
+| `rebuild_fts_indexes()` | `database.py` | Rebuild all 3 FTS5 tables |
 
 ## Embedding Model
 

@@ -112,11 +112,11 @@ def _fts_search_chunks(
 
 
 def _semantic_search_topics(
-    conn: sqlite3.Connection, query: str, limit: int = 200
+    conn: sqlite3.Connection, query: str, limit: int = 200, query_bytes: bytes | None = None
 ) -> list[tuple[int, float]]:
     """sqlite-vec cosine search on topic_vectors. Returns [(topic_id, similarity)]."""
-    query_embedding = embed_text(query)
-    query_bytes = embedding_to_bytes(query_embedding)
+    if query_bytes is None:
+        query_bytes = embedding_to_bytes(embed_text(query))
     try:
         rows = conn.execute(
             """
@@ -134,11 +134,11 @@ def _semantic_search_topics(
 
 
 def _semantic_search_book_themes(
-    conn: sqlite3.Connection, query: str, limit: int = 50
+    conn: sqlite3.Connection, query: str, limit: int = 50, query_bytes: bytes | None = None
 ) -> list[tuple[int, float]]:
     """sqlite-vec cosine search on book_theme_vectors. Returns [(book_id, best_similarity)]."""
-    query_embedding = embed_text(query)
-    query_bytes = embedding_to_bytes(query_embedding)
+    if query_bytes is None:
+        query_bytes = embedding_to_bytes(embed_text(query))
     try:
         rows = conn.execute(
             """
@@ -164,11 +164,11 @@ def _semantic_search_book_themes(
 
 
 def _semantic_search_chunks(
-    conn: sqlite3.Connection, query: str, limit: int = 100
+    conn: sqlite3.Connection, query: str, limit: int = 100, query_bytes: bytes | None = None
 ) -> list[tuple[int, float]]:
     """sqlite-vec cosine search on chunk_vectors. Returns [(book_id, best_similarity)]."""
-    query_embedding = embed_text(query)
-    query_bytes = embedding_to_bytes(query_embedding)
+    if query_bytes is None:
+        query_bytes = embedding_to_bytes(embed_text(query))
     try:
         rows = conn.execute(
             """
@@ -194,11 +194,11 @@ def _semantic_search_chunks(
 
 
 def _semantic_search_books_direct(
-    conn: sqlite3.Connection, query: str, limit: int = 50
+    conn: sqlite3.Connection, query: str, limit: int = 50, query_bytes: bytes | None = None
 ) -> list[tuple[int, float]]:
     """sqlite-vec cosine search on book_vectors. Returns [(book_id, similarity)]."""
-    query_embedding = embed_text(query)
-    query_bytes = embedding_to_bytes(query_embedding)
+    if query_bytes is None:
+        query_bytes = embedding_to_bytes(embed_text(query))
     try:
         rows = conn.execute(
             """
@@ -278,16 +278,19 @@ def hybrid_search_books(conn: sqlite3.Connection, query: str, limit: int = 20) -
     Hybrid book search: fuses FTS5 + semantic signals across books, topics, themes, and chunks.
     """
 
+    # Embed query once for all semantic signals
+    query_bytes = embedding_to_bytes(embed_text(query))
+
     # Gather ranked lists
     fts_books = _fts_search_books(conn, query)
     fts_topics = _fts_search_topics(conn, query)
     fts_topic_books = _topics_to_books(conn, fts_topics)
     fts_chunk_books = _fts_search_chunks(conn, query)
-    sem_topics = _semantic_search_topics(conn, query)
+    sem_topics = _semantic_search_topics(conn, query, query_bytes=query_bytes)
     sem_topic_books = _topics_to_books(conn, sem_topics)
-    sem_theme_books = _semantic_search_book_themes(conn, query)
-    sem_book_direct = _semantic_search_books_direct(conn, query)
-    sem_chunk_books = _semantic_search_chunks(conn, query)
+    sem_theme_books = _semantic_search_book_themes(conn, query, query_bytes=query_bytes)
+    sem_book_direct = _semantic_search_books_direct(conn, query, query_bytes=query_bytes)
+    sem_chunk_books = _semantic_search_chunks(conn, query, query_bytes=query_bytes)
 
     # RRF fusion over all 7 signals
     fused = rrf_fuse(
