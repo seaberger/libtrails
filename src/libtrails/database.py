@@ -281,6 +281,15 @@ def init_chunks_table():
 
             CREATE INDEX IF NOT EXISTS idx_cluster_domains_domain ON cluster_domains(domain_id);
 
+            -- Book theme entries (parsed from books.book_themes JSON)
+            CREATE TABLE IF NOT EXISTS book_theme_entries (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                book_id INTEGER NOT NULL REFERENCES books(id),
+                theme TEXT NOT NULL
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_bte_book ON book_theme_entries(book_id);
+
             -- Materialized stats: bridge table eliminates 4-table join for book lookups
             CREATE TABLE IF NOT EXISTS cluster_books (
                 cluster_id INTEGER NOT NULL,
@@ -694,23 +703,30 @@ def rebuild_fts_indexes(conn: sqlite3.Connection) -> dict[str, int]:
     """
     cursor = conn.cursor()
 
-    # books_fts: title, author, description, series
+    # books_fts: title, author, description, series, themes
     cursor.execute("DROP TABLE IF EXISTS books_fts")
     cursor.execute("""
         CREATE VIRTUAL TABLE books_fts USING fts5(
-            title, author, description, series,
+            title, author, description, series, themes,
             content='', tokenize='porter unicode61'
         )
     """)
-    cursor.execute("""
-        INSERT INTO books_fts(rowid, title, author, description, series)
-        SELECT b.id,
-               COALESCE(b.title, ''),
-               COALESCE(b.author, ''),
-               COALESCE(b.description, ''),
-               COALESCE(b.series, '')
-        FROM books b
-    """)
+    # Insert with JSON-parsed themes (strip brackets/quotes from book_themes JSON)
+    rows = cursor.execute(
+        "SELECT id, title, author, description, series, book_themes FROM books"
+    ).fetchall()
+    for row in rows:
+        book_id, title, author, desc, series, themes_json = row
+        themes_text = ""
+        if themes_json:
+            try:
+                themes_text = ", ".join(json.loads(themes_json))
+            except (json.JSONDecodeError, TypeError):
+                themes_text = ""
+        cursor.execute(
+            "INSERT INTO books_fts(rowid, title, author, description, series, themes) VALUES (?,?,?,?,?,?)",
+            (book_id, title or "", author or "", desc or "", series or "", themes_text),
+        )
     cursor.execute("SELECT COUNT(*) FROM books_fts")
     books_count = cursor.fetchone()[0]
 

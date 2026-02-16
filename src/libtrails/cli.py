@@ -1189,10 +1189,31 @@ def formats():
 
 @main.command()
 @click.option("--force", is_flag=True, help="Regenerate all embeddings (use after model change)")
-def embed(force: bool):
-    """Generate embeddings for all topics."""
+@click.option("--themes", is_flag=True, help="Embed book themes → book_theme_vectors")
+@click.option("--books", is_flag=True, help="Embed books (title+desc+themes) → book_vectors")
+@click.option("--chunks", is_flag=True, help="Embed chunks → chunk_vectors (~15-30 min)")
+@click.option("--all", "embed_all", is_flag=True, help="Embed topics + themes + books + chunks")
+def embed(force: bool, themes: bool, books: bool, chunks: bool, embed_all: bool):
+    """Generate embeddings for topics, book themes, books, and/or chunks.
+
+    By default, embeds topics only. Use --themes for book themes,
+    --books for whole-book vectors, --chunks for chunk content,
+    or --all for everything.
+    """
     from .database import get_db
     from .embeddings import embed_texts, embedding_to_bytes, get_model_info
+    from .vector_search import (
+        get_vec_db,
+        rebuild_book_theme_index,
+        rebuild_book_vector_index,
+        rebuild_vector_index,
+    )
+
+    # Determine what to embed (topics is default when no flags specified)
+    do_topics = (not themes and not books and not chunks) or embed_all
+    do_themes = themes or embed_all
+    do_books = books or embed_all
+    do_chunks = chunks or embed_all
 
     # Ensure tables exist
     init_chunks_table()
@@ -1203,77 +1224,152 @@ def embed(force: bool):
     if model_info["cached_locally"]:
         console.print("[dim]Model cached locally[/dim]")
 
-    # First, migrate raw topics to normalized form
-    console.print("\n[bold]Step 1: Normalizing topics...[/bold]")
-    with console.status("Migrating raw topics..."):
-        migrated = migrate_raw_topics_to_normalized()
-    console.print(f"[green]Migrated {migrated} topics[/green]")
-
-    # If force, clear existing embeddings
-    if force:
-        console.print("\n[yellow]Force mode: clearing existing embeddings...[/yellow]")
-        with get_db() as conn:
-            conn.execute("UPDATE topics SET embedding = NULL")
-            conn.commit()
-
-    # Get topics without embeddings
-    topics = get_topics_without_embeddings()
-    if not topics:
-        console.print("[yellow]All topics already have embeddings[/yellow]")
-        return
-
-    console.print(f"\n[bold]Step 2: Generating embeddings for {len(topics)} topics...[/bold]")
-
-    # Generate embeddings in batches
-    labels = [t["label"] for t in topics]
-    topic_ids = [t["id"] for t in topics]
-
     with console.status("Loading embedding model..."):
         from .embeddings import get_model
 
         get_model()  # Pre-load model
 
-    batch_size = 64
-    embedded_count = 0
-    use_rich = console.is_terminal
+    # ── Topic embeddings (default) ──
+    if do_topics:
+        console.print("\n[bold]Normalizing topics...[/bold]")
+        with console.status("Migrating raw topics..."):
+            migrated = migrate_raw_topics_to_normalized()
+        console.print(f"[green]Migrated {migrated} topics[/green]")
 
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        BarColumn(),
-        TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
-        console=console,
-        disable=not use_rich,
-    ) as progress:
-        task = progress.add_task("Embedding topics", total=len(topics))
+        if force:
+            console.print("[yellow]Force mode: clearing existing topic embeddings...[/yellow]")
+            with get_db() as conn:
+                conn.execute("UPDATE topics SET embedding = NULL")
+                conn.commit()
 
-        for i in range(0, len(labels), batch_size):
-            batch_labels = labels[i : i + batch_size]
-            batch_ids = topic_ids[i : i + batch_size]
+        topics = get_topics_without_embeddings()
+        if not topics:
+            console.print("[yellow]All topics already have embeddings[/yellow]")
+        else:
+            console.print(f"\n[bold]Generating embeddings for {len(topics)} topics...[/bold]")
+            labels = [t["label"] for t in topics]
+            topic_ids = [t["id"] for t in topics]
 
-            embeddings = embed_texts(batch_labels)
+            batch_size = 64
+            embedded_count = 0
+            use_rich = console.is_terminal
 
-            for topic_id, embedding in zip(batch_ids, embeddings):
-                save_topic_embedding(topic_id, embedding_to_bytes(embedding))
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+                console=console,
+                disable=not use_rich,
+            ) as progress:
+                task = progress.add_task("Embedding topics", total=len(topics))
 
-            embedded_count += len(batch_labels)
-            progress.advance(task, len(batch_labels))
-            if not use_rich:
-                pct = embedded_count * 100 // len(topics) if topics else 0
-                if pct % 10 == 0 or embedded_count == len(topics):
-                    console.print(f"  Embedding: {embedded_count}/{len(topics)} ({pct}%)")
+                for i in range(0, len(labels), batch_size):
+                    batch_labels = labels[i : i + batch_size]
+                    batch_ids = topic_ids[i : i + batch_size]
 
-    console.print(f"\n[green]Generated embeddings for {len(topics)} topics[/green]")
+                    embeddings = embed_texts(batch_labels)
 
-    # Build vector index (force recreate if using --force to get cosine distance)
-    console.print("\n[bold]Step 3: Building vector index (cosine distance)...[/bold]")
-    from .vector_search import get_vec_db, rebuild_vector_index
+                    for topic_id, emb in zip(batch_ids, embeddings):
+                        save_topic_embedding(topic_id, embedding_to_bytes(emb))
 
-    with console.status("Rebuilding vector index..."):
+                    embedded_count += len(batch_labels)
+                    progress.advance(task, len(batch_labels))
+                    if not use_rich:
+                        pct = embedded_count * 100 // len(topics) if topics else 0
+                        if pct % 10 == 0 or embedded_count == len(topics):
+                            console.print(f"  Embedding: {embedded_count}/{len(topics)} ({pct}%)")
+
+            console.print(f"[green]Generated embeddings for {len(topics)} topics[/green]")
+
+        console.print("\n[bold]Building topic vector index...[/bold]")
+        with console.status("Rebuilding topic vector index..."):
+            conn = get_vec_db()
+            try:
+                count = rebuild_vector_index(conn, force_recreate=force)
+            finally:
+                conn.close()
+        console.print(f"[green]Indexed {count} topic vectors[/green]")
+
+    # ── Book theme embeddings ──
+    if do_themes:
+        console.print("\n[bold]Embedding book themes → book_theme_vectors...[/bold]")
+        with console.status("Building book theme vectors..."):
+            conn = get_vec_db()
+            try:
+                count = rebuild_book_theme_index(conn)
+            finally:
+                conn.close()
+        console.print(f"[green]Indexed {count} book theme vectors[/green]")
+
+    # ── Book vectors (title + description + themes) ──
+    if do_books:
+        console.print("\n[bold]Embedding books (title+desc+themes) → book_vectors...[/bold]")
+        with console.status("Building book vectors..."):
+            conn = get_vec_db()
+            try:
+                count = rebuild_book_vector_index(conn)
+            finally:
+                conn.close()
+        console.print(f"[green]Indexed {count} book vectors[/green]")
+
+    # ── Chunk embeddings ──
+    if do_chunks:
         conn = get_vec_db()
-        count = rebuild_vector_index(conn, force_recreate=force)
-        conn.close()
-    console.print(f"[green]Indexed {count} topic vectors[/green]")
+        try:
+            cursor = conn.cursor()
+            cursor.execute("SELECT COUNT(*) FROM chunks")
+            total_chunks = cursor.fetchone()[0]
+            console.print(f"\n[bold]Embedding {total_chunks:,} chunks → chunk_vectors...[/bold]")
+            console.print("[dim]This may take 15-30 minutes on Apple Silicon.[/dim]")
+
+            use_rich = console.is_terminal
+            batch_size = 256
+            last_id = -1
+            indexed = 0
+
+            # Clear existing
+            conn.execute("DELETE FROM chunk_vectors")
+            conn.commit()
+
+            with Progress(
+                SpinnerColumn(),
+                TextColumn("[progress.description]{task.description}"),
+                BarColumn(),
+                TextColumn("[progress.percentage]{task.percentage:>3.0f}%"),
+                console=console,
+                disable=not use_rich,
+            ) as progress:
+                task = progress.add_task("Embedding chunks", total=total_chunks)
+
+                while True:
+                    rows = conn.execute(
+                        "SELECT id, text FROM chunks WHERE id > ? ORDER BY id LIMIT ?",
+                        (last_id, batch_size),
+                    ).fetchall()
+                    if not rows:
+                        break
+
+                    chunk_ids = [r[0] for r in rows]
+                    texts = [r[1] for r in rows]
+                    last_id = chunk_ids[-1]
+
+                    embs = embed_texts(texts, batch_size=64)
+
+                    conn.executemany(
+                        "INSERT INTO chunk_vectors (chunk_id, embedding) VALUES (?, ?)",
+                        [(cid, embedding_to_bytes(emb)) for cid, emb in zip(chunk_ids, embs)],
+                    )
+                    conn.commit()
+
+                    batch_count = len(rows)
+                    indexed += batch_count
+                    progress.advance(task, batch_count)
+                    if not use_rich and indexed % 1000 < batch_size:
+                        console.print(f"  Chunks: {indexed:,}/{total_chunks:,}")
+        finally:
+            conn.close()
+        console.print(f"[green]Indexed {indexed:,} chunk vectors[/green]")
 
 
 @main.command("search-semantic")
