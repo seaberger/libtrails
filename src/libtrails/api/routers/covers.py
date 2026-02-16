@@ -60,7 +60,16 @@ def get_cover(calibre_id: int):
 
 @router.get("/covers/book/{book_id}")
 def get_cover_by_book_id(db: DBConnection, book_id: int):
-    """Serve cover image by book ID (looks up calibre_id)."""
+    """Serve cover image by book ID (looks up calibre_id, falls back to book_{id}.jpg)."""
+    # Check for book-specific cover first (e.g. multi-volume works sharing one cover)
+    book_cover = COVERS_DIR / f"book_{book_id}.jpg"
+    if book_cover.exists():
+        return FileResponse(
+            book_cover,
+            media_type="image/jpeg",
+            headers={"Cache-Control": "public, max-age=86400"},
+        )
+
     cursor = db.cursor()
     cursor.execute("SELECT calibre_id FROM books WHERE id = ?", (book_id,))
     row = cursor.fetchone()

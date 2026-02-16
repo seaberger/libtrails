@@ -1,0 +1,106 @@
+id,title,author,chunks,avg_words_per_topic,pct_short_topics
+174,"Deep Learning with PyTorch Step-by-Step: A Beginner’s Guide","Daniel Voigt Godoy",551,2.22,73.1
+413,"Natural Language Processing With Transformers: Building Language Applications With Hugging Face","Lewis Tunstall, Leandro von Werra, Thomas Wolf",274,2.29,72.1
+171,"Deep Learning for Coders With Fastai and Pytorch: AI Applications Without a PhD","Jeremy Howard, Sylvain Gugger",433,2.3,69.5
+379,"Machine Learning for Absolute Beginners: A Plain English Introduction","Oliver Theobald",74,2.3,70.0
+69,"Approaching (Almost) Any Machine Learning Problem","Abhishek Thakur",154,2.32,68.3
+172,"Deep Learning With Python","François Chollet",301,2.37,66.0
+950,"Introduction to Algorithms, Third Edition","Thomas H. Cormen, Charles E. Leiserson etc.",1225,2.38,67.1
+264,"Hands-On Machine Learning With Scikit-Learn and TensorFlow: Concepts, Tools, and Techniques to Build Intelligent Systems","Aurélien Géron",621,2.39,64.4
+598,"The Blackwell Guide to Literary Theory","Gregory Castle",335,2.39,66.1
+121,"Build a Large Language Model","Sebastian Raschka",180,2.4,64.6
+382,"Machine Learning With PyTorch and Scikit-Learn: Develop Machine Learning and Deep Learning Models With Python","Sebastian Raschka, Yuxi (hayden) Liu, Vahid Mirjalili, Dmytro Dzhulgakov",450,2.4,64.2
+468,"Python Machine Learning: Machine Learning and Deep Learning With Python, Scikit-Learn, and TensorFlow","Samuel Burns",530,2.41,63.7
+469,"Python Programming: An Introduction to Computer Science, 3rd Ed.","John Zelle",481,2.41,63.7
+173,"Deep Learning With PyTorch","Luca Pietro Giovanni Antiga, Eli Stevens, Thomas Viehmann",468,2.42,61.6
+218,"Feature Engineering for Machine Learning","Alice Zheng, Amanda Casari",137,2.43,63.4
+74,"Artificial Intelligence: A Modern Approach (4th Edition) (Hardcover Edition)","Zhang Bo Ya [ Mei ] Si Tu Er Te · Luo Su ( Stuart Russell )",1638,2.44,62.9
+319,"Invent Your Own Computer Games With Python, 4th Edition","Al Sweigart",334,2.44,63.8
+710,"The Hundred-Page Machine Learning Book","Andriy Burkov",98,2.44,61.6
+938,"All the Math You Missed","Thomas A. Garrity",319,2.44,65.9
+959,"The Big Book of Small Python Projects 81 Easy Practice Programs","Al Sweigart",294,2.44,58.6
+47,"Algorithms, Part II","Kevin Wayne, Robert Sedgewick",395,2.45,60.9
+81,"Automate the Boring Stuff With Python, 2nd Edition: Practical Programming for Total Beginners","Al Sweigart",356,2.46,65.7
+175,"Deep Learning: Foundations and Concepts","Christopher M. Bishop, Hugh Bishop",648,2.46,61.0
+937,Algorithms,"Sanjoy Dasgupta, Christos H. Papadimitriou etc.",320,2.46,62.1
+943,"Data Structures and Algorithms Using Python","Rance D. Necaise",534,2.46,60.5
+467,"Python Crash Course, 3rd Edition: A Hands-On, Project-Based Introduction to Programming","Eric Matthes",342,2.47,59.5
+471,"PyTorch Recipes: A Problem-Solution Approach to Build, Train and Deploy Neural Network Models","Pradeepta Mishra",177,2.49,62.7
+793,"The Python Workshop: Learn to Code in Python and Kickstart Your Career in Software Development or Data Science","Andrew Bird",335,2.49,62.9
+664,"The Elements of Statistical Learning: Data Mining, Inference, and Prediction, Second Edition","Trevor Hastie",1074,2.51,58.3
+393,"Mastering Machine Learning Algorithms: Expert Techniques for Implementing Popular Machine Learning Algorithms, Fine-Tuning Your Models, and Understanding How They Work, 2nd Edition","Giuseppe Bonaccorso",228,2.53,57.3
+257,"Grokking Deep Learning","Andrew Trask",234,2.55,54.3
+108,"Botany for Gardeners","Brian Capon",171,2.59,55.6
+318,"Introduction to Linear Algebra","Serge Lang",235,2.59,60.2
+11,"50 Algorithms Every Programmer Should Know: Tackle Computer Science Challenges With Classic to Modern Algorithms in Machine Learning, Software Design, Data Systems, and Cryptography","Imran Ahmad",164,2.6,52.7
+366,"Linear Algebra Done Right","Sheldon Axler",290,2.61,56.8
+953,"Problem Solving with Algorithms and Data Structures Using Python. Release 3.0","Miller B.N., Ranum D.L.",205,2.61,51.0
+380,"Machine Learning for Algorithmic Trading: Predictive Models to Extract Signals From Market and Alternative Data for Systemic Trading Strategies With Python","Stefan Jansen",500,2.63,51.1
+41,"Advances in Financial Machine Learning","Marcos López de Prado",247,2.64,51.3
+109,"Botany: An Introduction to Plant Biology","James D. Mauseth",1070,2.65,50.6
+936,"Algorithms (part 1, electronic edition)","Robert Sedgewick, Kevin Wayne",480,2.69,47.4
+604,"The Book of Why: The New Science of Cause and Effect","Judea Pearl, Dana Mackenzie",336,2.7,54.8
+381,"Machine Learning with Python: A Step by Step Guide for Absolute Beginners to Program Artificial Intelligence with Python. Neural Networks and Data Science from Pre-Processing to Deep Learning","Mark Coding",59,2.71,45.4
+211,"Everything and More: A Compact History of Infinity","David Foster Wallace",257,2.72,53.1
+590,"The Beginning of Infinity: Explanations That Transform the World","David Deutsch",442,2.75,49.6
+934,"Ace Pre-Algebra and Algebra I","Workman Publishing & Jason Wan",181,2.75,50.4
+295,"How to Decide: Simple Tools for Making Better Choices","Annie Duke",156,2.76,47.7
+104,"Bobby Fischer Teaches Chess","Bobby Fischer, Stuart Margulies, Don Mosenfelder",35,2.77,45.7
+146,"Company of One: Why Staying Small Is the Next Big Thing for Business","Paul Jarvis",165,2.81,39.7
+259,"Gödel, Escher, Bach: An Eternal Golden Braid","Douglas R. Hofstadter",713,2.81,47.8
+470,"Python Workout","Reuven M. Lerner",223,2.82,44.8
+871,"Tiny Habits","BJ Fogg",216,2.86,44.1
+546,"Study Guide for the New Trading for a Living","Alexander Elder",73,2.87,41.1
+828,"The Startup Owner's Manual: The Step-By-Step Guide for Building a Great Company","Steve Blank, Bob Dorf",453,2.87,34.3
+941,"A First Course in Calculus","Serge Lang",564,2.88,47.7
+803,"The River Cottage Bread Handbook","Daniel Stevens",93,2.89,35.5
+891,"Walkaway: A Novel","Cory Doctorow",348,2.9,44.0
+517,Siddhartha,"Hermann Hesse, Susan Bernofsky, Tom Robbins",90,2.91,42.9
+320,"Investing Amid Low Expected Returns: Making the Most When Markets Offer the Least","Antti Ilmanen",343,2.92,39.5
+749,"The Mom Test: How to Talk to Customers & Learn if Your Business Is a Good Idea When Everyone Is Lying to You","Rob Fitzpatrick",65,2.93,38.5
+774,"The PARA Method: Simplify, Organize, and Master Your Digital Life","Tiago Forte",38,2.93,33.2
+817,"The Small Business Start Up Kit","Peri Pakroo, Barbara Kate Repa",520,2.93,39.8
+564,"Technical Analysis of the Financial Markets: A Comprehensive Guide to Trading Methods and Applications","John J. Murphy",263,2.94,39.1
+119,"Buddhism as Philosophy: An Introduction","Mark Siderits",327,2.95,46.3
+967,"Trade Your Way to Financial Freedom","Van K Tharp",307,2.95,32.8
+44,"AI Engineering: Building Applications With Foundation Models","Chip Huyen",370,2.96,40.2
+729,"The Little Book That Still Beats the Market","Joel Greenblatt",89,2.96,30.8
+291,"How to Cook Everything the Basics","Mark Bittman",315,2.97,34.9
+294,"How to Day Trade for a Living: Trading Strategies & Tactics to Consistently Earn Passive Income in Any Market - Stocks, Forex, Cryptocurrency, or Options","Bryan Lee",80,2.97,33.8
+913,"Winning Chess: How to Perfect Your Attacking Play","Irving Chernev, Fred Reinfeld",95,2.97,41.3
+948,"How To Learn Deep Learning And","Radek Osmulski",69,2.97,33.3
+145,"Come Into My Trading Room: A Complete Guide to Trading","Alexander Elder",280,2.99,33.3
+573,"The Age of Prediction: Algorithms, AI, and the Shifting Shadows of Risk","Igor Tulchinsky, Christopher E. Mason",179,3.01,37.1
+766,"The Obelisk Gate","N. K. Jemisin",262,3.03,38.7
+931,"6 Secrets to Startup Success","Bradberry, John.",211,3.03,34.7
+570,"The 4-Hour Workweek","Timothy Ferriss",231,3.05,30.6
+87,"Beginning Theory: An Introduction to Literary and Cultural Theory: Fourth Edition","Peter Barry",324,3.06,40.8
+151,"Cooking Classics: Japan","Catherina Hosoi",29,3.06,37.2
+725,"The Lessons of History","Will Durant, Ariel Durant",91,3.07,44.0
+876,"Trading Volatility: Trading Volatility, Correlation, Term Structure and Skew","Colin Bennett",218,3.09,30.9
+630,"The Complete Idiot's Guide to Chess","Patrick Wolff",270,3.1,35.9
+403,"Modern Literary Criticism and Theory: A History","M. A. R. Habib",1322,3.11,40.7
+456,"Philosophy : The Basics (5th Edition)","Nigel Warburton",178,3.11,36.2
+687,"The Fourth Turning Is Here: What the Seasons of History Tell Us About How and When This Crisis Will End","Neil Howe",461,3.11,37.7
+702,"The Great Gatsby","Francis Scott Fitzgerald",105,3.12,37.1
+551,"Superforecasting: The Art and Science of Prediction","Philip E. Tetlock, Dan Gardner",236,3.13,30.7
+757,"The New Trading for a Living: Psychology, Trading Tactics, Risk Management, and Record-Keeping","Alexander Elder",243,3.13,31.7
+442,Origin,"Dan Brown",304,3.16,34.2
+78,"Atomic Habits: An Easy & Proven Way to Build Good Habits & Break Bad Ones","James Clear",169,3.17,32.2
+686,"The Fourth Turning","William Strauss",361,3.18,34.8
+49,"Alien Clay","Adrian Tchaikovsky",266,3.2,30.3
+227,"Fooled by Randomness: The Hidden Role of Chance in Life and in the Markets","Nassim Nicholas Taleb",232,3.21,32.1
+250,"Good Habits, Bad Habits","Wendy Wood",230,3.21,32.0
+228,Fools,"Pat Cadigan",192,3.22,32.4
+385,"Make It Stick: The Science of Successful Learning","Peter C. Brown, Henry L. Roediger Iii, Mark A. McDaniel",209,3.22,32.0
+878,"Transitions (40th Anniversary Edition): Making Sense of Life's Changes","William Bridges, Susan Bridges",143,3.22,32.3
+288,"How Data Happened: A History From the Age of Reason to the Age of Algorithms","Chris Wiggins, Matthew L. Jones",238,3.23,34.5
+584,"The Art of Possibility: Transforming Professional and Personal Life","Rosamund Stone Zander, Benjamin Zander",141,3.23,33.0
+321,"Invisible Cities","Italo Calvino",59,3.24,30.5
+826,"The Starless Sea","Erin Morgenstern",318,3.25,33.5
+824,"The St. Martin's Guide to Writing","Rise B. Axelrod, Charles R. Cooper",1073,3.27,32.6
+907,"Where the Axe Is Buried","Ray Nayler",165,3.27,33.0
+132,"Change Your Thoughts - Change Your Life","Wayne W. Dyer",203,3.28,34.1
+764,"The Norton Anthology of Theory and Criticism","Vincent B. Leitch, William E. Cain, Laurie A. Finke, Barbara E. Johnson, John McGowan, T. Denean Sharpley-Whiting, Jeffrey J. Williams",4477,3.31,32.5
+7,"21 Lessons for the 21st Century","Yuval Noah Harari",271,3.35,33.2
+654,"The Denial of Death","Ernest Becker",321,3.38,31.2

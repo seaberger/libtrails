@@ -130,15 +130,21 @@ def _call_litellm(
 
     When cache_system_prompt=True, the system message is marked with
     cache_control for Gemini context caching (90% discount on cached tokens).
-    Only use this when the system prompt exceeds 2048 tokens.
+    Gemini requires a minimum of 4096 tokens for caching; if the system prompt
+    is shorter, caching is silently skipped to avoid 400 errors.
     """
     import litellm
 
     litellm.suppress_debug_info = True
 
+    # Gemini requires min 4096 tokens for context caching.
+    # Rough estimate: 1 token ≈ 4 chars. Use 16000 chars as safe threshold.
+    _MIN_CACHE_CHARS = 16000
+    use_cache = cache_system_prompt and system_prompt and len(system_prompt) >= _MIN_CACHE_CHARS
+
     messages = []
     if system_prompt:
-        if cache_system_prompt:
+        if use_cache:
             messages.append(
                 {
                     "role": "system",
