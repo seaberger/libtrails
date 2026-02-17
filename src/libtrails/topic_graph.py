@@ -66,25 +66,28 @@ def _validate_graph_cache(cache_path: Path, conn) -> ig.Graph | None:
 
 
 def _save_graph_cache(g: ig.Graph, cache_path: Path, conn):
-    """Save graph + metadata to cache."""
-    GRAPH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+    """Save graph + metadata to cache. Non-fatal on I/O errors."""
+    try:
+        GRAPH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
 
-    topic_count = conn.execute("SELECT COUNT(*) FROM topics").fetchone()[0]
-    embed_count = conn.execute(
-        "SELECT COUNT(*) FROM topics WHERE embedding IS NOT NULL"
-    ).fetchone()[0]
-    cooccur_count = conn.execute("SELECT COUNT(*) FROM topic_cooccurrences").fetchone()[0]
+        topic_count = conn.execute("SELECT COUNT(*) FROM topics").fetchone()[0]
+        embed_count = conn.execute(
+            "SELECT COUNT(*) FROM topics WHERE embedding IS NOT NULL"
+        ).fetchone()[0]
+        cooccur_count = conn.execute("SELECT COUNT(*) FROM topic_cooccurrences").fetchone()[0]
 
-    g.write_pickle(str(cache_path))
+        g.write_pickle(str(cache_path))
 
-    meta = {
-        "topic_count": topic_count,
-        "embed_count": embed_count,
-        "cooccur_count": cooccur_count,
-        "nodes": g.vcount(),
-        "edges": g.ecount(),
-    }
-    _graph_cache_metadata_path(cache_path).write_text(json.dumps(meta, indent=2))
+        meta = {
+            "topic_count": topic_count,
+            "embed_count": embed_count,
+            "cooccur_count": cooccur_count,
+            "nodes": g.vcount(),
+            "edges": g.ecount(),
+        }
+        _graph_cache_metadata_path(cache_path).write_text(json.dumps(meta, indent=2))
+    except Exception as exc:
+        print(f"  Warning: failed to cache graph: {exc}")
 
 
 def compute_cooccurrences(progress_file: str | None = None) -> dict:
