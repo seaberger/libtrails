@@ -1973,6 +1973,11 @@ def process():
     help="Automatically apply the sweep-recommended resolution",
 )
 @click.option(
+    "--force-rebuild",
+    is_flag=True,
+    help="Force rebuild of topic graph (ignore cache)",
+)
+@click.option(
     "--progress-file",
     "-p",
     default=None,
@@ -1996,6 +2001,7 @@ def cluster(
     sweep_iterations,
     sweep_output,
     auto_select,
+    force_rebuild,
     progress_file,
 ):
     """Run topic clustering with configurable options.
@@ -2066,6 +2072,7 @@ def cluster(
             n_iterations=sweep_iterations,
             auto_select=auto_select,
             output_path=sweep_output,
+            force_rebuild=force_rebuild,
             progress_file=progress_file,
         )
 
@@ -2131,6 +2138,7 @@ def cluster(
         remove_hubs=remove_hubs,
         hub_percentile=hub_percentile,
         hub_method=hub_method,
+        force_rebuild=force_rebuild,
         progress_file=progress_file,
     )
 
@@ -2284,6 +2292,11 @@ def load_domains(json_file: str):
     is_flag=True,
     help="Automatically apply sweep-recommended resolution (Leiden only)",
 )
+@click.option(
+    "--force-rebuild",
+    is_flag=True,
+    help="Force rebuild of topic graph (ignore cache)",
+)
 def regenerate_domains(
     n_domains: int,
     output: str,
@@ -2296,6 +2309,7 @@ def regenerate_domains(
     remove_outliers: bool,
     outlier_threshold: float,
     auto_select: bool,
+    force_rebuild: bool,
 ):
     """
     Regenerate domains (super-clusters) from current Leiden clusters.
