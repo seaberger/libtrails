@@ -34,12 +34,15 @@ def _graph_cache_metadata_path(cache_path: Path) -> Path:
 
 
 def _validate_graph_cache(cache_path: Path, conn) -> ig.Graph | None:
-    """Load cached graph if valid. Returns None if stale/missing."""
+    """Load cached graph if valid. Returns None if stale/missing/corrupt."""
     meta_path = _graph_cache_metadata_path(cache_path)
     if not cache_path.exists() or not meta_path.exists():
         return None
 
-    meta = json.loads(meta_path.read_text())
+    try:
+        meta = json.loads(meta_path.read_text())
+    except (json.JSONDecodeError, OSError):
+        return None
 
     # Check data fingerprint: topic count + embedding count + cooccurrence count
     topic_count = conn.execute("SELECT COUNT(*) FROM topics").fetchone()[0]
@@ -55,7 +58,10 @@ def _validate_graph_cache(cache_path: Path, conn) -> ig.Graph | None:
     ):
         return None
 
-    g = ig.Graph.Read_Pickle(str(cache_path))
+    try:
+        g = ig.Graph.Read_Pickle(str(cache_path))
+    except Exception:
+        return None
     return g
 
 
