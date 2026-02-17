@@ -59,13 +59,14 @@ class TestComputeCooccurrences:
         assert result["cooccurrence_pairs"] == 0
 
 
+@patch("libtrails.topic_graph._save_graph_cache")
 class TestBuildTopicGraph:
     """Tests for building the topic graph."""
 
     @patch("libtrails.topic_graph.get_topic_embeddings")
     @patch("libtrails.topic_graph.get_all_topics")
     @patch("libtrails.topic_graph.get_db")
-    def test_returns_igraph(self, mock_db, mock_get_topics, mock_get_embeddings):
+    def test_returns_igraph(self, mock_db, mock_get_topics, mock_get_embeddings, _mock_save):
         """Test that build returns an igraph Graph."""
         import igraph as ig
 
@@ -96,7 +97,7 @@ class TestBuildTopicGraph:
     @patch("libtrails.topic_graph.get_topic_embeddings")
     @patch("libtrails.topic_graph.get_all_topics")
     @patch("libtrails.topic_graph.get_db")
-    def test_adds_similarity_edges(self, mock_db, mock_get_topics, mock_get_embeddings):
+    def test_adds_similarity_edges(self, mock_db, mock_get_topics, mock_get_embeddings, _mock_save):
         """Test that similar topics get edges."""
         from libtrails.topic_graph import build_topic_graph
 
@@ -235,12 +236,13 @@ class TestGetGraphStats:
         assert stats["edges"] == 0
 
 
+@patch("libtrails.topic_graph._save_graph_cache")
 class TestBuildTopicGraphCooccurrenceOnly:
     """Tests for the fast co-occurrence-only graph builder."""
 
     @patch("libtrails.topic_graph.get_all_topics")
     @patch("libtrails.topic_graph.get_db")
-    def test_returns_igraph(self, mock_db, mock_get_topics):
+    def test_returns_igraph(self, mock_db, mock_get_topics, _mock_save):
         """Test that cooccurrence-only build returns an igraph Graph."""
         import igraph as ig
 
@@ -265,7 +267,7 @@ class TestBuildTopicGraphCooccurrenceOnly:
 
     @patch("libtrails.topic_graph.get_all_topics")
     @patch("libtrails.topic_graph.get_db")
-    def test_adds_cooccurrence_edges(self, mock_db, mock_get_topics):
+    def test_adds_cooccurrence_edges(self, mock_db, mock_get_topics, _mock_save):
         """Test that cooccurrence edges are added correctly."""
         from libtrails.topic_graph import build_topic_graph_cooccurrence_only
 
@@ -293,7 +295,7 @@ class TestBuildTopicGraphCooccurrenceOnly:
 
     @patch("libtrails.topic_graph.get_all_topics")
     @patch("libtrails.topic_graph.get_db")
-    def test_respects_min_count_threshold(self, mock_db, mock_get_topics):
+    def test_respects_min_count_threshold(self, mock_db, mock_get_topics, _mock_save):
         """Test that minimum count threshold is respected."""
         from libtrails.topic_graph import build_topic_graph_cooccurrence_only
 
@@ -316,13 +318,14 @@ class TestBuildTopicGraphCooccurrenceOnly:
         assert graph.ecount() == 0
 
 
+@patch("libtrails.topic_graph._save_graph_cache")
 class TestBuildTopicGraphKNN:
     """Tests for the k-NN embedding graph builder."""
 
     @patch("libtrails.topic_graph.get_topic_embeddings")
     @patch("libtrails.topic_graph.get_all_topics")
     @patch("libtrails.topic_graph.get_db")
-    def test_returns_igraph(self, mock_db, mock_get_topics, mock_get_embeddings):
+    def test_returns_igraph(self, mock_db, mock_get_topics, mock_get_embeddings, _mock_save):
         """Test that k-NN build returns an igraph Graph."""
         import igraph as ig
 
@@ -361,7 +364,7 @@ class TestBuildTopicGraphKNN:
     @patch("libtrails.topic_graph.get_topic_embeddings")
     @patch("libtrails.topic_graph.get_all_topics")
     @patch("libtrails.topic_graph.get_db")
-    def test_adds_knn_edges(self, mock_db, mock_get_topics, mock_get_embeddings):
+    def test_adds_knn_edges(self, mock_db, mock_get_topics, mock_get_embeddings, _mock_save):
         """Test that k-NN edges are added."""
         from libtrails.topic_graph import build_topic_graph_knn
 
@@ -400,7 +403,9 @@ class TestBuildTopicGraphKNN:
     @patch("libtrails.topic_graph.get_topic_embeddings")
     @patch("libtrails.topic_graph.get_all_topics")
     @patch("libtrails.topic_graph.get_db")
-    def test_combines_cooccurrence_and_knn(self, mock_db, mock_get_topics, mock_get_embeddings):
+    def test_combines_cooccurrence_and_knn(
+        self, mock_db, mock_get_topics, mock_get_embeddings, _mock_save
+    ):
         """Test that both cooccurrence and k-NN edges are added."""
         from libtrails.topic_graph import build_topic_graph_knn
 

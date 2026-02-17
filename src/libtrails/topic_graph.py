@@ -1,19 +1,84 @@
 """Topic graph construction using igraph."""
 
+import hashlib
+import json
 import math
 from collections import defaultdict
+from pathlib import Path
 
 import igraph as ig
 import numpy as np
 
 from .config import (
     COOCCURRENCE_MIN_COUNT,
+    DATA_DIR,
     EMBEDDING_EDGE_THRESHOLD,
     KNN_MIN_SIMILARITY,
     PMI_MIN_THRESHOLD,
 )
 from .database import get_all_topics, get_db, get_topic_embeddings, save_cooccurrence
 from .embeddings import bytes_to_embedding
+
+GRAPH_CACHE_DIR = DATA_DIR / "graph_cache"
+
+
+def _graph_cache_path(mode: str, params: dict) -> Path:
+    """Return cache file path based on mode + params hash."""
+    key = json.dumps({"mode": mode, **params}, sort_keys=True)
+    h = hashlib.sha256(key.encode()).hexdigest()[:12]
+    return GRAPH_CACHE_DIR / f"graph_{mode}_{h}.pkl"
+
+
+def _graph_cache_metadata_path(cache_path: Path) -> Path:
+    return cache_path.with_suffix(".json")
+
+
+def _validate_graph_cache(cache_path: Path, conn) -> ig.Graph | None:
+    """Load cached graph if valid. Returns None if stale/missing."""
+    meta_path = _graph_cache_metadata_path(cache_path)
+    if not cache_path.exists() or not meta_path.exists():
+        return None
+
+    meta = json.loads(meta_path.read_text())
+
+    # Check data fingerprint: topic count + embedding count + cooccurrence count
+    topic_count = conn.execute("SELECT COUNT(*) FROM topics").fetchone()[0]
+    embed_count = conn.execute(
+        "SELECT COUNT(*) FROM topics WHERE embedding IS NOT NULL"
+    ).fetchone()[0]
+    cooccur_count = conn.execute("SELECT COUNT(*) FROM topic_cooccurrences").fetchone()[0]
+
+    if (
+        meta.get("topic_count") != topic_count
+        or meta.get("embed_count") != embed_count
+        or meta.get("cooccur_count") != cooccur_count
+    ):
+        return None
+
+    g = ig.Graph.Read_Pickle(str(cache_path))
+    return g
+
+
+def _save_graph_cache(g: ig.Graph, cache_path: Path, conn):
+    """Save graph + metadata to cache."""
+    GRAPH_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+    topic_count = conn.execute("SELECT COUNT(*) FROM topics").fetchone()[0]
+    embed_count = conn.execute(
+        "SELECT COUNT(*) FROM topics WHERE embedding IS NOT NULL"
+    ).fetchone()[0]
+    cooccur_count = conn.execute("SELECT COUNT(*) FROM topic_cooccurrences").fetchone()[0]
+
+    g.write_pickle(str(cache_path))
+
+    meta = {
+        "topic_count": topic_count,
+        "embed_count": embed_count,
+        "cooccur_count": cooccur_count,
+        "nodes": g.vcount(),
+        "edges": g.ecount(),
+    }
+    _graph_cache_metadata_path(cache_path).write_text(json.dumps(meta, indent=2))
 
 
 def compute_cooccurrences(progress_file: str | None = None) -> dict:
@@ -140,6 +205,7 @@ def build_topic_graph(
     embedding_threshold: float = 0.5,
     cooccurrence_min: int = 2,
     pmi_min: float = 0.0,
+    force_rebuild: bool = False,
     progress_file: str | None = None,
 ) -> ig.Graph:
     """
@@ -149,6 +215,7 @@ def build_topic_graph(
         embedding_threshold: Minimum cosine similarity for embedding edges
         cooccurrence_min: Minimum co-occurrence count for edges
         pmi_min: Minimum PMI for co-occurrence edges
+        force_rebuild: If True, ignore cached graph and rebuild from scratch
         progress_file: Optional file path to write progress updates (for background runs)
 
     Returns:
@@ -156,6 +223,20 @@ def build_topic_graph(
     """
     import time
     from datetime import datetime
+
+    params = {
+        "embedding_threshold": embedding_threshold,
+        "cooccurrence_min": cooccurrence_min,
+        "pmi_min": pmi_min,
+    }
+    cache_path = _graph_cache_path("full", params)
+
+    if not force_rebuild:
+        with get_db() as conn:
+            cached = _validate_graph_cache(cache_path, conn)
+            if cached is not None:
+                print(f"  Loaded cached graph: {cached.vcount()} nodes, {cached.ecount()} edges")
+                return cached
 
     def log_progress(msg: str):
         """Write progress message to stdout and optionally to file."""
@@ -270,12 +351,17 @@ def build_topic_graph(
         g.es["type"] = edge_types
 
     log_progress(f"Graph complete: {g.vcount()} nodes, {g.ecount()} edges")
+
+    with get_db() as conn:
+        _save_graph_cache(g, cache_path, conn)
+
     return g
 
 
 def build_topic_graph_cooccurrence_only(
     cooccurrence_min: int = 5,
     pmi_min: float = 0.0,
+    force_rebuild: bool = False,
 ) -> ig.Graph:
     """
     Build a topic graph using ONLY co-occurrence edges.
@@ -286,10 +372,24 @@ def build_topic_graph_cooccurrence_only(
     Args:
         cooccurrence_min: Minimum co-occurrence count for edges
         pmi_min: Minimum PMI for co-occurrence edges
+        force_rebuild: If True, ignore cached graph and rebuild from scratch
 
     Returns:
         igraph.Graph with topic nodes and weighted edges
     """
+    params = {
+        "cooccurrence_min": cooccurrence_min,
+        "pmi_min": pmi_min,
+    }
+    cache_path = _graph_cache_path("cooccurrence", params)
+
+    if not force_rebuild:
+        with get_db() as conn:
+            cached = _validate_graph_cache(cache_path, conn)
+            if cached is not None:
+                print(f"  Loaded cached graph: {cached.vcount()} nodes, {cached.ecount()} edges")
+                return cached
+
     topics = get_all_topics()
     if not topics:
         return ig.Graph()
@@ -337,6 +437,9 @@ def build_topic_graph_cooccurrence_only(
         g.es["weight"] = weights
         g.es["type"] = edge_types
 
+    with get_db() as conn:
+        _save_graph_cache(g, cache_path, conn)
+
     return g
 
 
@@ -345,6 +448,7 @@ def build_topic_graph_knn(
     pmi_min: float = 0.0,
     k: int = 10,
     min_similarity: float = KNN_MIN_SIMILARITY,
+    force_rebuild: bool = False,
 ) -> ig.Graph:
     """
     Build a topic graph with co-occurrence edges plus k-nearest neighbor embedding edges.
@@ -358,10 +462,26 @@ def build_topic_graph_knn(
         pmi_min: Minimum PMI for co-occurrence edges
         k: Number of nearest neighbors per topic
         min_similarity: Minimum cosine similarity for KNN edges (default: 0.65)
+        force_rebuild: If True, ignore cached graph and rebuild from scratch
 
     Returns:
         igraph.Graph with topic nodes and weighted edges
     """
+    params = {
+        "cooccurrence_min": cooccurrence_min,
+        "pmi_min": pmi_min,
+        "k": k,
+        "min_similarity": min_similarity,
+    }
+    cache_path = _graph_cache_path("knn", params)
+
+    if not force_rebuild:
+        with get_db() as conn:
+            cached = _validate_graph_cache(cache_path, conn)
+            if cached is not None:
+                print(f"  Loaded cached graph: {cached.vcount()} nodes, {cached.ecount()} edges")
+                return cached
+
     from sklearn.neighbors import NearestNeighbors
 
     topics = get_all_topics()
@@ -458,6 +578,9 @@ def build_topic_graph_knn(
         g.add_edges(edges)
         g.es["weight"] = weights
         g.es["type"] = edge_types
+
+    with get_db() as conn:
+        _save_graph_cache(g, cache_path, conn)
 
     return g
 

@@ -40,6 +40,9 @@ data/*.json
 # Book cover images (extracted from Calibre)
 data/covers/
 
+# Cached topic graphs (igraph pickle files)
+data/graph_cache/
+
 # Cached embedding models (large files)
 models/
 

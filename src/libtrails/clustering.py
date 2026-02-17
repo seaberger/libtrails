@@ -395,6 +395,7 @@ def cluster_topics(
     remove_hubs: bool = False,
     hub_percentile: float = 95,
     hub_method: str = "degree",
+    force_rebuild: bool = False,
     progress_file: str | None = None,
 ) -> dict:
     """
@@ -452,12 +453,14 @@ def cluster_topics(
         g = build_topic_graph_cooccurrence_only(
             cooccurrence_min=min_cooccur,
             pmi_min=PMI_MIN_THRESHOLD,
+            force_rebuild=force_rebuild,
         )
     elif mode == "full":
         g = build_topic_graph(
             embedding_threshold=EMBEDDING_EDGE_THRESHOLD,
             cooccurrence_min=min_cooccur,
             pmi_min=PMI_MIN_THRESHOLD,
+            force_rebuild=force_rebuild,
         )
     elif mode == "knn":
         # k-NN mode: co-occurrence + k-nearest neighbor embedding edges
@@ -467,6 +470,7 @@ def cluster_topics(
             cooccurrence_min=min_cooccur,
             pmi_min=PMI_MIN_THRESHOLD,
             k=knn_k,
+            force_rebuild=force_rebuild,
         )
     else:
         return {"error": f"Unknown mode: {mode}. Use 'cooccurrence', 'knn', or 'full'"}
@@ -639,6 +643,7 @@ def sweep_resolutions(
     plateau_threshold: float | None = None,
     auto_select: bool = False,
     output_path: str | None = None,
+    force_rebuild: bool = False,
     progress_file: str | None = None,
 ) -> dict:
     """Run a multi-resolution Leiden CPM sweep to find optimal resolution.
@@ -708,12 +713,14 @@ def sweep_resolutions(
         g = build_topic_graph_cooccurrence_only(
             cooccurrence_min=min_cooccur,
             pmi_min=PMI_MIN_THRESHOLD,
+            force_rebuild=force_rebuild,
         )
     elif mode == "full":
         g = build_topic_graph(
             embedding_threshold=EMBEDDING_EDGE_THRESHOLD,
             cooccurrence_min=min_cooccur,
             pmi_min=PMI_MIN_THRESHOLD,
+            force_rebuild=force_rebuild,
         )
     elif mode == "knn":
         from .topic_graph import build_topic_graph_knn
@@ -722,6 +729,7 @@ def sweep_resolutions(
             cooccurrence_min=min_cooccur,
             pmi_min=PMI_MIN_THRESHOLD,
             k=knn_k,
+            force_rebuild=force_rebuild,
         )
     else:
         return {"error": f"Unknown mode: {mode}"}
@@ -785,6 +793,7 @@ def sweep_resolutions(
             resolution=summary.recommended_resolution,
             knn_k=knn_k,
             dry_run=False,
+            force_rebuild=force_rebuild,
             progress_file=progress_file,
         )
         result["cluster_result"] = cluster_result
@@ -859,6 +868,7 @@ def recluster_mega_clusters(
     size_threshold: int = 1000,
     sub_resolution: float = 0.05,
     dry_run: bool = False,
+    force_rebuild: bool = False,
     progress_file: str | None = None,
 ) -> dict:
     """
@@ -924,6 +934,7 @@ def recluster_mega_clusters(
         cooccurrence_min=COOCCURRENCE_MIN_COUNT,
         pmi_min=PMI_MIN_THRESHOLD,
         k=CLUSTER_KNN_K,
+        force_rebuild=force_rebuild,
     )
 
     _log_memory("After build_topic_graph")
