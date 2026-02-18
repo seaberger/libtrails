@@ -55,7 +55,7 @@ class _FlushConsole(Console):
 
         timestamp = datetime.now().strftime("%H:%M:%S")
         # Prepend timestamp as dim text unless caller is printing a blank line
-        if args and str(args[0]).strip():
+        if args and isinstance(args[0], str) and args[0].strip():
             args = (f"[dim]{timestamp}[/dim] {args[0]}", *args[1:])
         super().print(*args, **kwargs)
         self.file.flush()

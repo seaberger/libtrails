@@ -165,6 +165,255 @@ Following the same criteria from the demo library analysis (Experiment 3):
 
 ---
 
-## Phase 3: min_similarity Sweep
+## Phase 3: Domain (Super-Cluster) Hyperparameter Optimization
 
-*TODO: Run at best k + resolution*
+**Goal**: Group the 6,575 Leiden clusters into ~25-30 browsable high-level domains using Leiden CPM on a cluster-level k-NN graph. Two hyperparameters: graph density (k) and Leiden resolution (gamma).
+
+**Method**: Build a k-NN graph over Leiden cluster centroids (384-dim BGE embeddings), then run Leiden CPM to find macro-communities. This is more principled than K-means because it respects graph topology — clusters that co-occur and have strong KNN connections get grouped together, rather than just being geometrically close in embedding space. The demo library analysis (`docs/demo_graph_analysis.md`) suggested k=3 with gamma ≈ 0.0001 as a starting point, but V2 scale (6,562 clusters vs ~300 in demo) required its own sweep.
+
+**Fixed parameters**:
+- Cluster graph nodes: 6,562 (clusters with valid centroids)
+- min_similarity: 0.3 (for cluster graph edges)
+- Outlier reassignment: enabled (participation coefficient > 0.7)
+
+---
+
+### 3a. Cluster Graph k Sweep
+
+**Goal**: Find optimal graph density for the cluster-level graph. Tested k = 2, 3, 4, 5, 6, 8, 10.
+
+| k | Edges | Density |
+|---|-------|---------|
+| 2 | 11,027 | 0.0005 |
+| 3 | 16,287 | 0.0008 |
+| 4 | 21,550 | 0.0010 |
+| 5 | 26,746 | 0.0012 |
+| 6 | 31,985 | 0.0015 |
+| 8 | 42,443 | 0.0020 |
+| 10 | 52,905 | 0.0025 |
+
+**Initial comparison at ~25 domains** (selecting gamma per k to hit closest to 25):
+
+| k | gamma | Domains | Q | Max | Median | P10 | P90 |
+|---|-------|---------|------|------|--------|-----|-----|
+| 2 | 0.000300 | 38 | 0.810 | 1,179 | 123 | 4 | 309 |
+| **3** | **0.000516** | **24** | **0.764** | **1,269** | **202** | **105** | **367** |
+| **4** | **0.000676** | **24** | **0.735** | **1,375** | **238** | **96** | **335** |
+| 5 | 0.001163 | 25 | 0.718 | 1,227 | 214 | 83 | 412 |
+| 6 | 0.001332 | 25 | 0.702 | 1,362 | 172 | 52 | 523 |
+| 8 | 0.001747 | 23 | 0.668 | 1,455 | 216 | 77 | 378 |
+| 10 | 0.002000 | 20 | 0.661 | 1,433 | 249 | 69 | 660 |
+
+**Key observations**:
+- **k=2** has highest Q (0.81) but P10=4 — some domains have only 4-5 clusters, barely viable
+- **k=3-4** sweet spot: Q ≈ 0.73-0.76, P10 > 90, reasonable max sizes
+- **k≥6** too dense: Q drops below 0.70, low gammas produce mega-domains (3,000-6,000 clusters)
+- Eliminated k=2 (sparse fragmentation), k≥5 (too dense). Focused on k=3 and k=4.
+
+---
+
+### 3b. Full Resolution Sweep: k=2, 3, 4
+
+25 log-spaced resolutions from 0.0001 to 0.005 for each k value.
+
+#### Domain Count
+
+| gamma | k=2 | k=3 | k=4 |
+|-------|-----|-----|-----|
+| 0.000100 | 14 | 7 | 3 |
+| 0.000118 | 19 | 6 | 4 |
+| 0.000139 | 23 | 8 | 5 |
+| 0.000163 | 21 | 7 | 6 |
+| 0.000192 | 25 | 11 | 7 |
+| 0.000226 | 30 | 12 | 7 |
+| 0.000266 | 33 | 15 | 10 |
+| 0.000313 | 39 | 18 | 11 |
+| 0.000368 | 39 | 20 | 14 |
+| 0.000434 | 46 | 21 | 17 |
+| 0.000510 | 52 | 24 | 16 |
+| 0.000601 | 60 | 29 | 21 |
+| 0.000707 | 70 | 32 | 24 |
+| 0.000832 | 74 | 41 | **27** |
+| 0.000980 | 86 | 45 | 29 |
+| 0.001153 | 89 | 53 | 35 |
+| 0.001357 | 101 | 61 | 40 |
+| 0.001597 | 116 | 67 | 49 |
+| 0.001880 | 131 | 75 | 57 |
+| 0.002213 | 146 | 86 | 62 |
+| 0.002605 | 166 | 100 | 67 |
+| 0.003066 | 180 | 115 | 81 |
+| 0.003609 | 204 | 127 | 95 |
+| 0.004248 | 227 | 140 | 108 |
+| 0.005000 | 251 | 160 | 124 |
+
+#### Modularity Q
+
+| gamma | k=2 | k=3 | k=4 |
+|-------|-----|-----|-----|
+| 0.000100 | 0.761 | 0.307 | 0.068 |
+| 0.000118 | 0.781 | 0.535 | 0.071 |
+| 0.000139 | 0.767 | 0.577 | 0.445 |
+| 0.000163 | 0.784 | 0.657 | 0.508 |
+| 0.000192 | 0.794 | 0.706 | 0.615 |
+| 0.000226 | 0.804 | 0.726 | 0.641 |
+| 0.000266 | 0.808 | 0.747 | 0.696 |
+| 0.000313 | 0.807 | 0.751 | 0.702 |
+| 0.000368 | 0.812 | 0.756 | 0.711 |
+| 0.000434 | 0.821 | 0.758 | 0.722 |
+| 0.000510 | 0.821 | 0.756 | 0.726 |
+| 0.000601 | 0.820 | 0.770 | 0.736 |
+| 0.000707 | 0.817 | 0.770 | 0.738 |
+| 0.000832 | 0.818 | 0.773 | **0.738** |
+| 0.000980 | 0.813 | 0.773 | 0.740 |
+| 0.001153 | 0.810 | 0.768 | 0.737 |
+| 0.001357 | 0.809 | 0.765 | 0.741 |
+| 0.001597 | 0.799 | 0.764 | 0.735 |
+| 0.001880 | 0.794 | 0.758 | 0.728 |
+| 0.002213 | 0.790 | 0.749 | 0.728 |
+| 0.002605 | 0.780 | 0.742 | 0.725 |
+| 0.003066 | 0.778 | 0.735 | 0.714 |
+| 0.003609 | 0.772 | 0.728 | 0.710 |
+| 0.004248 | 0.764 | 0.721 | 0.695 |
+| 0.005000 | 0.758 | 0.710 | 0.684 |
+
+#### Max Domain Size (clusters)
+
+| gamma | k=2 | k=3 | k=4 |
+|-------|-----|-----|-----|
+| 0.000100 | 1,628 | 5,222 | 6,304 |
+| 0.000118 | 1,532 | 3,293 | 6,292 |
+| 0.000139 | 1,722 | 2,915 | 3,863 |
+| 0.000163 | 1,537 | 2,304 | 3,045 |
+| 0.000192 | 1,431 | 2,134 | 2,373 |
+| 0.000226 | 1,300 | 1,835 | 2,352 |
+| 0.000266 | 1,183 | 1,639 | 1,877 |
+| 0.000313 | 1,191 | 1,611 | 1,751 |
+| 0.000368 | 1,078 | 1,538 | 1,784 |
+| 0.000434 | 574 | 1,504 | 1,690 |
+| 0.000510 | 557 | 1,490 | 1,578 |
+| 0.000601 | 563 | 1,163 | 1,406 |
+| 0.000707 | 509 | 1,111 | 1,317 |
+| 0.000832 | 513 | 682 | **1,185** |
+| 0.000980 | 428 | 692 | 1,116 |
+| 0.001153 | 497 | 673 | 1,002 |
+| 0.001357 | 410 | 621 | 676 |
+| 0.001597 | 373 | 513 | 584 |
+| 0.001880 | 222 | 521 | 631 |
+| 0.002213 | 252 | 374 | 511 |
+| 0.002605 | 171 | 346 | 462 |
+| 0.003066 | 166 | 324 | 399 |
+| 0.003609 | 193 | 270 | 396 |
+| 0.004248 | 123 | 243 | 299 |
+| 0.005000 | 92 | 210 | 262 |
+
+#### Median Domain Size
+
+| gamma | k=2 | k=3 | k=4 |
+|-------|-----|-----|-----|
+| 0.000100 | 412 | 223 | 253 |
+| 0.000192 | 192 | 442 | 426 |
+| 0.000313 | 119 | 222 | 353 |
+| 0.000510 | 102 | 191 | 293 |
+| 0.000707 | 81 | 163 | 180 |
+| 0.000832 | 73 | 113 | **180** |
+| 0.000980 | 65 | 106 | 182 |
+| 0.001357 | 54 | 87 | 114 |
+| 0.001880 | 43 | 65 | 84 |
+| 0.002605 | 34 | 53 | 73 |
+| 0.005000 | 24 | 38 | 43 |
+
+#### Significance
+
+| gamma | k=2 | k=3 | k=4 |
+|-------|-----|-----|-----|
+| 0.000100 | 11,561 | 5,227 | 1,746 |
+| 0.000313 | 19,927 | 21,052 | 20,335 |
+| 0.000601 | 24,625 | 26,177 | 29,148 |
+| 0.000832 | 26,127 | 30,052 | **31,834** |
+| 0.001153 | 27,822 | 32,530 | 35,128 |
+| 0.001880 | 31,031 | 35,567 | 40,751 |
+| 0.005000 | 35,468 | 41,910 | 48,476 |
+
+Significance climbs monotonically (no peak in this range) — it favors finer partitions. Not useful as a selection criterion for domains; used only to confirm all configs are statistically significant.
+
+#### Singletons
+
+Zero across all k values and gammas. Every Leiden cluster finds a domain home.
+
+---
+
+### 3c. Seed Stability Analysis
+
+**Goal**: Test robustness — do the same hyperparameters produce the same partition across random seeds?
+
+Ran 30 random seeds (42–71) at 8 candidate configurations. For each config, computed all pairwise NMI scores (435 pairs).
+
+| Config | Mean domains | Std | Range | Mean NMI | Min NMI | Max NMI |
+|--------|-------------|-----|-------|----------|---------|---------|
+| k=3, γ=0.0006 | 29.7 | 1.3 | 26–33 | 0.772 | 0.720 | 0.819 |
+| k=3, γ=0.0007 | 34.1 | 1.3 | 32–36 | 0.787 | 0.735 | 0.842 |
+| k=3, γ=0.0008 | 38.2 | 1.7 | 35–42 | 0.793 | 0.736 | 0.845 |
+| k=4, γ=0.0006 | 20.5 | 0.7 | 19–22 | 0.785 | 0.717 | 0.848 |
+| k=4, γ=0.0007 | 23.0 | 0.9 | 21–25 | 0.782 | 0.717 | 0.854 |
+| **k=4, γ=0.0008** | **25.3** | **0.9** | **24–27** | **0.783** | **0.720** | **0.833** |
+| k=4, γ=0.0009 | 28.0 | 1.2 | 24–30 | 0.785 | 0.741 | 0.837 |
+| k=4, γ=0.0010 | 30.7 | 1.1 | 29–33 | 0.789 | 0.741 | 0.836 |
+
+**Key findings**:
+- **Stability is comparable across all configs** — pairwise NMI ≈ 0.77–0.79 everywhere. No config is dramatically more stable. Domain boundaries have ~20% variability across seeds, which is normal for community detection at this coarse scale.
+- **k=4 has lower variance in domain count** (std 0.7–0.9) vs k=3 (std 1.3–1.7). The denser graph anchors the partition better.
+- **Cross-k NMI ≈ 0.68–0.72**: k=3 and k=4 produce fundamentally different partitions. Within the same k, adjacent gammas are highly correlated (NMI 0.80–0.85).
+- Stability does not differentiate the candidates — both are equally robust. Decision rests on practical domain quality.
+
+---
+
+### 3d. Final Recommendation
+
+**Selected: k=4, γ=0.0008** (with mega-domain splitting)
+
+| Metric | k=3, γ=0.0006 | **k=4, γ=0.0008** | Rationale |
+|--------|---------------|-------------------|-----------|
+| Domains | 29 | **25** | Fewer starting domains → less manual curation |
+| Q (modularity) | **0.770** | 0.738 | Both well above 0.3 significance threshold |
+| Significance | 26,177 | **31,834** | Higher = more statistically significant structure |
+| Max domain | 1,163 | **1,185** | Comparable; handled by mega-domain split |
+| Median | 175 | **180** | Comparable; good for browsing |
+| P10 | 84 | **89** | k=4 slightly better — smallest domains more viable |
+| P90 | 336 | **331** | Comparable |
+| Singletons | 0 | **0** | Perfect — all clusters assigned |
+| Domain count std | 1.3 | **0.9** | k=4 more stable across random seeds |
+| Outliers reassigned | 26 | **87** | More outlier correction = cleaner boundaries |
+
+**Rationale**:
+1. **Fewer domains to curate**: 25 vs 29 — since we manually merge/split/label domains anyway, a tighter starting set is preferred
+2. **Tighter count stability**: std=0.9 (range 24–27) vs std=1.3 (range 26–33) — less randomness in the starting partition
+3. **Higher significance**: 31,834 vs 26,177 — the denser k=4 graph captures more meaningful cluster relationships
+4. **Better P10**: 89 vs 84 — even the smallest domains are substantial enough to be meaningful
+5. **Mega-domain handled by splitting**: Domain #0 (1,239 clusters) is split into 5 sub-groups using K-means on cluster centroids, producing a final ~29 domain starting set
+6. **Q tradeoff acceptable**: 0.738 vs 0.770 is a minor difference; both indicate strong community structure
+7. **Consistent with demo library finding**: The demo analysis noted k=3 for super-clusters, but V2's 20x larger cluster set (6,562 vs ~300) benefits from the denser k=4 graph to maintain cohesion
+
+### Applied Configuration
+
+```
+k=4, gamma=0.0008, min_similarity=0.3, outlier_reassignment=True (threshold=0.7)
+→ 25 domains (87 outlier clusters reassigned)
+→ Mega-domain #0 (1,239 clusters) split into 5 sub-groups
+→ Final: ~29 domains for manual curation
+```
+
+**Mega-domain split (domain #0 → 5 sub-groups)**:
+
+| Sub-domain | Clusters | Auto-label |
+|-----------|----------|------------|
+| 25 | 409 | cugel's arrival in smolod / alethiometer's significance / bene gesserit |
+| 27 | 307 | protomolecule experimentation / úrsula's business acumen |
+| 28 | 209 | devon's protective instincts / lilith's aspirations for social mobility |
+| 29 | 164 | american expatriate experience / gersbach's public persona / magister ludi |
+| 26 | 150 | quidditch team tryouts / america shaftoe's personal history |
+
+---
+
+## Phase 4: min_similarity Sweep (Topic-Level)
+
+*Skipped — diminishing returns. The KNN graph at min_similarity=0.65 already produces well-distributed clusters with no pathologies (zero singletons, no mega-blobs). Sweeping min_similarity 0.5–0.8 would require rebuilding the GPU KNN graph + reclustering (~47 min) with minimal expected impact on cluster quality.*

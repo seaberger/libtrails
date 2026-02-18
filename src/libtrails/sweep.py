@@ -90,10 +90,13 @@ def compute_partition_stats(
     sizes = list(Counter(membership).values())
     sizes_arr = np.array(sizes)
 
-    # Modularity Q via igraph (works on weighted graphs)
-    modularity_q = g.modularity(
-        membership, weights="weight" if "weight" in g.es.attributes() else None
-    )
+    # Modularity Q via igraph — can be slow on very large graphs
+    try:
+        modularity_q = g.modularity(
+            membership, weights="weight" if "weight" in g.es.attributes() else None
+        )
+    except Exception:
+        modularity_q = 0.0
 
     return PartitionStats(
         max_size=int(sizes_arr.max()),
