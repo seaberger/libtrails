@@ -92,11 +92,18 @@ def _ssh_base(gpu_cfg: dict) -> list[str]:
     return ["ssh", "-p", gpu_cfg["port"], gpu_cfg["host"]]
 
 
+def _quote_remote_path(path: str) -> str:
+    """Shell-quote a remote path, preserving tilde expansion."""
+    if path.startswith("~/"):
+        return "~/" + shlex.quote(path[2:])
+    return shlex.quote(path)
+
+
 def _ssh_upload(gpu_cfg: dict, local_path: Path, remote_path: str) -> None:
     """Upload a file via SSH pipe (cat | ssh 'cat > remote')."""
     with open(local_path, "rb") as f:
         result = subprocess.run(
-            [*_ssh_base(gpu_cfg), f"cat > {shlex.quote(remote_path)}"],
+            [*_ssh_base(gpu_cfg), f"cat > {_quote_remote_path(remote_path)}"],
             stdin=f,
             capture_output=True,
         )
@@ -107,7 +114,7 @@ def _ssh_upload(gpu_cfg: dict, local_path: Path, remote_path: str) -> None:
 def _ssh_download(gpu_cfg: dict, remote_path: str, local_path: Path) -> None:
     """Download a file via SSH pipe (ssh 'cat remote' > local)."""
     result = subprocess.run(
-        [*_ssh_base(gpu_cfg), f"cat {shlex.quote(remote_path)}"],
+        [*_ssh_base(gpu_cfg), f"cat {_quote_remote_path(remote_path)}"],
         capture_output=True,
     )
     if result.returncode != 0:
