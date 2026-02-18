@@ -49,6 +49,9 @@ models/
 # Experiments (intermediate outputs)
 experiments/
 
+# Node modules
+node_modules/
+
 # Downloaded EPUBs (large, not source)
 gutenberg_epubs/
 
