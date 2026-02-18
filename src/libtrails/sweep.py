@@ -31,6 +31,19 @@ from .config import (
 
 
 @dataclass
+class PartitionStats:
+    """Distribution statistics for a partition's cluster sizes."""
+
+    max_size: int
+    median_size: int
+    mean_size: float
+    p10_size: int
+    p90_size: int
+    singletons: int
+    modularity_q: float
+
+
+@dataclass
 class SweepResult:
     """Result from a single Leiden run at one resolution."""
 
@@ -39,6 +52,7 @@ class SweepResult:
     quality: float
     membership: list[int]
     elapsed: float
+    stats: PartitionStats | None = None
 
 
 @dataclass
@@ -64,6 +78,32 @@ class SweepSummary:
     recommended_index: int | None
     resolutions: list[float] = field(default_factory=list)
     significance_scores: list[float] = field(default_factory=list)
+
+
+def compute_partition_stats(
+    g: ig.Graph,
+    membership: list[int],
+) -> PartitionStats:
+    """Compute distribution statistics and modularity Q for a partition."""
+    from collections import Counter
+
+    sizes = list(Counter(membership).values())
+    sizes_arr = np.array(sizes)
+
+    # Modularity Q via igraph (works on weighted graphs)
+    modularity_q = g.modularity(
+        membership, weights="weight" if "weight" in g.es.attributes() else None
+    )
+
+    return PartitionStats(
+        max_size=int(sizes_arr.max()),
+        median_size=int(np.median(sizes_arr)),
+        mean_size=float(np.mean(sizes_arr)),
+        p10_size=int(np.percentile(sizes_arr, 10)),
+        p90_size=int(np.percentile(sizes_arr, 90)),
+        singletons=int(np.sum(sizes_arr == 1)),
+        modularity_q=float(modularity_q),
+    )
 
 
 def log_spaced_resolutions(
@@ -142,6 +182,7 @@ def leiden_sweep(
             result = leiden_at_resolution(g, res, seed=iter_seed, weights=weights)
             if best is None or result.quality > best.quality:
                 best = result
+        best.stats = compute_partition_stats(g, best.membership)
         results.append(best)
 
     return results
@@ -334,14 +375,21 @@ def format_sweep_table(summary: SweepSummary) -> "Table":
 
     has_sig = bool(summary.significance_scores)
 
+    has_stats = summary.results and summary.results[0].stats is not None
+
     table = Table(title="Leiden CPM Resolution Sweep")
     table.add_column("Resolution", justify="right", style="cyan", width=12)
     table.add_column("Clusters", justify="right", width=10)
+    table.add_column("Q", justify="right", width=8)
     table.add_column("Quality", justify="right", width=12)
     if has_sig:
         table.add_column("Significance", justify="right", width=14)
+    if has_stats:
+        table.add_column("Max", justify="right", width=8)
+        table.add_column("Median", justify="right", width=8)
+        table.add_column("Singles", justify="right", width=8)
     table.add_column("NMI", justify="right", width=8)
-    table.add_column("Time (s)", justify="right", width=8)
+    table.add_column("Time", justify="right", width=6)
     table.add_column("", width=16)  # markers
 
     # Build plateau membership set for marking
@@ -362,9 +410,11 @@ def format_sweep_table(summary: SweepSummary) -> "Table":
         if i == summary.recommended_index:
             markers.append("[bold yellow]<< BEST[/bold yellow]")
 
+        q_str = f"{r.stats.modularity_q:.4f}" if r.stats else ""
         row = [
             f"{r.resolution:.6f}",
             str(r.num_clusters),
+            q_str,
             f"{r.quality:.2f}",
         ]
         if has_sig:
@@ -372,10 +422,18 @@ def format_sweep_table(summary: SweepSummary) -> "Table":
             if i == peak_sig_idx:
                 sig_str = f"[bold]{sig_str}[/bold]"
             row.append(sig_str)
+        if has_stats and r.stats:
+            row.extend(
+                [
+                    str(r.stats.max_size),
+                    str(r.stats.median_size),
+                    str(r.stats.singletons),
+                ]
+            )
         row.extend(
             [
                 nmi_str,
-                f"{r.elapsed:.2f}",
+                f"{r.elapsed:.0f}s",
                 " ".join(markers),
             ]
         )
@@ -404,5 +462,14 @@ def save_sweep_json(summary: SweepSummary, path: Path) -> None:
         ],
         "recommended_resolution": summary.recommended_resolution,
     }
+    # Add partition distribution stats if available
+    if summary.results and summary.results[0].stats is not None:
+        data["modularity_q"] = [r.stats.modularity_q for r in summary.results]
+        data["max_size"] = [r.stats.max_size for r in summary.results]
+        data["median_size"] = [r.stats.median_size for r in summary.results]
+        data["mean_size"] = [r.stats.mean_size for r in summary.results]
+        data["p10_size"] = [r.stats.p10_size for r in summary.results]
+        data["p90_size"] = [r.stats.p90_size for r in summary.results]
+        data["singletons"] = [r.stats.singletons for r in summary.results]
     with open(path, "w") as f:
         json.dump(data, f, indent=2)
