@@ -491,8 +491,6 @@ def build_topic_graph_knn(
                 print(f"  Loaded cached graph: {cached.vcount()} nodes, {cached.ecount()} edges")
                 return cached
 
-    from sklearn.neighbors import NearestNeighbors
-
     topics = get_all_topics()
     if not topics:
         return ig.Graph()
@@ -542,21 +540,35 @@ def build_topic_graph_knn(
                     edge_types.append("cooccurrence")
                     edge_set.add(edge_key)
 
-    # Add k-NN embedding edges
-    topic_data = get_topic_embeddings()
-    if topic_data:
-        topic_id_to_embedding = {t[0]: bytes_to_embedding(t[1]) for t in topic_data}
-        embedding_ids = [t[0] for t in topic_data]
-        embeddings = np.array([topic_id_to_embedding[tid] for tid in embedding_ids])
+    # Add k-NN embedding edges — try GPU cache first, fall back to sklearn
+    from .gpu_knn import find_cached_knn
 
-        # Build k-NN index with cosine metric
-        # Note: sklearn's NearestNeighbors uses "cosine" which is (1 - cosine_similarity)
-        knn = NearestNeighbors(n_neighbors=min(k + 1, len(embeddings)), metric="cosine")
-        knn.fit(embeddings)
+    cached_knn = find_cached_knn(k + 1)
+    if cached_knn is not None:
+        # Use cached GPU KNN results
+        cached_ids, distances, indices = cached_knn
+        embedding_ids = cached_ids.tolist()
+        print(f"  Using cached GPU KNN ({len(embedding_ids):,} vectors, k={k + 1})")
+    else:
+        # Fall back to sklearn (slow for large datasets)
+        topic_data = get_topic_embeddings()
+        if topic_data:
+            from sklearn.neighbors import NearestNeighbors
 
-        # Query k nearest neighbors for each topic
-        distances, indices = knn.kneighbors(embeddings)
+            topic_id_to_embedding = {t[0]: bytes_to_embedding(t[1]) for t in topic_data}
+            embedding_ids = [t[0] for t in topic_data]
+            embeddings_arr = np.array([topic_id_to_embedding[tid] for tid in embedding_ids])
 
+            print(f"  Building sklearn KNN ({len(embedding_ids):,} vectors, k={k + 1})...")
+            knn_model = NearestNeighbors(
+                n_neighbors=min(k + 1, len(embeddings_arr)), metric="cosine"
+            )
+            knn_model.fit(embeddings_arr)
+            distances, indices = knn_model.kneighbors(embeddings_arr)
+        else:
+            embedding_ids = []
+
+    if embedding_ids:
         for i, topic_id in enumerate(embedding_ids):
             if topic_id not in id_to_idx:
                 continue

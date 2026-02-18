@@ -85,6 +85,13 @@ LM_STUDIO_CHUNK_API_BASE = os.environ.get(
     _user_cfg.get("lm_studio", {}).get("chunk_api_base", "http://localhost:1234"),
 )
 
+# GPU KNN via FAISS — configurable via ~/.libtrails/config.yaml
+# YAML example:
+#   gpu:
+#     host: seanb@192.168.1.36
+#     port: 2222
+#     remote_dir: ~/projects/gpu-knn
+
 # Chunking settings
 CHUNK_TARGET_WORDS = 500
 CHUNK_MIN_WORDS = 100
