@@ -7,7 +7,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from ..embeddings import embed_text
-from .routers import books, covers, domains, search, themes, universe
+from .routers import books, communities, covers, domains, search, themes, universe
 
 logger = logging.getLogger(__name__)
 
@@ -39,6 +39,7 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(domains.router, prefix="/api/v1", tags=["domains"])
+    app.include_router(communities.router, prefix="/api/v1", tags=["communities"])
     app.include_router(themes.router, prefix="/api/v1", tags=["themes"])
     app.include_router(books.router, prefix="/api/v1", tags=["books"])
     app.include_router(search.router, prefix="/api/v1", tags=["search"])

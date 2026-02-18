@@ -53,7 +53,7 @@ const isActive = (path: string) => {
             Themes
           </a>
           <a href={url("/clusters")} class:list={["text-sm transition-colors", isActive("/clusters") ? "text-[var(--color-accent)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"]}>
-            Clusters
+            Topics
           </a>
           <a href={url("/books")} class:list={["text-sm transition-colors", isActive("/books") ? "text-[var(--color-accent)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"]}>
             Books
@@ -104,7 +104,7 @@ const isActive = (path: string) => {
           Themes
         </a>
         <a href={url("/clusters")} class:list={["block py-2 text-sm transition-colors", isActive("/clusters") ? "text-[var(--color-accent)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"]}>
-          Clusters
+          Topics
         </a>
         <a href={url("/books")} class:list={["block py-2 text-sm transition-colors", isActive("/books") ? "text-[var(--color-accent)]" : "text-[var(--color-text-muted)] hover:text-[var(--color-text)]"]}>
           Books

@@ -2,38 +2,44 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import ThemeCard from '../../components/ThemeCard.astro';
 import SearchBar from '../../components/SearchBar.astro';
-import { getThemes, getCoverUrl } from '../../lib/api';
+import { getCommunities, getCoverUrl } from '../../lib/api';
 
-// Fetch clusters at build time (SSR) or request time
-const clusters = await getThemes(2000, 3);
+// Fetch communities at build time (SSR) or request time
+const communities = await getCommunities();
 const basePath = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 ---
 
-<BaseLayout title="Clusters" description="Browse all topic clusters from your library">
+<BaseLayout title="Topics" description="Browse topic communities from your library">
   <header class="mb-6">
     <h1 class="text-2xl font-medium text-[var(--color-text)] mb-2">
-      Clusters
+      Topics
     </h1>
     <p class="text-[var(--color-text-muted)]">
-      Explore {clusters.length} topic clusters discovered in your library
+      Explore {communities.length} topic communities discovered in your library
     </p>
   </header>
 
-  <SearchBar placeholder="Search clusters..." scope="clusters" />
+  <SearchBar placeholder="Search topics..." scope="clusters" />
 
   <!-- Search results grid (hidden by default) -->
   <div id="clusters-search-results" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 hidden" data-base-path={basePath}></div>
 
-  <!-- Original clusters grid -->
+  <!-- Communities grid -->
   <div id="clusters-original" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4" data-themes-grid>
-    {clusters.map(theme => (
-      <ThemeCard theme={theme} />
+    {communities.map(community => (
+      <ThemeCard theme={{
+        cluster_id: community.community_id,
+        label: community.label,
+        size: community.topic_count,
+        book_count: community.book_count,
+        sample_books: community.sample_books,
+      }} />
     ))}
   </div>
 </BaseLayout>
 
 <script>
-  function createClusterCard(cluster: any, basePath: string): HTMLElement {
+  function createCommunityCard(cluster: any, basePath: string): HTMLElement {
     const books = cluster.sample_books || [];
     const bookCount = books.length;
     const center = (bookCount - 1) / 2;
@@ -79,7 +85,7 @@ const basePath = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
     coverContainer.appendChild(coverStack);
     card.appendChild(coverContainer);
 
-    // Cluster label
+    // Community label
     const label = document.createElement('h3');
     label.className = 'font-bold text-[var(--color-text)] text-base leading-tight mb-2 text-center capitalize';
     label.textContent = cluster.label;
@@ -140,13 +146,13 @@ const basePath = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
       if (data.clusters.length === 0) {
         const msg = document.createElement('p');
         msg.className = 'text-[var(--color-text-muted)] text-center py-8 col-span-full';
-        msg.textContent = 'No clusters found';
+        msg.textContent = 'No topics found';
         resultsContainer.appendChild(msg);
         return;
       }
 
       data.clusters.forEach((cluster: any) => {
-        resultsContainer.appendChild(createClusterCard(cluster, basePath));
+        resultsContainer.appendChild(createCommunityCard(cluster, basePath));
       });
       initFanEffect();
     }) as EventListener);

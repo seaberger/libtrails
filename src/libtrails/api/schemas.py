@@ -99,8 +99,16 @@ class DomainSummary(BaseModel):
     label: str
     cluster_count: int
     book_count: int
+    primary_book_count: int = 0
     sample_books: list[BookSummary] = []
     top_clusters: list[dict] = []
+
+
+class DomainBook(BookSummary):
+    """Book with domain-specific concentration and membership info."""
+
+    concentration: float
+    is_primary: bool
 
 
 class DomainDetail(BaseModel):
@@ -110,7 +118,39 @@ class DomainDetail(BaseModel):
     label: str
     cluster_count: int
     clusters: list[dict] = []
-    books: list[BookSummary] = []
+    books: list[DomainBook] = []
+
+
+class CommunitySummary(BaseModel):
+    """Brief community info for lists."""
+
+    community_id: int
+    label: str
+    topic_count: int
+    book_count: int
+    primary_book_count: int = 0
+    domain_id: int | None = None
+    domain_label: str = ""
+    sample_books: list[BookSummary] = []
+
+
+class CommunityBook(BookSummary):
+    """Book with community-specific concentration and membership info."""
+
+    concentration: float
+    is_primary: bool
+
+
+class CommunityDetail(BaseModel):
+    """Full community info with clusters and books."""
+
+    community_id: int
+    label: str
+    topic_count: int
+    domain_id: int | None = None
+    domain_label: str = ""
+    clusters: list[ClusterInfo] = []
+    books: list[CommunityBook] = []
 
 
 class UniverseCluster(BaseModel):

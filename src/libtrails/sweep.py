@@ -380,20 +380,20 @@ def format_sweep_table(summary: SweepSummary) -> "Table":
 
     has_stats = summary.results and summary.results[0].stats is not None
 
-    table = Table(title="Leiden CPM Resolution Sweep")
-    table.add_column("Resolution", justify="right", style="cyan", width=12)
-    table.add_column("Clusters", justify="right", width=10)
-    table.add_column("Q", justify="right", width=8)
-    table.add_column("Quality", justify="right", width=12)
+    table = Table(title="Leiden CPM Resolution Sweep", show_lines=False)
+    table.add_column("Resolution", justify="right", style="cyan", no_wrap=True)
+    table.add_column("Clusters", justify="right", no_wrap=True)
+    table.add_column("Q", justify="right", no_wrap=True)
+    table.add_column("Quality", justify="right", no_wrap=True)
     if has_sig:
-        table.add_column("Significance", justify="right", width=14)
+        table.add_column("Significance", justify="right", no_wrap=True)
     if has_stats:
-        table.add_column("Max", justify="right", width=8)
-        table.add_column("Median", justify="right", width=8)
-        table.add_column("Singles", justify="right", width=8)
-    table.add_column("NMI", justify="right", width=8)
-    table.add_column("Time", justify="right", width=6)
-    table.add_column("", width=16)  # markers
+        table.add_column("Max", justify="right", no_wrap=True)
+        table.add_column("Median", justify="right", no_wrap=True)
+        table.add_column("Singles", justify="right", no_wrap=True)
+    table.add_column("NMI", justify="right", no_wrap=True)
+    table.add_column("Time", justify="right", no_wrap=True)
+    table.add_column("", no_wrap=True)  # markers
 
     # Build plateau membership set for marking
     plateau_indices = set()
@@ -415,7 +415,7 @@ def format_sweep_table(summary: SweepSummary) -> "Table":
 
         q_str = f"{r.stats.modularity_q:.4f}" if r.stats else ""
         row = [
-            f"{r.resolution:.6f}",
+            f"{r.resolution:.2e}",
             str(r.num_clusters),
             q_str,
             f"{r.quality:.2f}",

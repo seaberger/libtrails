@@ -417,3 +417,70 @@ k=4, gamma=0.0008, min_similarity=0.3, outlier_reassignment=True (threshold=0.7)
 ## Phase 4: min_similarity Sweep (Topic-Level)
 
 *Skipped — diminishing returns. The KNN graph at min_similarity=0.65 already produces well-distributed clusters with no pathologies (zero singletons, no mega-blobs). Sweeping min_similarity 0.5–0.8 would require rebuilding the GPU KNN graph + reclustering (~47 min) with minimal expected impact on cluster quality.*
+
+---
+
+## Phase 5: Domain Membership — The Differentiation Problem
+
+### The Problem
+
+After generating 29 domains (k=4, γ=0.0008, mega-split) and loading them into V2, we measured how many books appear in each domain using the current "any topic link" membership rule. The results reveal a **fundamental differentiation failure**:
+
+| Domain | Clusters | Books | % of 937 | Label |
+|-------:|:--------:|------:|---------:|-------|
+| 1 | 710 | 936 | **99.9%** | Mind & Potential |
+| 4 | 330 | 926 | 98.8% | Analytical & Creative Systems |
+| 2 | 394 | 923 | 98.5% | Advanced Scientific Concepts |
+| 6 | 288 | 922 | 98.4% | Literary Study & Writing |
+| 3 | 333 | 918 | 98.0% | Modern Conflict & Warfare |
+| 11 | 196 | 916 | 97.8% | Hidden Lives & Lore |
+| ... | ... | ... | 90-97% | *(22 of 29 domains above 90%)* |
+| 26 | 150 | 748 | 79.8% | Royal History & Intrigue |
+| 24 | 32 | 426 | **45.5%** | Russian Literature & History |
+
+**Every domain contains 80-100% of the library.** The domains are not differentiating books at all.
+
+### Root Cause
+
+The membership chain is: `book → chunks (~200/book) → topics (~5/chunk) → clusters → domains`. A typical 300-page book produces ~1,000 topic mentions spread across hundreds of clusters. Those clusters inevitably span most or all 29 domains. Binary "any link" membership is meaningless at this granularity.
+
+### Case Study: Russian Literature & History (Domain 24)
+
+The most specific domain (32 clusters, only 45% of library) still includes 426 books — but the vast majority have trivial connections:
+
+| Concentration | Books | % of 426 | Examples |
+|:-------------:|------:|---------:|----------|
+| ≥10% | 2 | 0.5% | Reading Chekhov (15.9%), Life and Fate (10.7%) |
+| ≥5% | 7 | 1.6% | + Blowout, Complete Chekhov, Fall of Giants, Sketches from a Hunter's Album |
+| ≥3% | 18 | 4.2% | + Doctor Zhivago, Crime and Punishment, Tinker Tailor |
+| ≥1% | 57 | 13.4% | + A Swim in a Pond in the Rain, How Fiction Works |
+| <1% | **369** | **86.6%** | Mistborn, Game of Thrones, On Cooking (!), Norton Anthology |
+
+**86% of the "Russian Literature" domain's books have <1% of their topics in this domain.** On Cooking and Mistborn are counted as "Russian Literature" because of a single incidental topic mention.
+
+The mean concentration is **0.63%** and median is **0.25%** — noise-level membership.
+
+### Solution Direction: Weighted Membership + Two-Tier Hierarchy
+
+Two complementary changes are needed:
+
+**1. Weighted domain membership (primary domain assignment)**
+
+Instead of binary membership, compute each book's **topic concentration** per domain. Assign each book to its top 1-3 domains by weight. This turns the flat many-to-many into meaningful rankings.
+
+For Russian Literature at a ≥3% threshold, the domain would contain **18 actually-relevant books** instead of 426 — a 24x improvement in precision.
+
+**2. Two-tier domain hierarchy (Galaxy → Constellation)**
+
+- **Galaxy** (~5-8): Broad browsing categories (Fiction, Science & Technology, History & Politics, Arts & Culture, Food & Craft, etc.)
+- **Constellation** (~40-80): Finer topical groupings within each galaxy (the current 29 domains are too coarse for the second tier, too fine for the first)
+
+Books assigned to their **primary galaxy** by topic weight, then ranked within constellations. This gives meaningful differentiation at the top level and browsable depth within each galaxy.
+
+### Implications
+
+- **Domain counts in the LLM labels table are unreliable** — the reported "book_count" uses the broken any-link rule
+- **The `cluster_books` bridge table** already stores `topic_count` and `book_total_topics` — everything needed for weighted membership is already materialized
+- **`book_cluster_relevance()`** in `stats.py` already implements concentration + BM25 + PPMI scoring — this can be extended to domain-level aggregation
+- **App display changes needed**: The themes page currently shows all books per domain; needs to rank by concentration and apply a minimum threshold
+- **More domains may be needed**: 29 is too few for constellations; may need γ ≈ 0.002 (50-60 domains) for the constellation tier, with a separate galaxy grouping above

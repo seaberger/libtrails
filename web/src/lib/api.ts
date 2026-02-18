@@ -3,6 +3,8 @@
 import type {
   BookDetail,
   BookSummary,
+  CommunityDetail,
+  CommunitySummary,
   DomainDetail,
   DomainSummary,
   HybridSearchResponse,
@@ -91,6 +93,20 @@ export function getCoverUrl(calibreId: number | null): string {
 
 export function getBookCoverUrl(bookId: number): string {
   return `${basePath}/api/v1/covers/book/${bookId}`;
+}
+
+// Community (mid-tier) API
+export async function getCommunities(
+  domainId?: number
+): Promise<CommunitySummary[]> {
+  const params = domainId != null ? `?domain_id=${domainId}` : "";
+  return fetchJson(`/communities${params}`);
+}
+
+export async function getCommunity(
+  communityId: number
+): Promise<CommunityDetail> {
+  return fetchJson(`/communities/${communityId}`);
 }
 
 // Domain (super-cluster) API
