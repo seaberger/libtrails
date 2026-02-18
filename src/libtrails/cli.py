@@ -2457,17 +2457,22 @@ def gpu_knn(k: int, force: bool, export_only: bool):
         console.print(f"[green]Using cached results ({result['embed_count']:,} vectors)[/green]")
         console.print(f"  Cache: [dim]{result['cache_path']}[/dim]")
     elif result["status"] == "exported":
+        from .gpu_knn import get_gpu_config
+
+        gpu_cfg = get_gpu_config()
         console.print(f"[green]Exported {result['embed_count']:,} embeddings[/green]")
         console.print(f"  File: [cyan]{result['export_path']}[/cyan]")
         console.print(f"  Time: {result['export_time']:.1f}s")
         console.print("\n[dim]Manual workflow:[/dim]")
-        console.print(f"  scp {result['export_path']} seanb@192.168.1.36:~/projects/gpu-knn/")
         console.print(
-            "  ssh seanb@192.168.1.36 -p 2222 "
-            "'cd ~/projects/gpu-knn && uv run python faiss_knn.py embeddings.npz --k {k}'"
+            f"  scp -P {gpu_cfg['port']} {result['export_path']} {gpu_cfg['host']}:{gpu_cfg['remote_dir']}/"
         )
         console.print(
-            "  scp seanb@192.168.1.36:~/projects/gpu-knn/knn_results.npz data/graph_cache/"
+            f"  ssh -p {gpu_cfg['port']} {gpu_cfg['host']} "
+            f"'cd {gpu_cfg['remote_dir']} && uv run python faiss_knn.py embeddings.npz --k {k}'"
+        )
+        console.print(
+            f"  scp -P {gpu_cfg['port']} {gpu_cfg['host']}:{gpu_cfg['remote_dir']}/knn_results.npz data/graph_cache/"
         )
     elif result["status"] == "completed":
         console.print("[bold green]GPU KNN complete![/bold green]")

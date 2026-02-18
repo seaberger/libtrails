@@ -12,6 +12,7 @@ Configuration in ~/.libtrails/config.yaml:
       remote_dir: ~/projects/gpu-knn
 """
 
+import shlex
 import shutil
 import subprocess
 import tempfile
@@ -30,10 +31,18 @@ GRAPH_CACHE_DIR = DATA_DIR / "graph_cache"
 def get_gpu_config() -> dict:
     """Read GPU SSH settings from ~/.libtrails/config.yaml."""
     cfg = get_user_config().get("gpu", {})
+    if not cfg:
+        raise RuntimeError(
+            "GPU config not found. Add to ~/.libtrails/config.yaml:\n"
+            "  gpu:\n"
+            "    host: user@gpu-host\n"
+            "    port: 22\n"
+            "    remote_dir: ~/projects/gpu-knn"
+        )
     return {
-        "host": cfg.get("host", "seanb@192.168.1.36"),
-        "port": str(cfg.get("port", 2222)),
-        "remote_dir": cfg.get("remote_dir", "~/projects/gpu-knn"),
+        "host": cfg["host"],
+        "port": str(cfg.get("port", 22)),
+        "remote_dir": cfg.get("remote_dir", "~/gpu-knn"),
     }
 
 
@@ -55,12 +64,11 @@ def find_cached_knn(k: int) -> tuple[np.ndarray, np.ndarray, np.ndarray] | None:
     if not cache.exists():
         return None
 
-    data = np.load(cache)
-    cached_ids = data["topic_ids"]
-    if len(cached_ids) != embed_count:
-        return None
-
-    return cached_ids, data["distances"], data["indices"]
+    with np.load(cache) as data:
+        cached_ids = data["topic_ids"]
+        if len(cached_ids) != embed_count:
+            return None
+        return cached_ids, data["distances"], data["indices"]
 
 
 def export_embeddings(output_path: Path) -> int:
@@ -88,7 +96,7 @@ def _ssh_upload(gpu_cfg: dict, local_path: Path, remote_path: str) -> None:
     """Upload a file via SSH pipe (cat | ssh 'cat > remote')."""
     with open(local_path, "rb") as f:
         result = subprocess.run(
-            [*_ssh_base(gpu_cfg), f"cat > {remote_path}"],
+            [*_ssh_base(gpu_cfg), f"cat > {shlex.quote(remote_path)}"],
             stdin=f,
             capture_output=True,
         )
@@ -99,7 +107,7 @@ def _ssh_upload(gpu_cfg: dict, local_path: Path, remote_path: str) -> None:
 def _ssh_download(gpu_cfg: dict, remote_path: str, local_path: Path) -> None:
     """Download a file via SSH pipe (ssh 'cat remote' > local)."""
     result = subprocess.run(
-        [*_ssh_base(gpu_cfg), f"cat {remote_path}"],
+        [*_ssh_base(gpu_cfg), f"cat {shlex.quote(remote_path)}"],
         capture_output=True,
     )
     if result.returncode != 0:
