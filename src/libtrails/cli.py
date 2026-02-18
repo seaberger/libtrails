@@ -2422,6 +2422,66 @@ def regenerate_domains(
         console.print("  3. Run: [cyan]uv run libtrails load-domains[/cyan]")
 
 
+@main.command("gpu-knn")
+@click.option("--k", default=11, type=int, help="Number of neighbors including self (default: 11)")
+@click.option("--force", is_flag=True, help="Recompute even if cached")
+@click.option(
+    "--export-only",
+    is_flag=True,
+    help="Just export embeddings.npz for manual transfer",
+)
+def gpu_knn(k: int, force: bool, export_only: bool):
+    """Run KNN on remote GPU (RTX 3090) via FAISS for fast graph building.
+
+    Exports embeddings, SCPs to the 3090 PC, runs FAISS-GPU KNN,
+    and caches results locally. The 'cluster' command auto-detects
+    cached GPU KNN results.
+
+    Examples:
+        libtrails gpu-knn                    # Default k=11
+        libtrails gpu-knn --k 21            # More neighbors
+        libtrails gpu-knn --force           # Recompute
+        libtrails gpu-knn --export-only     # Manual workflow
+    """
+    from .gpu_knn import run_gpu_knn
+
+    console.print("[bold]GPU KNN Pipeline[/bold]\n")
+
+    try:
+        result = run_gpu_knn(k=k, force=force, export_only=export_only)
+    except RuntimeError as e:
+        console.print(f"[red]Error: {e}[/red]")
+        return
+
+    if result["status"] == "cached":
+        console.print(f"[green]Using cached results ({result['embed_count']:,} vectors)[/green]")
+        console.print(f"  Cache: [dim]{result['cache_path']}[/dim]")
+    elif result["status"] == "exported":
+        console.print(f"[green]Exported {result['embed_count']:,} embeddings[/green]")
+        console.print(f"  File: [cyan]{result['export_path']}[/cyan]")
+        console.print(f"  Time: {result['export_time']:.1f}s")
+        console.print("\n[dim]Manual workflow:[/dim]")
+        console.print(f"  scp {result['export_path']} seanb@192.168.1.36:~/projects/gpu-knn/")
+        console.print(
+            "  ssh seanb@192.168.1.36 -p 2222 "
+            "'cd ~/projects/gpu-knn && uv run python faiss_knn.py embeddings.npz --k {k}'"
+        )
+        console.print(
+            "  scp seanb@192.168.1.36:~/projects/gpu-knn/knn_results.npz data/graph_cache/"
+        )
+    elif result["status"] == "completed":
+        console.print("[bold green]GPU KNN complete![/bold green]")
+        console.print(f"  Vectors: {result['embed_count']:,}")
+        console.print(f"  k: {result['k']}")
+        console.print(f"  Cache: [dim]{result['cache_path']}[/dim]")
+        console.print("\n[dim]Timing breakdown:[/dim]")
+        console.print(f"  Export:   {result['export_time']:.1f}s")
+        console.print(f"  Upload:   {result['upload_time']:.1f}s")
+        console.print(f"  GPU:      {result['gpu_time']:.1f}s")
+        console.print(f"  Download: {result['download_time']:.1f}s")
+        console.print(f"  Total:    {result['total_time']:.1f}s")
+
+
 @main.command("generate-universe")
 @click.option(
     "--output",
