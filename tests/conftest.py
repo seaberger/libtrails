@@ -240,6 +240,189 @@ def temp_config_dir(tmp_path, monkeypatch):
 
 
 @pytest.fixture
+def stats_db(tmp_path):
+    """Create a database with full schema and seeded data for stats refresh tests.
+
+    Seed data layout:
+    - 2 books (B1 with 100 total topics, B2 with 50 total topics)
+    - 2 clusters (C0, C1)
+    - 2 domains (D0, D1)
+    - 2 communities (Comm0, Comm1)
+    - cluster_books pre-populated (B1→C0:60, B1→C1:40, B2→C0:20, B2→C1:30)
+    - cluster_domains: C0→D0, C1→D1
+    - cluster_communities: C0→Comm0, C1→Comm1
+    - topics with community_id assignments for community_stats queries
+    """
+    db_path = tmp_path / "stats_test.db"
+    conn = sqlite3.connect(db_path)
+    conn.row_factory = sqlite3.Row
+    conn.executescript("""
+        CREATE TABLE books (
+            id INTEGER PRIMARY KEY,
+            title TEXT NOT NULL,
+            author TEXT,
+            calibre_id INTEGER,
+            book_themes TEXT
+        );
+
+        CREATE TABLE chunks (
+            id INTEGER PRIMARY KEY,
+            book_id INTEGER REFERENCES books(id),
+            chunk_index INTEGER,
+            text TEXT,
+            word_count INTEGER,
+            topics_json TEXT
+        );
+
+        CREATE TABLE topics (
+            id INTEGER PRIMARY KEY,
+            label TEXT UNIQUE NOT NULL,
+            embedding BLOB,
+            cluster_id INTEGER,
+            community_id INTEGER,
+            occurrence_count INTEGER DEFAULT 0
+        );
+
+        CREATE TABLE chunk_topic_links (
+            chunk_id INTEGER,
+            topic_id INTEGER,
+            PRIMARY KEY (chunk_id, topic_id)
+        );
+
+        CREATE TABLE domains (
+            id INTEGER PRIMARY KEY,
+            label TEXT NOT NULL UNIQUE,
+            cluster_count INTEGER DEFAULT 0
+        );
+
+        CREATE TABLE cluster_domains (
+            cluster_id INTEGER PRIMARY KEY,
+            domain_id INTEGER NOT NULL REFERENCES domains(id)
+        );
+
+        CREATE TABLE communities (
+            id INTEGER PRIMARY KEY,
+            label TEXT NOT NULL,
+            domain_id INTEGER REFERENCES domains(id),
+            topic_count INTEGER DEFAULT 0
+        );
+
+        CREATE TABLE cluster_communities (
+            cluster_id INTEGER PRIMARY KEY,
+            community_id INTEGER NOT NULL REFERENCES communities(id)
+        );
+
+        CREATE TABLE cluster_books (
+            cluster_id INTEGER NOT NULL,
+            book_id INTEGER NOT NULL,
+            topic_count INTEGER DEFAULT 0,
+            book_total_topics INTEGER DEFAULT 0,
+            PRIMARY KEY (cluster_id, book_id)
+        );
+
+        CREATE TABLE cluster_stats (
+            cluster_id INTEGER PRIMARY KEY,
+            size INTEGER NOT NULL DEFAULT 0,
+            book_count INTEGER NOT NULL DEFAULT 0,
+            top_label TEXT,
+            top_topics_json TEXT,
+            sample_books_json TEXT
+        );
+
+        CREATE TABLE book_domains (
+            book_id INTEGER NOT NULL,
+            domain_id INTEGER NOT NULL,
+            topic_count INTEGER NOT NULL,
+            book_total_topics INTEGER NOT NULL,
+            concentration REAL NOT NULL,
+            relevance_score REAL NOT NULL,
+            is_primary INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (book_id, domain_id)
+        );
+
+        CREATE TABLE domain_stats (
+            domain_id INTEGER PRIMARY KEY,
+            book_count INTEGER NOT NULL DEFAULT 0,
+            primary_book_count INTEGER NOT NULL DEFAULT 0,
+            sample_books_json TEXT,
+            top_clusters_json TEXT
+        );
+
+        CREATE TABLE book_communities (
+            book_id INTEGER NOT NULL,
+            community_id INTEGER NOT NULL,
+            topic_count INTEGER NOT NULL,
+            book_total_topics INTEGER NOT NULL,
+            concentration REAL NOT NULL,
+            relevance_score REAL NOT NULL,
+            is_primary INTEGER NOT NULL DEFAULT 0,
+            PRIMARY KEY (book_id, community_id)
+        );
+
+        CREATE TABLE community_stats (
+            community_id INTEGER PRIMARY KEY,
+            topic_count INTEGER NOT NULL DEFAULT 0,
+            book_count INTEGER NOT NULL DEFAULT 0,
+            primary_book_count INTEGER NOT NULL DEFAULT 0,
+            top_label TEXT,
+            top_topics_json TEXT,
+            sample_books_json TEXT,
+            domain_id INTEGER,
+            domain_label TEXT,
+            refreshed_at TIMESTAMP
+        );
+
+        -- Seed: 2 books
+        INSERT INTO books (id, title, author, calibre_id) VALUES
+            (1, 'Book Alpha', 'Author A', 100),
+            (2, 'Book Beta', 'Author B', 200);
+
+        -- Seed: 2 domains
+        INSERT INTO domains (id, label, cluster_count) VALUES
+            (0, 'Science & Tech', 1),
+            (1, 'Literature & Arts', 1);
+
+        -- Seed: cluster→domain mapping
+        INSERT INTO cluster_domains (cluster_id, domain_id) VALUES
+            (0, 0),
+            (1, 1);
+
+        -- Seed: 2 communities
+        INSERT INTO communities (id, label, domain_id, topic_count) VALUES
+            (0, 'Physics & Math', 0, 3),
+            (1, 'Poetry & Fiction', 1, 2);
+
+        -- Seed: cluster→community mapping
+        INSERT INTO cluster_communities (cluster_id, community_id) VALUES
+            (0, 0),
+            (1, 1);
+
+        -- Seed: cluster_books (B1 has 100 total topics, B2 has 50)
+        INSERT INTO cluster_books (cluster_id, book_id, topic_count, book_total_topics) VALUES
+            (0, 1, 60, 100),
+            (1, 1, 40, 100),
+            (0, 2, 20, 50),
+            (1, 2, 30, 50);
+
+        -- Seed: topics with cluster and community assignments
+        INSERT INTO topics (id, label, cluster_id, community_id, occurrence_count) VALUES
+            (1, 'quantum mechanics', 0, 0, 15),
+            (2, 'linear algebra', 0, 0, 10),
+            (3, 'thermodynamics', 0, 0, 8),
+            (4, 'romantic poetry', 1, 1, 12),
+            (5, 'narrative structure', 1, 1, 9);
+
+        -- Seed: cluster_stats (needed by refresh_domain_stats)
+        INSERT INTO cluster_stats (cluster_id, size, book_count, top_label) VALUES
+            (0, 3, 2, 'quantum mechanics'),
+            (1, 2, 2, 'romantic poetry');
+    """)
+    conn.commit()
+    yield conn
+    conn.close()
+
+
+@pytest.fixture
 def sample_chunks():
     """Sample text chunks for testing."""
     return [

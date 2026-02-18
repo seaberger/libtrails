@@ -532,7 +532,7 @@ def refresh_community_stats(conn: sqlite3.Connection) -> int:
             community_id = row["id"]
             topic_count = row["topic_count"]
             domain_id = row["domain_id"]
-            domain_label = domain_labels.get(domain_id, "") if domain_id else ""
+            domain_label = domain_labels.get(domain_id, "") if domain_id is not None else ""
 
             # Book count: books with >=1% concentration
             cursor.execute(

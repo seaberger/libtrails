@@ -81,7 +81,7 @@ def get_community(db: DBConnection, community_id: int):
 
     # Get domain label
     domain_label = ""
-    if community["domain_id"]:
+    if community["domain_id"] is not None:
         cursor.execute("SELECT label FROM domains WHERE id = ?", (community["domain_id"],))
         domain_row = cursor.fetchone()
         if domain_row:
