@@ -281,19 +281,20 @@ def refresh_book_domains(conn: sqlite3.Connection) -> int:
             updates,
         )
 
-        # Mark is_primary: each book's highest-scoring domain
+        # Mark is_primary: each book's single highest-scoring domain
         cursor.execute("""
             UPDATE book_domains SET is_primary = 1
             WHERE rowid IN (
-                SELECT bd.rowid
-                FROM book_domains bd
-                INNER JOIN (
-                    SELECT book_id, MAX(relevance_score) as max_score
+                SELECT rowid FROM (
+                    SELECT rowid,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY book_id
+                               ORDER BY relevance_score DESC
+                           ) as rn
                     FROM book_domains
                     WHERE relevance_score > 0
-                    GROUP BY book_id
-                ) best ON bd.book_id = best.book_id
-                    AND bd.relevance_score = best.max_score
+                )
+                WHERE rn = 1
             )
         """)
 
@@ -483,19 +484,20 @@ def refresh_book_communities(conn: sqlite3.Connection) -> int:
             updates,
         )
 
-        # Mark is_primary: each book's highest-scoring community
+        # Mark is_primary: each book's single highest-scoring community
         cursor.execute("""
             UPDATE book_communities SET is_primary = 1
             WHERE rowid IN (
-                SELECT bc.rowid
-                FROM book_communities bc
-                INNER JOIN (
-                    SELECT book_id, MAX(relevance_score) as max_score
+                SELECT rowid FROM (
+                    SELECT rowid,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY book_id
+                               ORDER BY relevance_score DESC
+                           ) as rn
                     FROM book_communities
                     WHERE relevance_score > 0
-                    GROUP BY book_id
-                ) best ON bc.book_id = best.book_id
-                    AND bc.relevance_score = best.max_score
+                )
+                WHERE rn = 1
             )
         """)
 

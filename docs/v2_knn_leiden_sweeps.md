@@ -2,7 +2,7 @@
 
 ## Database: `ipad_library_v2.db`
 - **837,320 topics** with embeddings (384-dim BGE-small)
-- **936 books**, 335K chunks
+- **937 books**, 335K chunks
 - **2M cooccurrence pairs**
 - Previous clustering (sklearn k=10): 3,330 clusters (median 188, mean 251)
 
@@ -602,15 +602,17 @@ This mirrors the V2 domain-level finding (Phase 3d) where k=4 won over k=3 for i
 
 **Selected: k=4, γ=1.37e-4** for demo community clustering.
 
-| Metric | Value | vs V2 (k=4, γ=4.86e-5) |
-|--------|-------|------------------------|
-| Communities | 235 | ~230 (comparable) |
-| Q | 0.822 | 0.831 (comparable) |
-| Significance | 1,156,499 | 883,832 (demo higher, smaller graph) |
-| Max | 2,708 | 5,185 (demo smaller, expected at 7x fewer topics) |
-| Median | 455 | 865 (demo smaller, proportional) |
-| NMI | 0.802 | 0.729 (demo more stable) |
+| Metric | Demo (k=4, γ=1.37e-4) | V2 (k=4, γ=4.86e-5) |
+|--------|------------------------|----------------------|
+| Communities | 235 | ~230 |
+| Q | 0.822 | 0.831 |
+| Significance | 1,156,499 | 883,832 |
+| Max | 2,708 | 5,185 |
+| Median | 455 | 865 |
+| NMI | 0.802 | 0.729 |
 | Singletons | 17 | 17 |
+
+*V2 metrics are from the full V2 dataset (837K topics). Demo metrics are from the demo library (121K topics). Each γ was independently tuned to produce ~230 communities at its respective scale.*
 
 **Rationale**:
 1. **Matches V2 community count** (~235 vs ~230) — same user experience
