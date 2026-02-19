@@ -1,8 +1,8 @@
 """
-Generate UMAP projection of Leiden cluster centroids for Galaxy visualization.
+Generate UMAP projection of community centroids for Galaxy visualization.
 
-Creates a 3D map where semantically similar themes appear close together,
-with each cluster colored by its domain assignment.
+Creates a 3D map where semantically similar communities appear close together,
+with each community colored by its domain assignment.
 """
 
 import colorsys
@@ -22,68 +22,48 @@ DEFAULT_MIN_DIST = 0.3
 RANDOM_STATE = 42
 
 
-def get_cluster_label(cursor: sqlite3.Cursor, cluster_id: int) -> str:
-    """Get label for cluster from its top topic."""
-    cursor.execute(
-        """
-        SELECT label FROM topics
-        WHERE cluster_id = ? AND LENGTH(label) >= 4
-        ORDER BY occurrence_count DESC
-        LIMIT 1
-    """,
-        (cluster_id,),
-    )
-    row = cursor.fetchone()
-    return row["label"] if row else f"cluster_{cluster_id}"
+def compute_community_centroid(cursor: sqlite3.Cursor, community_id: int) -> np.ndarray | None:
+    """Compute community centroid by averaging its child cluster centroids.
 
-
-def get_cluster_book_ids(cursor: sqlite3.Cursor, cluster_id: int) -> list[int]:
-    """Get distinct book IDs touching a cluster."""
-    cursor.execute(
-        """
-        SELECT DISTINCT b.id
-        FROM books b
-        JOIN chunks c ON c.book_id = b.id
-        JOIN chunk_topic_links ctl ON ctl.chunk_id = c.id
-        JOIN topics t ON t.id = ctl.topic_id
-        WHERE t.cluster_id = ?
-        ORDER BY b.id
-    """,
-        (cluster_id,),
-    )
-    return [row["id"] for row in cursor.fetchall()]
-
-
-def get_cluster_top_topics(cursor: sqlite3.Cursor, cluster_id: int, limit: int = 5) -> list[str]:
-    """Get top topic labels for a cluster."""
-    cursor.execute(
-        """
-        SELECT label FROM topics
-        WHERE cluster_id = ? AND LENGTH(label) >= 4
-        ORDER BY occurrence_count DESC
-        LIMIT ?
-    """,
-        (cluster_id, limit),
-    )
-    return [row["label"] for row in cursor.fetchall()]
-
-
-def load_domain_assignments_from_db(cursor: sqlite3.Cursor) -> dict[int, dict]:
-    """Load domain assignments from the domains + cluster_domains tables."""
-    cursor.execute(
-        """
-        SELECT cd.cluster_id, d.id as domain_id, d.label as domain_label
-        FROM cluster_domains cd
-        JOIN domains d ON d.id = cd.domain_id
+    For each child cluster, computes a robust centroid (weighted by topic
+    occurrence count), then averages all child centroids and L2-normalizes.
     """
+    cursor.execute(
+        "SELECT cluster_id FROM cluster_communities WHERE community_id = ?",
+        (community_id,),
     )
-    assignments = {}
-    for row in cursor.fetchall():
-        assignments[row["cluster_id"]] = {
-            "domain_id": row["domain_id"],
-            "domain_label": row["domain_label"],
-        }
-    return assignments
+    cluster_ids = [row["cluster_id"] for row in cursor.fetchall()]
+    if not cluster_ids:
+        return None
+
+    child_centroids = []
+    for cluster_id in cluster_ids:
+        topics = get_cluster_topics(cursor, cluster_id)
+        centroid = compute_robust_centroid(topics)
+        if centroid is not None:
+            child_centroids.append(centroid)
+
+    if not child_centroids:
+        return None
+
+    avg = np.mean(child_centroids, axis=0)
+    norm = np.linalg.norm(avg)
+    if norm > 0:
+        avg = avg / norm
+    return avg
+
+
+def get_community_book_ids(cursor: sqlite3.Cursor, community_id: int) -> list[int]:
+    """Get distinct book IDs in a community from book_communities."""
+    cursor.execute(
+        """
+        SELECT book_id FROM book_communities
+        WHERE community_id = ?
+        ORDER BY book_id
+    """,
+        (community_id,),
+    )
+    return [row["book_id"] for row in cursor.fetchall()]
 
 
 def generate_semantic_colors(
@@ -95,7 +75,7 @@ def generate_semantic_colors(
     then maps each domain's position to a hue in [0, 330] degrees
     (avoiding wrap-back to red).
 
-    Returns a dict mapping domain_id → hex color string.
+    Returns a dict mapping domain_id -> hex color string.
     """
     ordered_ids = [did for did in domain_ids if did in domain_embeddings]
     if not ordered_ids:
@@ -132,7 +112,10 @@ def generate_universe_data(
     db_path: Path | None = None,
 ) -> dict:
     """
-    Generate 3D UMAP projection of all Leiden cluster centroids.
+    Generate 3D UMAP projection of community centroids.
+
+    Queries ~200 communities (not ~2,400 raw clusters), computes a centroid
+    for each by averaging child cluster centroids, then runs UMAP for 3D layout.
 
     Args:
         output_path: Where to write JSON (defaults to UNIVERSE_JSON_PATH)
@@ -141,7 +124,7 @@ def generate_universe_data(
         db_path: Path to database (defaults to IPAD_DB_PATH)
 
     Returns:
-        Dict with 'clusters' and 'domains' lists
+        Dict with 'communities' and 'domains' lists
     """
     # Lazy import — umap-learn is heavy
     from umap import UMAP
@@ -153,46 +136,42 @@ def generate_universe_data(
     conn.row_factory = sqlite3.Row
     cursor = conn.cursor()
 
-    # Get all Leiden clusters with 3+ topics
+    # Get all communities with 3+ topics from materialized stats
     cursor.execute("""
-        SELECT DISTINCT cluster_id, COUNT(*) as size
-        FROM topics
-        WHERE cluster_id IS NOT NULL AND cluster_id >= 0
-        GROUP BY cluster_id
-        HAVING size >= 3
-        ORDER BY size DESC
+        SELECT cs.community_id, cs.topic_count, cs.book_count,
+               cs.top_label, cs.top_topics_json,
+               cs.domain_id, cs.domain_label
+        FROM community_stats cs
+        WHERE cs.topic_count >= 3
+        ORDER BY cs.topic_count DESC
     """)
-    clusters = cursor.fetchall()
+    communities = cursor.fetchall()
 
-    # Load domain assignments from DB
-    domain_assignments = load_domain_assignments_from_db(cursor)
-
-    # Compute robust centroids
-    cluster_data = []
+    # Compute community centroids (average of child cluster centroids)
+    community_data = []
     centroids = []
 
-    for row in clusters:
-        cluster_id = row["cluster_id"]
-        topics = get_cluster_topics(cursor, cluster_id)
-        centroid = compute_robust_centroid(topics)
+    for row in communities:
+        community_id = row["community_id"]
+        centroid = compute_community_centroid(cursor, community_id)
 
         if centroid is not None:
-            label = get_cluster_label(cursor, cluster_id)
-            book_ids = get_cluster_book_ids(cursor, cluster_id)
-            top_topics = get_cluster_top_topics(cursor, cluster_id)
-            domain_info = domain_assignments.get(
-                cluster_id, {"domain_id": -1, "domain_label": "Unknown"}
-            )
+            label = row["top_label"] or f"community_{community_id}"
+            book_ids = get_community_book_ids(cursor, community_id)
+            top_topics_raw = json.loads(row["top_topics_json"] or "[]")
+            top_topics = [t["label"] if isinstance(t, dict) else t for t in top_topics_raw]
+            domain_id = row["domain_id"] if row["domain_id"] is not None else -1
+            domain_label = row["domain_label"] or "Unknown"
 
-            cluster_data.append(
+            community_data.append(
                 {
-                    "cluster_id": cluster_id,
+                    "community_id": community_id,
                     "label": label,
-                    "size": row["size"],
-                    "book_count": len(book_ids),
+                    "size": row["topic_count"],
+                    "book_count": row["book_count"],
                     "book_ids": book_ids,
-                    "domain_id": domain_info["domain_id"],
-                    "domain_label": domain_info["domain_label"],
+                    "domain_id": domain_id,
+                    "domain_label": domain_label,
                     "top_topics": top_topics,
                 }
             )
@@ -219,26 +198,26 @@ def generate_universe_data(
             coords_3d[:, axis] = 2 * (col - col_min) / (col_max - col_min) - 1
 
     # Attach coordinates
-    for i, cd in enumerate(cluster_data):
+    for i, cd in enumerate(community_data):
         cd["x"] = float(coords_3d[i, 0])
         cd["y"] = float(coords_3d[i, 1])
         cd["z"] = float(coords_3d[i, 2])
 
-    # Compute domain centroid embeddings (average of cluster centroids per domain)
+    # Compute domain centroid embeddings (average of community centroids per domain)
     domain_centroids: dict[int, list[np.ndarray]] = {}
-    for cd, centroid in zip(cluster_data, centroids):
+    for cd, centroid in zip(community_data, centroids):
         did = cd["domain_id"]
         domain_centroids.setdefault(did, []).append(centroid)
     domain_embeddings = {did: np.mean(vecs, axis=0) for did, vecs in domain_centroids.items()}
 
     # Build domains list with semantic colors, sorted alphabetically by label
-    domain_ids = sorted(set(cd["domain_id"] for cd in cluster_data))
+    domain_ids = sorted(set(cd["domain_id"] for cd in community_data))
     colors = generate_semantic_colors(domain_ids, domain_embeddings)
     domains = []
 
     for domain_id in domain_ids:
         domain_label = next(
-            (cd["domain_label"] for cd in cluster_data if cd["domain_id"] == domain_id),
+            (cd["domain_label"] for cd in community_data if cd["domain_id"] == domain_id),
             f"Domain {domain_id}",
         )
         domains.append(
@@ -251,7 +230,7 @@ def generate_universe_data(
 
     domains.sort(key=lambda d: d["label"])
 
-    result = {"clusters": cluster_data, "domains": domains}
+    result = {"communities": community_data, "domains": domains}
 
     # Save
     output_path.parent.mkdir(parents=True, exist_ok=True)

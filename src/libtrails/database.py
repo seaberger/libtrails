@@ -337,6 +337,8 @@ def init_chunks_table():
                 primary_book_count INTEGER NOT NULL DEFAULT 0,
                 sample_books_json TEXT,
                 top_clusters_json TEXT,
+                community_count INTEGER NOT NULL DEFAULT 0,
+                top_communities_json TEXT,
                 refreshed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
@@ -416,6 +418,14 @@ def init_chunks_table():
             conn.execute(
                 "ALTER TABLE domain_stats ADD COLUMN primary_book_count INTEGER NOT NULL DEFAULT 0"
             )
+
+        # Migration: add community_count and top_communities_json to domain_stats
+        if ds_columns and "community_count" not in ds_columns:
+            conn.execute(
+                "ALTER TABLE domain_stats ADD COLUMN community_count INTEGER NOT NULL DEFAULT 0"
+            )
+        if ds_columns and "top_communities_json" not in ds_columns:
+            conn.execute("ALTER TABLE domain_stats ADD COLUMN top_communities_json TEXT")
 
         # Migration: add community_id column to topics table
         cursor.execute("PRAGMA table_info(topics)")

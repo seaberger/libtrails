@@ -19,12 +19,14 @@ class TopicInfo(BaseModel):
     label: str
     count: int
     cluster_id: int | None = None
+    community_id: int | None = None
 
 
 class ThemeRef(BaseModel):
-    """Cluster reference with label for display."""
+    """Community reference with label for display."""
 
     cluster_id: int
+    community_id: int | None = None
     label: str
 
 
@@ -61,8 +63,9 @@ class ThemeDetail(BaseModel):
 class RelatedBook(BookSummary):
     """Book with similarity score."""
 
-    shared_topics: int
+    shared_topics: int = 0
     similarity: float
+    match_type: str = ""
 
 
 class SearchResult(BaseModel):
@@ -92,6 +95,15 @@ class ClusterInfo(BaseModel):
     book_count: int | None = None
 
 
+class CommunityRef(BaseModel):
+    """Community reference for domain listings."""
+
+    community_id: int
+    label: str
+    topic_count: int
+    book_count: int = 0
+
+
 class DomainSummary(BaseModel):
     """Brief domain (super-cluster) info for lists."""
 
@@ -100,8 +112,10 @@ class DomainSummary(BaseModel):
     cluster_count: int
     book_count: int
     primary_book_count: int = 0
+    community_count: int = 0
     sample_books: list[BookSummary] = []
     top_clusters: list[dict] = []
+    top_communities: list[CommunityRef] = []
 
 
 class DomainBook(BookSummary):
@@ -153,10 +167,10 @@ class CommunityDetail(BaseModel):
     books: list[CommunityBook] = []
 
 
-class UniverseCluster(BaseModel):
-    """A cluster positioned in the 3D galaxy map."""
+class UniverseCommunity(BaseModel):
+    """A community positioned in the 3D galaxy map."""
 
-    cluster_id: int
+    community_id: int
     label: str
     size: int
     book_count: int
@@ -180,7 +194,7 @@ class UniverseDomain(BaseModel):
 class UniverseData(BaseModel):
     """Full galaxy visualization payload."""
 
-    clusters: list[UniverseCluster]
+    communities: list[UniverseCommunity]
     domains: list[UniverseDomain]
 
 
@@ -209,6 +223,17 @@ class HybridClusterResult(BaseModel):
     sample_books: list[BookSummary] = []
 
 
+class HybridCommunityResult(BaseModel):
+    """Community result from hybrid search."""
+
+    community_id: int
+    label: str
+    topic_count: int
+    book_count: int
+    score: float
+    sample_books: list[BookSummary] = []
+
+
 class HybridDomainResult(BaseModel):
     """Domain result from hybrid search."""
 
@@ -219,9 +244,9 @@ class HybridDomainResult(BaseModel):
 
 
 class UniverseSearchResult(BaseModel):
-    """Minimal cluster hit for universe highlighting."""
+    """Minimal community hit for universe highlighting."""
 
-    cluster_id: int
+    community_id: int
     score: float
 
 
@@ -234,5 +259,6 @@ class HybridSearchResponse(BaseModel):
     timing_ms: int
     books: list[HybridBookResult] = []
     clusters: list[HybridClusterResult] = []
+    communities: list[HybridCommunityResult] = []
     domains: list[HybridDomainResult] = []
     universe: list[UniverseSearchResult] = []

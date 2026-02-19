@@ -10,6 +10,7 @@ from ..schemas import (
     BookSummary,
     HybridBookResult,
     HybridClusterResult,
+    HybridCommunityResult,
     HybridDomainResult,
     HybridSearchResponse,
     SearchResult,
@@ -196,7 +197,7 @@ def semantic_search(
     return results[:limit]
 
 
-VALID_SCOPES = {"books", "clusters", "domains", "universe"}
+VALID_SCOPES = {"books", "clusters", "communities", "domains", "universe"}
 
 
 @router.get("/search/hybrid", response_model=HybridSearchResponse)
@@ -216,6 +217,7 @@ def hybrid_search(
     from ...hybrid_search import (
         hybrid_search_books,
         hybrid_search_clusters,
+        hybrid_search_communities,
         hybrid_search_domains,
         hybrid_search_universe,
     )
@@ -251,6 +253,29 @@ def hybrid_search(
             )
         response.clusters = cluster_results
         response.total = len(response.clusters)
+
+    elif scope == "communities":
+        raw = hybrid_search_communities(db, q, limit)
+        community_results = []
+        for r in raw:
+            sample_books = []
+            if r.get("sample_books_json"):
+                try:
+                    sample_books = [BookSummary(**b) for b in json.loads(r["sample_books_json"])]
+                except Exception:
+                    pass
+            community_results.append(
+                HybridCommunityResult(
+                    community_id=r["community_id"],
+                    label=r["label"],
+                    topic_count=r["topic_count"],
+                    book_count=r["book_count"],
+                    score=r["score"],
+                    sample_books=sample_books,
+                )
+            )
+        response.communities = community_results
+        response.total = len(response.communities)
 
     elif scope == "domains":
         raw = hybrid_search_domains(db, q, limit)

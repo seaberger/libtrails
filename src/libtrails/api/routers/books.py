@@ -2,6 +2,7 @@
 
 from fastapi import APIRouter, Body, HTTPException, Query
 
+from ...hybrid_search import find_related_books
 from ..dependencies import DBConnection
 from ..schemas import BookDetail, BookSummary, RelatedBook, ThemeRef, TopicInfo
 
@@ -94,10 +95,11 @@ def get_book(db: DBConnection, book_id: int):
     # Get topics for this book with occurrence counts
     cursor.execute(
         """
-        SELECT t.id, t.label, COUNT(*) as count, t.cluster_id
+        SELECT t.id, t.label, COUNT(*) as count, t.cluster_id, cc.community_id
         FROM topics t
         JOIN chunk_topic_links ctl ON ctl.topic_id = t.id
         JOIN chunks c ON c.id = ctl.chunk_id
+        LEFT JOIN cluster_communities cc ON cc.cluster_id = t.cluster_id
         WHERE c.book_id = ?
         GROUP BY t.id
         ORDER BY count DESC
@@ -107,17 +109,27 @@ def get_book(db: DBConnection, book_id: int):
     )
     topics = [TopicInfo(**dict(r)) for r in cursor.fetchall()]
 
-    # Get unique themes with labels
+    # Get unique themes with labels, mapped to communities
     cluster_ids = list({t.cluster_id for t in topics if t.cluster_id is not None})
     themes = []
     if cluster_ids:
         placeholders = ",".join("?" * len(cluster_ids))
         cursor.execute(
-            f"SELECT cluster_id, top_label FROM cluster_stats WHERE cluster_id IN ({placeholders})",
+            f"""
+            SELECT cs.cluster_id, cs.top_label, cc.community_id
+            FROM cluster_stats cs
+            LEFT JOIN cluster_communities cc ON cc.cluster_id = cs.cluster_id
+            WHERE cs.cluster_id IN ({placeholders})
+            """,
             cluster_ids,
         )
         themes = [
-            ThemeRef(cluster_id=r["cluster_id"], label=r["top_label"]) for r in cursor.fetchall()
+            ThemeRef(
+                cluster_id=r["cluster_id"],
+                community_id=r["community_id"],
+                label=r["top_label"],
+            )
+            for r in cursor.fetchall()
         ]
 
     return BookDetail(
@@ -139,7 +151,7 @@ def get_related_books(
     book_id: int,
     limit: int = Query(10, ge=1, le=50),
 ):
-    """Get related books by topic overlap."""
+    """Get related books via hybrid search on the source book's metadata."""
     cursor = db.cursor()
 
     # Verify book exists
@@ -147,55 +159,16 @@ def get_related_books(
     if not cursor.fetchone():
         raise HTTPException(status_code=404, detail="Book not found")
 
-    # Get topics for source book
-    cursor.execute(
-        """
-        SELECT DISTINCT t.id
-        FROM topics t
-        JOIN chunk_topic_links ctl ON ctl.topic_id = t.id
-        JOIN chunks c ON c.id = ctl.chunk_id
-        WHERE c.book_id = ?
-    """,
-        (book_id,),
-    )
-    source_topics = {row["id"] for row in cursor.fetchall()}
+    results = find_related_books(db, book_id, limit=limit)
 
-    if not source_topics:
-        return []
-
-    # Find books sharing topics
-    placeholders = ",".join("?" * len(source_topics))
-    cursor.execute(
-        f"""
-        SELECT
-            b.id, b.title, b.author, b.calibre_id,
-            COUNT(DISTINCT t.id) as shared_topics
-        FROM books b
-        JOIN chunks c ON c.book_id = b.id
-        JOIN chunk_topic_links ctl ON ctl.chunk_id = c.id
-        JOIN topics t ON t.id = ctl.topic_id
-        WHERE t.id IN ({placeholders})
-        AND b.id != ?
-        GROUP BY b.id
-        ORDER BY shared_topics DESC
-        LIMIT ?
-    """,
-        (*source_topics, book_id, limit),
-    )
-
-    results = []
-    for row in cursor.fetchall():
-        shared = row["shared_topics"]
-        similarity = shared / len(source_topics) if source_topics else 0
-        results.append(
-            RelatedBook(
-                id=row["id"],
-                title=row["title"],
-                author=row["author"],
-                calibre_id=row["calibre_id"],
-                shared_topics=shared,
-                similarity=round(similarity, 3),
-            )
+    return [
+        RelatedBook(
+            id=r["book_id"],
+            title=r["title"],
+            author=r["author"],
+            calibre_id=r["calibre_id"],
+            similarity=r["similarity"],
+            match_type=r.get("match_type", ""),
         )
-
-    return results
+        for r in results
+    ]

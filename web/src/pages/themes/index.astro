@@ -58,7 +58,7 @@ const domains = await getDomains();
                 {domain.label}
               </span>
               <span class="text-xs text-[var(--color-text-muted)] bg-[var(--color-bg)] px-2 py-0.5 rounded-full">
-                {domain.cluster_count}
+                {domain.community_count || domain.cluster_count}
               </span>
             </div>
           </button>
@@ -67,7 +67,7 @@ const domains = await getDomains();
     </div>
 
     <!-- Right panel: Domain detail -->
-    <div class="flex-1 min-w-0">
+    <div class="flex-1 min-w-0 md:sticky md:top-24 md:self-start md:max-h-[calc(100vh-7rem)] md:overflow-y-auto">
       {domains.map((domain, index) => (
         <div
           class="domain-detail"
@@ -79,21 +79,30 @@ const domains = await getDomains();
               {domain.label}
             </h2>
             <p class="text-sm text-[var(--color-text-muted)] mb-6">
-              {domain.cluster_count} clusters · {domain.primary_book_count} primary books · {domain.book_count} related
+              {domain.community_count || domain.cluster_count} topics · {domain.primary_book_count} primary books · {domain.book_count} related
             </p>
 
-            <!-- Top clusters -->
+            <!-- Top topics -->
             <div class="mb-6">
-              <h3 class="text-sm font-medium text-[var(--color-text)] mb-3">Top Clusters</h3>
+              <h3 class="text-sm font-medium text-[var(--color-text)] mb-3">Top Topics</h3>
               <div class="flex flex-wrap gap-2">
-                {domain.top_clusters.slice(0, 8).map((cluster: any) => (
-                  <a
-                    href={url(`/clusters/${cluster.cluster_id}`)}
-                    class="px-3 py-1.5 bg-[var(--color-bg)] text-sm text-[var(--color-text)] rounded-full hover:bg-[var(--color-accent)] hover:text-white transition-colors"
-                  >
-                    {cluster.label}
-                  </a>
-                ))}
+                {(domain.top_communities?.length ? domain.top_communities : domain.top_clusters).slice(0, 8).map((item: any) => {
+                  const communityId = item.community_id;
+                  return communityId != null ? (
+                    <a
+                      href={url(`/communities/${communityId}`)}
+                      class="px-3 py-1.5 bg-[var(--color-bg)] text-sm text-[var(--color-text)] rounded-full hover:bg-[var(--color-accent)] hover:text-white transition-colors"
+                    >
+                      {item.label}
+                    </a>
+                  ) : (
+                    <span
+                      class="px-3 py-1.5 bg-[var(--color-bg)] text-sm text-[var(--color-text)] rounded-full"
+                    >
+                      {item.label}
+                    </span>
+                  );
+                })}
               </div>
             </div>
 
@@ -119,13 +128,13 @@ const domains = await getDomains();
               </div>
             </div>
 
-            <!-- View all clusters link -->
+            <!-- View all topics link -->
             <div class="mt-6 pt-4 border-t border-[var(--color-border)]">
               <a
-                href={url(`/clusters?domain=${domain.domain_id}`)}
+                href={url(`/communities?domain=${domain.domain_id}`)}
                 class="text-sm text-[var(--color-accent)] hover:underline"
               >
-                View all {domain.cluster_count} clusters in {domain.label} →
+                View all {domain.community_count || domain.cluster_count} topics in {domain.label} →
               </a>
             </div>
           </div>

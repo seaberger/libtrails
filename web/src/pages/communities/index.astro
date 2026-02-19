@@ -2,33 +2,53 @@
 import BaseLayout from '../../layouts/BaseLayout.astro';
 import ThemeCard from '../../components/ThemeCard.astro';
 import SearchBar from '../../components/SearchBar.astro';
-import { getCommunities, getCoverUrl } from '../../lib/api';
+import { getCommunities, getDomains, getCoverUrl } from '../../lib/api';
 
-// Fetch communities at build time (SSR) or request time
-const communities = await getCommunities();
+// Read optional domain filter from query string
+const domainParam = Astro.url.searchParams.get('domain');
+const parsedDomainId = domainParam != null ? Number(domainParam) : NaN;
+const domainId = Number.isFinite(parsedDomainId) ? parsedDomainId : undefined;
+
+const communities = await getCommunities(domainId);
 const basePath = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
+
+// Get domain label for filtered view
+let domainLabel = '';
+if (domainId != null) {
+  const domains = await getDomains();
+  const domain = domains.find((d: any) => d.domain_id === domainId);
+  domainLabel = domain?.label || '';
+}
 ---
 
-<BaseLayout title="Topics" description="Browse topic communities from your library">
+<BaseLayout title={domainLabel ? `${domainLabel} Topics` : "Topics"} description="Browse topics from your library">
   <header class="mb-6">
     <h1 class="text-2xl font-medium text-[var(--color-text)] mb-2">
-      Topics
+      {domainLabel ? `${domainLabel}` : "Topics"}
     </h1>
     <p class="text-[var(--color-text-muted)]">
-      Explore {communities.length} topic communities discovered in your library
+      {domainLabel
+        ? `${communities.length} topics in ${domainLabel}`
+        : `Explore ${communities.length} topics discovered in your library`}
     </p>
+    {domainLabel && (
+      <a href={basePath + "/communities"} class="text-sm text-[var(--color-accent)] hover:underline mt-1 inline-block">
+        ← View all topics
+      </a>
+    )}
   </header>
 
-  <SearchBar placeholder="Search topics..." scope="clusters" />
+  <SearchBar placeholder="Search topics..." scope="communities" />
 
   <!-- Search results grid (hidden by default) -->
-  <div id="clusters-search-results" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 hidden" data-base-path={basePath}></div>
+  <div id="communities-search-results" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 hidden" data-base-path={basePath}></div>
 
   <!-- Communities grid -->
-  <div id="clusters-original" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4" data-themes-grid>
+  <div id="communities-original" class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4" data-themes-grid>
     {communities.map(community => (
       <ThemeCard theme={{
         cluster_id: community.community_id,
+        community_id: community.community_id,
         label: community.label,
         size: community.topic_count,
         book_count: community.book_count,
@@ -39,13 +59,13 @@ const basePath = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
 </BaseLayout>
 
 <script>
-  function createCommunityCard(cluster: any, basePath: string): HTMLElement {
-    const books = cluster.sample_books || [];
+  function createCommunityCard(community: any, basePath: string): HTMLElement {
+    const books = community.sample_books || [];
     const bookCount = books.length;
     const center = (bookCount - 1) / 2;
 
     const card = document.createElement('a');
-    card.href = `${basePath}/clusters/${cluster.cluster_id}`;
+    card.href = `${basePath}/communities/${community.community_id}`;
     card.className = 'group relative block overflow-visible bg-[var(--color-surface)] rounded-lg p-5 border border-[var(--color-border)] hover:border-[var(--color-accent)] hover:shadow-lg hover:z-10 transition-all duration-300';
     card.setAttribute('data-theme-card', '');
 
@@ -88,13 +108,13 @@ const basePath = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
     // Community label
     const label = document.createElement('h3');
     label.className = 'font-bold text-[var(--color-text)] text-base leading-tight mb-2 text-center capitalize';
-    label.textContent = cluster.label;
+    label.textContent = community.label;
     card.appendChild(label);
 
     // Stats
     const stats = document.createElement('p');
     stats.className = 'text-xs text-[var(--color-text-muted)] text-center';
-    stats.textContent = `${cluster.book_count} books · ${cluster.size} topics`;
+    stats.textContent = `${community.book_count} books · ${community.topic_count} topics`;
     card.appendChild(stats);
 
     return card;
@@ -126,9 +146,9 @@ const basePath = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
     });
   }
 
-  function initClustersSearch() {
-    const original = document.getElementById('clusters-original');
-    const resultsContainer = document.getElementById('clusters-search-results');
+  function initCommunitiesSearch() {
+    const original = document.getElementById('communities-original');
+    const resultsContainer = document.getElementById('communities-search-results');
     if (!original || !resultsContainer) return;
     if (resultsContainer.dataset.searchInit === 'true') return;
     resultsContainer.dataset.searchInit = 'true';
@@ -136,14 +156,14 @@ const basePath = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
     const basePath = resultsContainer.dataset.basePath || '';
 
     document.addEventListener('libtrails:search', ((e: CustomEvent) => {
-      if (e.detail.scope !== 'clusters') return;
+      if (e.detail.scope !== 'communities') return;
       const { data } = e.detail;
       original.classList.add('hidden');
       resultsContainer.classList.remove('hidden');
 
       while (resultsContainer.firstChild) resultsContainer.removeChild(resultsContainer.firstChild);
 
-      if (data.clusters.length === 0) {
+      if (data.communities.length === 0) {
         const msg = document.createElement('p');
         msg.className = 'text-[var(--color-text-muted)] text-center py-8 col-span-full';
         msg.textContent = 'No topics found';
@@ -151,24 +171,24 @@ const basePath = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
         return;
       }
 
-      data.clusters.forEach((cluster: any) => {
-        resultsContainer.appendChild(createCommunityCard(cluster, basePath));
+      data.communities.forEach((community: any) => {
+        resultsContainer.appendChild(createCommunityCard(community, basePath));
       });
       initFanEffect();
     }) as EventListener);
 
     document.addEventListener('libtrails:search-clear', ((e: CustomEvent) => {
-      if (e.detail.scope !== 'clusters') return;
+      if (e.detail.scope !== 'communities') return;
       original.classList.remove('hidden');
       resultsContainer.classList.add('hidden');
       while (resultsContainer.firstChild) resultsContainer.removeChild(resultsContainer.firstChild);
     }) as EventListener);
   }
 
-  initClustersSearch();
+  initCommunitiesSearch();
   initFanEffect();
   document.addEventListener('astro:page-load', () => {
-    initClustersSearch();
+    initCommunitiesSearch();
     initFanEffect();
   });
 </script>

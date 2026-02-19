@@ -19,26 +19,26 @@ import { url } from '../../lib/url';
     <section>
       <h2 class="text-lg font-medium text-[var(--color-text)] mb-3">What is this?</h2>
       <p class="text-[var(--color-text-muted)] mb-4">
-        LibTrails helps you discover conceptual connections across your book collection. It extracts topics
-        from your EPUBs using LLMs (local or cloud), generates semantic embeddings, and builds a hierarchical
-        topic graph — all stored locally in SQLite.
+        LibTrails helps you discover conceptual connections across a book collection. It parses EPUBs into
+        text chunks, uses LLMs to extract granular topics from each chunk, generates semantic embeddings,
+        and builds a multi-tier topic hierarchy — all stored locally in SQLite.
       </p>
       <ul class="space-y-2 text-[var(--color-text-muted)]">
         <li class="flex items-start gap-2">
           <span class="text-[var(--color-accent)] mt-1.5 flex-shrink-0">&#8226;</span>
-          Find books that discuss similar themes
+          Find books that discuss similar themes across genres and centuries
         </li>
         <li class="flex items-start gap-2">
           <span class="text-[var(--color-accent)] mt-1.5 flex-shrink-0">&#8226;</span>
-          Discover unexpected connections between books
+          Discover unexpected connections between books via shared topics
         </li>
         <li class="flex items-start gap-2">
           <span class="text-[var(--color-accent)] mt-1.5 flex-shrink-0">&#8226;</span>
-          Build "trails" of related excerpts across your library
+          Explore a 3D galaxy where each sphere is a topic community, colored by theme
         </li>
         <li class="flex items-start gap-2">
           <span class="text-[var(--color-accent)] mt-1.5 flex-shrink-0">&#8226;</span>
-          Explore your reading interests through topic clusters
+          Search across every layer — books, text chunks, topics, and themes — simultaneously
         </li>
       </ul>
     </section>
@@ -53,13 +53,13 @@ import { url } from '../../lib/url';
       </p>
       <p class="text-[var(--color-text-muted)] mb-4">
         The selection was designed to maximize thematic bridge density — books that connect across categories to
-        produce rich, interconnected Leiden clusters. Every title is a recognizable classic, chosen for how it
+        produce rich, interconnected topic clusters. Every title is a recognizable classic, chosen for how it
         links to others in the collection rather than just its individual significance.
       </p>
       <div class="grid grid-cols-3 gap-3 mb-4">
         {[
           ["100", "Books"],
-          ["121,118", "Topics"],
+          ["31,849", "Text chunks"],
           ["~3,000 yrs", "~800 BC – 1925 AD"],
         ].map(([value, label]) => (
           <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg px-4 py-3 text-center">
@@ -96,12 +96,13 @@ import { url } from '../../lib/url';
     <!-- Pipeline -->
     <section>
       <h2 class="text-lg font-medium text-[var(--color-text)] mb-3">The Pipeline</h2>
-      <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 mb-6">
         {[
-          ["~31,800", "Text chunks"],
-          ["121,118", "Deduped topics"],
+          ["121,118", "Extracted topics"],
           ["2,468", "Leiden clusters"],
-          ["26", "Super-clusters"],
+          ["202", "Topic communities"],
+          ["26", "Themes"],
+          ["7", "Search signals"],
         ].map(([value, label]) => (
           <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg px-4 py-3 text-center">
             <div class="text-lg font-medium text-[var(--color-text)]">{value}</div>
@@ -118,6 +119,7 @@ import { url } from '../../lib/url';
           <p class="text-sm">
             EPUBs are parsed with selectolax (HTML block tags converted to paragraph breaks) and recursively
             split into ~500-word chunks — first at paragraph boundaries, then sentences, then words as a last resort.
+            The 100-book demo library produces 31,849 chunks.
           </p>
         </div>
         <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5">
@@ -128,13 +130,14 @@ import { url } from '../../lib/url';
           </p>
           <p class="text-sm mt-2">
             <strong>Pass 2</strong>: A smaller model (gemma3:4b or 12b) extracts chunk-level topics, contextualized
-            with the book themes from Pass 1. This produces domain-specific noun phrases instead of generic single words.
+            with the book themes from Pass 1. This produces domain-specific noun phrases instead of generic single words —
+            yielding 121,118 deduplicated topics across the demo library.
           </p>
         </div>
       </div>
 
-      <!-- Stage 2: Graph & Clustering -->
-      <h3 class="text-sm font-medium text-[var(--color-text)] uppercase tracking-wide text-[var(--color-text-muted)] mt-8 mb-3">Stage 2: Post-Processing Pipeline</h3>
+      <!-- Stage 2: Clustering -->
+      <h3 class="text-sm font-medium text-[var(--color-text)] uppercase tracking-wide text-[var(--color-text-muted)] mt-8 mb-3">Stage 2: Graph & Clustering</h3>
       <div class="space-y-4 text-[var(--color-text-muted)]">
         <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5">
           <h4 class="text-sm font-medium text-[var(--color-text)] mb-2">Embed & Deduplicate</h4>
@@ -155,21 +158,35 @@ import { url } from '../../lib/url';
           </p>
         </div>
         <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5">
-          <h4 class="text-sm font-medium text-[var(--color-text)] mb-2">Hub Removal & Leiden Clustering</h4>
+          <h4 class="text-sm font-medium text-[var(--color-text)] mb-2">First Leiden Pass: Topic Clusters</h4>
           <p class="text-sm">
             High-degree "hub" topics (95th percentile) are removed before clustering — these generic terms
-            would create artificially large, incoherent communities. The Leiden algorithm then runs with the
-            CPM (Constant Potts Model) partition type at resolution 0.001, producing ~2,500 coherent topic clusters
-            with more even sizes than modularity-based approaches.
+            would create artificially large, incoherent groups. The Leiden algorithm then runs with the
+            CPM (Constant Potts Model) partition type at resolution 0.001, producing 2,468 fine-grained
+            topic clusters. These clusters power the semantic search engine — topic and chunk vectors are
+            indexed in sqlite-vec for fast cosine similarity lookups, and full-text search (FTS5) indexes
+            the cluster labels, topic labels, and chunk text for keyword matching.
           </p>
         </div>
         <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5">
-          <h4 class="text-sm font-medium text-[var(--color-text)] mb-2">Super-Clusters & Domain Labels</h4>
+          <h4 class="text-sm font-medium text-[var(--color-text)] mb-2">Second Leiden Pass: Topic Communities</h4>
           <p class="text-sm">
-            K-means groups the ~2,500 Leiden clusters into ~26 high-level domains based on their centroid
-            embeddings (weighted average of each cluster's top-15 topics). An LLM auto-generates domain labels
-            from constituent topics, which are then human-refined into names like "Adventure & Human Folly,"
-            "Literary Classics & Philosophy," or "Nature & Rural Life."
+            A second Leiden pass runs on the same topic graph with a different resolution, grouping topics
+            into 202 broader communities. These are the browsable entries on the
+            <a href={url("/communities")} class="text-[var(--color-accent)] hover:underline">Topics</a> page
+            and the spheres in the
+            <a href={url("/")} class="text-[var(--color-accent)] hover:underline">Universe</a> view.
+            Each community is a coherent theme like "Victorian Social Norms," "Nautical Adventure," or
+            "Ancient Greek Philosophy" — large enough to span multiple books, small enough to be meaningful.
+          </p>
+        </div>
+        <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5">
+          <h4 class="text-sm font-medium text-[var(--color-text)] mb-2">Themes via K-Means</h4>
+          <p class="text-sm">
+            K-means groups the cluster centroids into 26 high-level themes based on embedding similarity.
+            These appear on the <a href={url("/themes")} class="text-[var(--color-accent)] hover:underline">Themes</a>
+            page with names like "Adventure & Human Folly," "Literary Classics & Philosophy," or "Nature & Rural Life"
+            — LLM-generated and human-refined.
           </p>
         </div>
       </div>
@@ -180,10 +197,10 @@ import { url } from '../../lib/url';
         <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5">
           <h4 class="text-sm font-medium text-[var(--color-text)] mb-2">3D Projection & Semantic Colors</h4>
           <p class="text-sm">
-            Cluster centroids are projected into 3D with UMAP (cosine metric, n_neighbors=15). Domain embeddings
-            are mapped onto a single PCA axis, then each domain's position becomes a hue value — so semantically
-            similar domains share similar colors in the
-            <a href={url("/")} class="text-[var(--color-accent)] hover:underline">galaxy view</a>.
+            Community centroids are projected into 3D with UMAP (cosine metric, n_neighbors=15). Theme embeddings
+            are mapped onto a single PCA axis, then each theme's position becomes a hue value — so semantically
+            similar themes share similar colors in the
+            <a href={url("/")} class="text-[var(--color-accent)] hover:underline">Universe</a>.
             The result is rendered with React Three Fiber using instanced meshes for performance.
           </p>
         </div>
@@ -194,29 +211,49 @@ import { url } from '../../lib/url';
     <section>
       <h2 class="text-lg font-medium text-[var(--color-text)] mb-3">Hybrid Search</h2>
       <p class="text-[var(--color-text-muted)] mb-4">
-        Every tab has a search bar that combines multiple retrieval signals into a single ranked result set.
+        Every page has a search bar that combines multiple retrieval signals into a single ranked result set.
         Rather than choosing between keyword search or semantic search, LibTrails runs both in parallel and
         fuses them with Reciprocal Rank Fusion (RRF).
       </p>
       <div class="space-y-4 text-[var(--color-text-muted)]">
         <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5">
-          <h4 class="text-sm font-medium text-[var(--color-text)] mb-2">Multi-Signal Search</h4>
-          <ul class="space-y-2 text-sm">
+          <h4 class="text-sm font-medium text-[var(--color-text)] mb-2">7-Signal Book Search</h4>
+          <p class="text-sm mb-3">
+            When you search on the <a href={url("/books")} class="text-[var(--color-accent)] hover:underline">Books</a>
+            page, your query is evaluated against seven independent retrieval signals, each producing its own ranked list:
+          </p>
+          <ul class="space-y-1.5 text-sm">
             <li class="flex items-start gap-2">
               <span class="text-[var(--color-accent)] mt-0.5 flex-shrink-0 font-medium">1.</span>
-              <span><strong class="text-[var(--color-text)]">Keyword (FTS5)</strong> — Full-text search across book metadata, 121K topic labels, and ~31,800 chunk passages using BM25 ranking</span>
+              <span><strong class="text-[var(--color-text)]">FTS5 book metadata</strong> — keyword search over title, author, and description</span>
             </li>
             <li class="flex items-start gap-2">
               <span class="text-[var(--color-accent)] mt-0.5 flex-shrink-0 font-medium">2.</span>
-              <span><strong class="text-[var(--color-text)]">Semantic (sqlite-vec)</strong> — The query is embedded with BGE-small-en-v1.5 and matched against topic, book theme, whole-book, and chunk embedding vectors using cosine distance</span>
+              <span><strong class="text-[var(--color-text)]">FTS5 topic labels</strong> — keyword search across 121K topic labels, mapped back to books</span>
             </li>
             <li class="flex items-start gap-2">
               <span class="text-[var(--color-accent)] mt-0.5 flex-shrink-0 font-medium">3.</span>
-              <span><strong class="text-[var(--color-text)]">Label matching</strong> — Direct text matching on cluster and domain labels for instant categorical hits</span>
+              <span><strong class="text-[var(--color-text)]">FTS5 chunk text</strong> — keyword search across 31,849 chunk passages, mapped back to books</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-[var(--color-accent)] mt-0.5 flex-shrink-0 font-medium">4.</span>
+              <span><strong class="text-[var(--color-text)]">Semantic topic vectors</strong> — cosine similarity against topic embeddings via sqlite-vec</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-[var(--color-accent)] mt-0.5 flex-shrink-0 font-medium">5.</span>
+              <span><strong class="text-[var(--color-text)]">Semantic book theme vectors</strong> — cosine similarity against book-level theme embeddings</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-[var(--color-accent)] mt-0.5 flex-shrink-0 font-medium">6.</span>
+              <span><strong class="text-[var(--color-text)]">Semantic book vectors</strong> — cosine similarity against whole-book embeddings (title + themes)</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <span class="text-[var(--color-accent)] mt-0.5 flex-shrink-0 font-medium">7.</span>
+              <span><strong class="text-[var(--color-text)]">Semantic chunk vectors</strong> — cosine similarity against chunk embeddings, best per book</span>
             </li>
           </ul>
           <p class="text-sm text-[var(--color-text-muted)] mt-3">
-            Book search fuses <strong class="text-[var(--color-text)]">7 signals</strong>, cluster/universe search fuses <strong class="text-[var(--color-text)]">5 signals</strong>, and domain search adds direct label matching on top of cluster aggregation.
+            Each result shows a colored badge indicating which signal contributed most: keyword, content, topic, theme, book, semantic, or chunk.
           </p>
         </div>
         <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5">
@@ -231,14 +268,62 @@ import { url } from '../../lib/url';
           </p>
         </div>
         <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5">
-          <h4 class="text-sm font-medium text-[var(--color-text)] mb-2">Scope-Aware Results</h4>
+          <h4 class="text-sm font-medium text-[var(--color-text)] mb-2">Scope-Aware Search</h4>
           <p class="text-sm">
-            Search adapts to each tab. On <strong class="text-[var(--color-text)]">Books</strong>, results are
-            ranked books with match-type badges. On <strong class="text-[var(--color-text)]">Clusters</strong>,
-            topic scores are aggregated to surface the most relevant topic groups. On
-            <strong class="text-[var(--color-text)]">Themes</strong>, cluster scores roll up to highlight
-            matching domains. On the <strong class="text-[var(--color-text)]">Universe</strong>, matching clusters
-            glow amber in the 3D view with a ranked sidebar list.
+            Search adapts to each page. On <a href={url("/books")} class="text-[var(--color-accent)] hover:underline">Books</a>,
+            all 7 signals rank books directly. On
+            <a href={url("/communities")} class="text-[var(--color-accent)] hover:underline">Topics</a>,
+            5 signals surface the most relevant topic communities — topic FTS/semantic, cluster label matching, and chunk FTS/semantic.
+            On <a href={url("/themes")} class="text-[var(--color-accent)] hover:underline">Themes</a>,
+            topic scores roll up to highlight matching themes, with a boost for direct label matches.
+          </p>
+        </div>
+        <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5">
+          <h4 class="text-sm font-medium text-[var(--color-text)] mb-2">Universe Search</h4>
+          <p class="text-sm">
+            The <a href={url("/")} class="text-[var(--color-accent)] hover:underline">Universe</a> search bar
+            runs the same 5-signal cluster search, then aggregates results by community. Matching communities glow
+            amber in the 3D view — the brighter the glow, the stronger the match — with a ranked sidebar list showing
+            the top hits. This lets you visually see where a concept lives in the semantic landscape and which
+            neighboring communities are related.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Exploring the Universe -->
+    <section>
+      <h2 class="text-lg font-medium text-[var(--color-text)] mb-3">Exploring the Universe</h2>
+      <p class="text-[var(--color-text-muted)] mb-4">
+        The <a href={url("/")} class="text-[var(--color-accent)] hover:underline">Universe</a> is a 3D galaxy
+        of 202 topic communities projected by semantic similarity — communities that share conceptual DNA are close
+        together; unrelated ones are far apart.
+      </p>
+      <div class="space-y-4 text-[var(--color-text-muted)]">
+        <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5">
+          <h4 class="text-sm font-medium text-[var(--color-text)] mb-2">Navigation</h4>
+          <p class="text-sm">
+            Drag to rotate, scroll to zoom, and right-drag to pan. Each sphere is a topic community —
+            larger spheres contain more topics. Colors encode themes: semantically similar themes share similar hues,
+            so you can see natural neighborhoods form in 3D space.
+          </p>
+        </div>
+        <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5">
+          <h4 class="text-sm font-medium text-[var(--color-text)] mb-2">Interacting</h4>
+          <p class="text-sm">
+            Hover over a sphere to see its label and the books it spans. Click to open a detail panel with the
+            community's top topics and all contributing books. Use the search bar to light up matching communities —
+            try searching for a concept like "justice" or "natural selection" to see which corners of the library
+            discuss it.
+          </p>
+        </div>
+        <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg p-5">
+          <h4 class="text-sm font-medium text-[var(--color-text)] mb-2">What to Look For</h4>
+          <p class="text-sm">
+            Tight clusters of similarly-colored spheres reveal thematic neighborhoods — philosophy spheres near
+            political theory, gothic fiction near psychological horror. But the interesting discoveries are the
+            unexpected bridges: a nature-writing community sitting near a philosophy community because Thoreau
+            and Emerson link them both.
           </p>
         </div>
       </div>
@@ -249,12 +334,12 @@ import { url } from '../../lib/url';
       <h2 class="text-lg font-medium text-[var(--color-text)] mb-3">Features</h2>
       <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
         {[
-          ["Two-Pass Extraction", "Book themes contextualize chunk topics for domain-specific results"],
+          ["Two-Pass Extraction", "Book themes from a 27b model contextualize chunk-level topic extraction by a 12b model"],
           ["Multi-Provider LLM", "Ollama, Gemini API, or LM Studio — swap with a CLI flag"],
-          ["3D Galaxy", "Interactive Three.js universe with semantic domain colors"],
-          ["Hybrid Search", "Combines FTS5 keyword matching with semantic vector search, fused via Reciprocal Rank Fusion (RRF) — search across books, clusters, themes, and the universe view"],
-          ["Smart Deduplication", "Two-tier merging prevents cross-domain conflation"],
-          ["Leiden Clustering", "Community detection with hub removal for clean topic groups"],
+          ["3D Universe", "Interactive Three.js galaxy with 202 topic communities, colored by semantic theme similarity"],
+          ["7-Signal Hybrid Search", "FTS5 keyword + semantic vector search across books, topics, themes, and chunks, fused via RRF"],
+          ["Smart Deduplication", "Two-tier merging: cosine >0.95 merges always, 0.85–0.95 only if same book — prevents cross-domain conflation"],
+          ["Three-Tier Hierarchy", "Leiden clusters (2,468, with hub removal) → topic communities (202) → themes (26)"],
         ].map(([title, desc]) => (
           <div class="bg-[var(--color-surface)] border border-[var(--color-border)] rounded-lg px-4 py-3">
             <div class="text-sm font-medium text-[var(--color-text)]">{title}</div>
@@ -274,7 +359,7 @@ import { url } from '../../lib/url';
               ["Topic extraction", "gemma3 via Ollama / Gemini / LM Studio"],
               ["Embeddings", "BGE-small-en-v1.5 (384 dims)"],
               ["Search", "Hybrid: FTS5 (BM25) + sqlite-vec (cosine) + RRF fusion"],
-              ["Clustering", "Leiden (python-igraph + leidenalg)"],
+              ["Clustering", "Leiden (python-igraph + leidenalg), two-pass"],
               ["3D projection", "UMAP + PCA semantic colors"],
               ["Backend", "FastAPI + SQLite"],
               ["Frontend", "Astro + React Three Fiber"],

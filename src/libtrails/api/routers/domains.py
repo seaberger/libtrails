@@ -9,7 +9,7 @@ import json
 from fastapi import APIRouter, HTTPException
 
 from ..dependencies import DBConnection
-from ..schemas import BookSummary, DomainBook, DomainDetail, DomainSummary
+from ..schemas import BookSummary, CommunityRef, DomainBook, DomainDetail, DomainSummary
 
 router = APIRouter()
 
@@ -22,7 +22,8 @@ def list_domains(db: DBConnection):
     cursor.execute("""
         SELECT d.id, d.label, d.cluster_count,
                ds.book_count, ds.primary_book_count,
-               ds.sample_books_json, ds.top_clusters_json
+               ds.sample_books_json, ds.top_clusters_json,
+               ds.community_count, ds.top_communities_json
         FROM domains d
         LEFT JOIN domain_stats ds ON ds.domain_id = d.id
         ORDER BY d.cluster_count DESC
@@ -33,10 +34,13 @@ def list_domains(db: DBConnection):
     for row in rows:
         book_count = row["book_count"] or 0
         primary_book_count = row["primary_book_count"] or 0
+        community_count = row["community_count"] or 0
         sample_books_raw = json.loads(row["sample_books_json"] or "[]")
         top_clusters = json.loads(row["top_clusters_json"] or "[]")
+        top_communities_raw = json.loads(row["top_communities_json"] or "[]")
 
         sample_books = [BookSummary(**b) for b in sample_books_raw]
+        top_communities = [CommunityRef(**c) for c in top_communities_raw]
 
         result.append(
             DomainSummary(
@@ -45,8 +49,10 @@ def list_domains(db: DBConnection):
                 cluster_count=row["cluster_count"],
                 book_count=book_count,
                 primary_book_count=primary_book_count,
+                community_count=community_count,
                 sample_books=sample_books,
                 top_clusters=top_clusters,
+                top_communities=top_communities,
             )
         )
 

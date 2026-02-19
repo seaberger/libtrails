@@ -3,11 +3,11 @@ import { Canvas, useThree } from "@react-three/fiber";
 import type { ThreeEvent } from "@react-three/fiber";
 import { OrbitControls } from "@react-three/drei";
 import * as THREE from "three";
-import { getBooksBatch, getCoverUrl, getUniverse, searchHybrid } from "../lib/api";
+import { getBooksBatch, getCommunity, getCoverUrl, getUniverse, searchHybrid } from "../lib/api";
 import type {
   BookSummary,
-  ThemeDetail,
-  UniverseCluster,
+  CommunityDetail,
+  UniverseCommunity,
   UniverseData,
   UniverseDomain,
   UniverseSearchResult,
@@ -15,6 +15,13 @@ import type {
 
 const SPREAD = 40;
 const HIGHLIGHT_COLOR = "#f59e0b"; // amber for selected
+
+interface TooltipState {
+  x: number;
+  y: number;
+  community: UniverseCommunity;
+  domain: UniverseDomain | undefined;
+}
 const SIDEBAR_WIDTH = 340;
 const SCENE_BG_DARK = "#0f0f1a";
 const SCENE_BG_LIGHT = "#e8e8f0";
@@ -90,17 +97,6 @@ const SIDEBAR_LIGHT: SidebarColors = {
   coverFallbackBg: "rgba(0,0,0,0.05)",
 };
 
-// ── Fetch theme detail (cluster info with books) ──
-
-async function fetchThemeDetail(clusterId: number): Promise<ThemeDetail> {
-  const isServer = typeof window === "undefined";
-  const basePath = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
-  const base = isServer ? "http://localhost:8000" : basePath;
-  const res = await fetch(`${base}/api/v1/themes/${clusterId}`);
-  if (!res.ok) throw new Error(`API error: ${res.status}`);
-  return res.json();
-}
-
 // ── Small book cover for React context ──
 
 function BookCoverImg({
@@ -164,29 +160,31 @@ function CameraRef({ cameraRef }: { cameraRef: React.MutableRefObject<THREE.Came
   return null;
 }
 
-// ── Cluster spheres using InstancedMesh ──
+// ── Community spheres using InstancedMesh ──
 
 const SEARCH_HIGHLIGHT_COLOR = "#f59e0b"; // amber for search hits
 
-interface ClusterSpheresProps {
-  clusters: UniverseCluster[];
+interface CommunitySpheresProps {
+  communities: UniverseCommunity[];
   colorMap: Map<number, string>;
   selectedIds: Set<number>;
   searchHitIds: Set<number> | null;
-  onClickSphere: (cluster: UniverseCluster) => void;
+  onClickSphere: (community: UniverseCommunity) => void;
+  onHover: (community: UniverseCommunity | null, x: number, y: number) => void;
 }
 
-function ClusterSpheres({
-  clusters,
+function CommunitySpheres({
+  communities,
   colorMap,
   selectedIds,
   searchHitIds,
   onClickSphere,
-}: ClusterSpheresProps) {
+  onHover,
+}: CommunitySpheresProps) {
   const meshRef = useRef<THREE.InstancedMesh>(null!);
   const maxBooks = useMemo(
-    () => Math.max(...clusters.map((c) => c.book_count), 1),
-    [clusters]
+    () => Math.max(...communities.map((c) => c.book_count), 1),
+    [communities]
   );
 
   useEffect(() => {
@@ -196,10 +194,10 @@ function ClusterSpheres({
     const col = new THREE.Color();
     const isSearching = searchHitIds !== null;
 
-    for (let i = 0; i < clusters.length; i++) {
-      const c = clusters[i];
-      const isSelected = selectedIds.has(c.cluster_id);
-      const isSearchHit = isSearching && searchHitIds.has(c.cluster_id);
+    for (let i = 0; i < communities.length; i++) {
+      const c = communities[i];
+      const isSelected = selectedIds.has(c.community_id);
+      const isSearchHit = isSearching && searchHitIds.has(c.community_id);
       dummy.position.set(c.x * SPREAD, c.y * SPREAD, (c.z ?? 0) * SPREAD);
       const base = 0.2 + 0.8 * Math.sqrt(c.book_count / maxBooks);
       const scale = isSelected ? base * 1.6 : isSearchHit ? base * 1.3 : base;
@@ -212,7 +210,7 @@ function ClusterSpheres({
       } else if (isSearchHit) {
         col.set(SEARCH_HIGHLIGHT_COLOR);
       } else if (isSearching) {
-        // Dim non-matching clusters during search
+        // Dim non-matching communities during search
         col.set(colorMap.get(c.domain_id) || "#888888");
         col.multiplyScalar(0.15);
       } else {
@@ -223,36 +221,38 @@ function ClusterSpheres({
     mesh.instanceMatrix.needsUpdate = true;
     if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
     mesh.computeBoundingSphere();
-  }, [clusters, colorMap, maxBooks, selectedIds, searchHitIds]);
+  }, [communities, colorMap, maxBooks, selectedIds, searchHitIds]);
 
   const handlePointerMove = useCallback(
     (e: ThreeEvent<PointerEvent>) => {
-      if (e.instanceId !== undefined && e.instanceId < clusters.length) {
+      if (e.instanceId !== undefined && e.instanceId < communities.length) {
         document.body.style.cursor = "pointer";
+        onHover(communities[e.instanceId], e.nativeEvent.clientX, e.nativeEvent.clientY);
       }
     },
-    [clusters]
+    [communities, onHover]
   );
 
   const handlePointerOut = useCallback(() => {
     document.body.style.cursor = "default";
-  }, []);
+    onHover(null, 0, 0);
+  }, [onHover]);
 
   const handleClick = useCallback(
     (e: ThreeEvent<MouseEvent>) => {
       e.stopPropagation();
       const idx = e.instanceId;
-      if (idx !== undefined && idx < clusters.length) {
-        onClickSphere(clusters[idx]);
+      if (idx !== undefined && idx < communities.length) {
+        onClickSphere(communities[idx]);
       }
     },
-    [clusters, onClickSphere]
+    [communities, onClickSphere]
   );
 
   return (
     <instancedMesh
       ref={meshRef}
-      args={[undefined, undefined, clusters.length]}
+      args={[undefined, undefined, communities.length]}
       onPointerMove={handlePointerMove}
       onPointerOut={handlePointerOut}
       onClick={handleClick}
@@ -311,40 +311,40 @@ interface SearchState {
 }
 
 interface SidebarProps {
-  selectedClusters: UniverseCluster[];
-  singleDetail: ThemeDetail | null;
+  selectedCommunities: UniverseCommunity[];
+  singleDetail: CommunityDetail | null;
   detailLoading: boolean;
   domains: UniverseDomain[];
   activeDomains: Set<number> | null;
   onToggleDomain: (id: number) => void;
   onClearDomainFilter: () => void;
-  onSelectCluster: (cluster: UniverseCluster) => void;
+  onSelectCommunity: (community: UniverseCommunity) => void;
   onClose: () => void;
   colors: SidebarColors;
   isMobile: boolean;
   search: SearchState;
   onSearchChange: (query: string) => void;
-  allClusters: UniverseCluster[];
+  allCommunities: UniverseCommunity[];
 }
 
 const SNAP_POINTS = [20, 40, 85]; // vh: peek, half, expanded
 const DEFAULT_SHEET_HEIGHT = 40; // vh
 
 function Sidebar({
-  selectedClusters,
+  selectedCommunities,
   singleDetail,
   detailLoading,
   domains,
   activeDomains,
   onToggleDomain,
   onClearDomainFilter,
-  onSelectCluster,
+  onSelectCommunity,
   onClose,
   colors,
   isMobile,
   search,
   onSearchChange,
-  allClusters,
+  allCommunities,
 }: SidebarProps) {
   const basePath = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
   const searchInputRef = useRef<HTMLInputElement>(null);
@@ -355,17 +355,17 @@ function Sidebar({
     return m;
   }, [domains]);
 
-  // Map search results to cluster objects for the sidebar list,
+  // Map search results to community objects for the sidebar list,
   // filtered by activeDomains so hidden domains don't appear in results
-  const searchResultClusters = useMemo(() => {
+  const searchResultCommunities = useMemo(() => {
     if (!search.results.length) return [];
-    const clusterMap = new Map(allClusters.map((c) => [c.cluster_id, c]));
+    const communityMap = new Map(allCommunities.map((c) => [c.community_id, c]));
     return search.results
-      .map((r) => clusterMap.get(r.cluster_id))
-      .filter((c): c is UniverseCluster =>
+      .map((r) => communityMap.get(r.community_id))
+      .filter((c): c is UniverseCommunity =>
         c !== undefined && (!activeDomains || activeDomains.has(c.domain_id))
       );
-  }, [search.results, allClusters, activeDomains]);
+  }, [search.results, allCommunities, activeDomains]);
 
   // ── Bottom sheet drag-to-resize (mobile only) ──
   // Uses ref-based DOM listeners with { passive: false } so preventDefault()
@@ -500,8 +500,8 @@ function Sidebar({
           />
         </div>
       )}
-      {/* Search input (always visible at top when no cluster selected) */}
-      {selectedClusters.length === 0 && (
+      {/* Search input (always visible at top when no community selected) */}
+      {selectedCommunities.length === 0 && (
         <div style={{ padding: "12px 16px 0" }}>
           <div style={{ position: "relative" }}>
             <input
@@ -510,7 +510,7 @@ function Sidebar({
               value={search.query}
               onChange={(e) => onSearchChange(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Escape") { onSearchChange(""); searchInputRef.current?.blur(); } }}
-              placeholder="Search clusters..."
+              placeholder="Search universe..."
               style={{
                 width: "100%",
                 padding: "8px 12px 8px 32px",
@@ -537,38 +537,38 @@ function Sidebar({
         </div>
       )}
 
-      {selectedClusters.length === 1 ? (
-        <ClusterPanel
-          cluster={selectedClusters[0]}
+      {selectedCommunities.length === 1 ? (
+        <CommunityPanel
+          community={selectedCommunities[0]}
           detail={singleDetail}
           loading={detailLoading}
-          domain={domainMap.get(selectedClusters[0].domain_id)}
+          domain={domainMap.get(selectedCommunities[0].domain_id)}
           basePath={basePath}
           onClose={onClose}
           colors={colors}
         />
-      ) : selectedClusters.length > 1 ? (
+      ) : selectedCommunities.length > 1 ? (
         <MultiSelectPanel
-          clusters={selectedClusters}
+          communities={selectedCommunities}
           domainMap={domainMap}
           basePath={basePath}
-          onSelectCluster={onSelectCluster}
+          onSelectCommunity={onSelectCommunity}
           onClose={onClose}
           colors={colors}
         />
-      ) : search.query && searchResultClusters.length > 0 && !search.loading ? (
+      ) : search.query && searchResultCommunities.length > 0 && !search.loading ? (
         /* Search results list */
         <div style={{ padding: "12px 16px" }}>
           <div style={{ fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.05em", color: colors.textMuted, marginBottom: 8 }}>
-            {searchResultClusters.length} matching clusters
+            {searchResultCommunities.length} matching topics
           </div>
           <div style={{ display: "flex", flexDirection: "column", gap: 2 }}>
-            {searchResultClusters.map((c) => {
+            {searchResultCommunities.map((c) => {
               const domain = domainMap.get(c.domain_id);
               return (
                 <div
-                  key={c.cluster_id}
-                  onClick={() => onSelectCluster(c)}
+                  key={c.community_id}
+                  onClick={() => onSelectCommunity(c)}
                   style={{ padding: "6px 10px", borderRadius: 6, cursor: "pointer", background: colors.chipBg, transition: "background 0.1s" }}
                   onMouseEnter={(e) => (e.currentTarget.style.background = colors.chipBgHover)}
                   onMouseLeave={(e) => (e.currentTarget.style.background = colors.chipBg)}
@@ -585,7 +585,7 @@ function Sidebar({
         </div>
       ) : search.query && !search.loading ? (
         <div style={{ padding: "16px", fontSize: "0.8rem", color: colors.textMuted, textAlign: "center" }}>
-          No clusters found
+          No topics found
         </div>
       ) : (
         <DomainLegend
@@ -601,47 +601,47 @@ function Sidebar({
   );
 }
 
-// ── Multi-select panel (rich overview of selected clusters) ──
+// ── Multi-select panel (rich overview of selected communities) ──
 
 function MultiSelectPanel({
-  clusters,
+  communities,
   domainMap,
   basePath,
-  onSelectCluster,
+  onSelectCommunity,
   onClose,
   colors,
 }: {
-  clusters: UniverseCluster[];
+  communities: UniverseCommunity[];
   domainMap: Map<number, UniverseDomain>;
   basePath: string;
-  onSelectCluster: (cluster: UniverseCluster) => void;
+  onSelectCommunity: (community: UniverseCommunity) => void;
   onClose: () => void;
   colors: SidebarColors;
 }) {
   const [books, setBooks] = useState<BookSummary[]>([]);
   const [booksLoading, setBooksLoading] = useState(false);
   const [showAllBooks, setShowAllBooks] = useState(false);
-  const [showAllClusters, setShowAllClusters] = useState(false);
+  const [showAllCommunities, setShowAllCommunities] = useState(false);
 
   // ── Derived data ──
 
   const uniqueBookIds = useMemo(() => {
     const ids = new Set<number>();
-    for (const c of clusters) {
+    for (const c of communities) {
       if (c.book_ids) for (const id of c.book_ids) ids.add(id);
     }
     return ids;
-  }, [clusters]);
+  }, [communities]);
 
   const totalTopics = useMemo(
-    () => clusters.reduce((sum, c) => sum + c.size, 0),
-    [clusters]
+    () => communities.reduce((sum, c) => sum + c.size, 0),
+    [communities]
   );
 
-  // Domain breakdown: group clusters by domain, sorted by count desc
+  // Domain breakdown: group communities by domain, sorted by count desc
   const domainBreakdown = useMemo(() => {
     const counts = new Map<number, number>();
-    for (const c of clusters) {
+    for (const c of communities) {
       counts.set(c.domain_id, (counts.get(c.domain_id) || 0) + 1);
     }
     return [...counts.entries()]
@@ -651,12 +651,12 @@ function MultiSelectPanel({
         domain: domainMap.get(domainId),
       }))
       .sort((a, b) => b.count - a.count);
-  }, [clusters, domainMap]);
+  }, [communities, domainMap]);
 
-  // Top books: ranked by how many selected clusters they appear in
+  // Top books: ranked by how many selected communities they appear in
   const topBookIds = useMemo(() => {
     const freq = new Map<number, number>();
-    for (const c of clusters) {
+    for (const c of communities) {
       if (c.book_ids) {
         for (const id of c.book_ids) {
           freq.set(id, (freq.get(id) || 0) + 1);
@@ -667,12 +667,12 @@ function MultiSelectPanel({
       .sort((a, b) => b[1] - a[1])
       .slice(0, 50)
       .map(([id]) => id);
-  }, [clusters]);
+  }, [communities]);
 
-  // Top topics: aggregate top_topics across clusters, count frequency
+  // Top topics: aggregate top_topics across communities, count frequency
   const topTopics = useMemo(() => {
     const freq = new Map<string, number>();
-    for (const c of clusters) {
+    for (const c of communities) {
       for (const t of c.top_topics) {
         freq.set(t, (freq.get(t) || 0) + 1);
       }
@@ -680,7 +680,7 @@ function MultiSelectPanel({
     return [...freq.entries()]
       .sort((a, b) => b[1] - a[1])
       .slice(0, 15);
-  }, [clusters]);
+  }, [communities]);
 
   // Fetch book details when selection changes
   useEffect(() => {
@@ -719,7 +719,7 @@ function MultiSelectPanel({
         }}
       >
         <h3 style={{ margin: 0, fontSize: "1rem", fontWeight: 600 }}>
-          {clusters.length} clusters selected
+          {communities.length} topics selected
         </h3>
         <button
           onClick={onClose}
@@ -797,7 +797,7 @@ function MultiSelectPanel({
                   background: domain?.color || "#555",
                   minWidth: 2,
                 }}
-                title={`${domain?.label || `Domain ${domainId}`}: ${count} clusters`}
+                title={`${domain?.label || `Domain ${domainId}`}: ${count} topics`}
               />
             ))}
           </div>
@@ -826,7 +826,7 @@ function MultiSelectPanel({
                   {domain?.label || `Domain ${domainId}`}
                 </span>
                 <span style={{ color: colors.textMuted, fontSize: "0.65rem", flexShrink: 0 }}>
-                  {count} clusters
+                  {count} topics
                 </span>
               </div>
             ))}
@@ -962,7 +962,7 @@ function MultiSelectPanel({
         </div>
       )}
 
-      {/* ── 5. Cluster List (collapsible) ── */}
+      {/* ── 5. Community List (collapsible) ── */}
       <div
         style={{
           borderTop: `1px solid ${colors.ruleBorder}`,
@@ -970,7 +970,7 @@ function MultiSelectPanel({
         }}
       >
         <button
-          onClick={() => setShowAllClusters((v) => !v)}
+          onClick={() => setShowAllCommunities((v) => !v)}
           style={{
             background: "none",
             border: "none",
@@ -987,14 +987,14 @@ function MultiSelectPanel({
             style={{
               display: "inline-block",
               transition: "transform 0.15s",
-              transform: showAllClusters ? "rotate(90deg)" : "rotate(0deg)",
+              transform: showAllCommunities ? "rotate(90deg)" : "rotate(0deg)",
             }}
           >
             ▸
           </span>
-          {showAllClusters ? "Hide" : "View all"} {clusters.length} clusters
+          {showAllCommunities ? "Hide" : "View all"} {communities.length} topics
         </button>
-        {showAllClusters && (
+        {showAllCommunities && (
           <div
             style={{
               display: "flex",
@@ -1003,12 +1003,12 @@ function MultiSelectPanel({
               marginTop: 8,
             }}
           >
-            {clusters.map((c) => {
+            {communities.map((c) => {
               const domain = domainMap.get(c.domain_id);
               return (
                 <div
-                  key={c.cluster_id}
-                  onClick={() => onSelectCluster(c)}
+                  key={c.community_id}
+                  onClick={() => onSelectCommunity(c)}
                   style={{
                     padding: "6px 10px",
                     borderRadius: 6,
@@ -1052,10 +1052,10 @@ function MultiSelectPanel({
   );
 }
 
-// ── Cluster detail panel (single selection) ──
+// ── Community detail panel (single selection) ──
 
-function ClusterPanel({
-  cluster,
+function CommunityPanel({
+  community,
   detail,
   loading,
   domain,
@@ -1063,8 +1063,8 @@ function ClusterPanel({
   onClose,
   colors,
 }: {
-  cluster: UniverseCluster;
-  detail: ThemeDetail | null;
+  community: UniverseCommunity;
+  detail: CommunityDetail | null;
   loading: boolean;
   domain: UniverseDomain | undefined;
   basePath: string;
@@ -1110,7 +1110,7 @@ function ClusterPanel({
               lineHeight: 1.3,
             }}
           >
-            {cluster.label}
+            {community.label}
           </h3>
         </div>
         <button
@@ -1140,13 +1140,13 @@ function ClusterPanel({
           gap: 8,
         }}
       >
-        <span>{cluster.book_count} books</span>
+        <span>{community.book_count} books</span>
         <span>·</span>
-        <span>{cluster.size} topics</span>
+        <span>{community.size} topics</span>
       </div>
 
       {/* Top topics */}
-      {cluster.top_topics.length > 0 && (
+      {community.top_topics.length > 0 && (
         <div style={{ marginBottom: 16 }}>
           <div
             style={{
@@ -1160,7 +1160,7 @@ function ClusterPanel({
             Top Topics
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-            {cluster.top_topics.slice(0, 8).map((t) => (
+            {community.top_topics.slice(0, 8).map((t) => (
               <span
                 key={t}
                 style={{
@@ -1223,8 +1223,8 @@ function ClusterPanel({
         </div>
       )}
 
-      {/* More topics from detail */}
-      {detail && detail.topics.length > 0 && (
+      {/* Clusters from detail */}
+      {detail && detail.clusters.length > 0 && (
         <div style={{ marginBottom: 16 }}>
           <div
             style={{
@@ -1235,12 +1235,12 @@ function ClusterPanel({
               marginBottom: 6,
             }}
           >
-            All Topics
+            Clusters ({detail.clusters.length})
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-            {detail.topics.slice(0, 20).map((t) => (
+            {detail.clusters.slice(0, 12).map((cl) => (
               <span
-                key={t.id}
+                key={cl.cluster_id}
                 style={{
                   background: colors.chipBg,
                   borderRadius: 4,
@@ -1249,9 +1249,9 @@ function ClusterPanel({
                   color: colors.textMuted,
                 }}
               >
-                {t.label}
+                {cl.label}
                 <span style={{ color: colors.textFaint, marginLeft: 4 }}>
-                  {t.count}
+                  {cl.size}
                 </span>
               </span>
             ))}
@@ -1261,7 +1261,7 @@ function ClusterPanel({
 
       {/* Explore link */}
       <a
-        href={`${basePath}/clusters/${cluster.cluster_id}`}
+        href={`${basePath}/communities/${community.community_id}`}
         style={{
           display: "inline-flex",
           alignItems: "center",
@@ -1272,13 +1272,13 @@ function ClusterPanel({
           padding: "8px 0",
         }}
       >
-        Explore cluster →
+        View topic →
       </a>
     </div>
   );
 }
 
-// ── Domain legend (shown when no cluster selected) ──
+// ── Domain legend (shown when no community selected) ──
 
 function DomainLegend({
   domains,
@@ -1430,17 +1430,17 @@ function DomainLegend({
   );
 }
 
-// ── Project 3D cluster position to 2D screen coordinates ──
+// ── Project 3D community position to 2D screen coordinates ──
 
 function projectToScreen(
-  cluster: UniverseCluster,
+  community: UniverseCommunity,
   camera: THREE.Camera,
   canvasRect: DOMRect
 ): { x: number; y: number } {
   const vec = new THREE.Vector3(
-    cluster.x * SPREAD,
-    cluster.y * SPREAD,
-    (cluster.z ?? 0) * SPREAD
+    community.x * SPREAD,
+    community.y * SPREAD,
+    (community.z ?? 0) * SPREAD
   );
   vec.project(camera);
   return {
@@ -1462,8 +1462,11 @@ export default function GalaxyView() {
 
   // Selection state (supports single and multi-select)
   const [selectedIds, setSelectedIds] = useState<Set<number>>(EMPTY_SET);
-  const [singleDetail, setSingleDetail] = useState<ThemeDetail | null>(null);
+  const [singleDetail, setSingleDetail] = useState<CommunityDetail | null>(null);
   const [detailLoading, setDetailLoading] = useState(false);
+
+  // Hover tooltip
+  const [tooltip, setTooltip] = useState<TooltipState | null>(null);
 
   // Search state
   const [searchQuery, setSearchQuery] = useState("");
@@ -1474,7 +1477,7 @@ export default function GalaxyView() {
 
   const searchHitIds = useMemo(() => {
     if (!searchQuery || searchResults.length === 0) return null;
-    return new Set(searchResults.map((r) => r.cluster_id));
+    return new Set(searchResults.map((r) => r.community_id));
   }, [searchQuery, searchResults]);
 
   const handleSearchChange = useCallback((query: string) => {
@@ -1504,6 +1507,22 @@ export default function GalaxyView() {
     }, 300);
   }, []);
 
+  const handleHover = useCallback(
+    (community: UniverseCommunity | null, x: number, y: number) => {
+      if (!community || !data) {
+        setTooltip(null);
+        return;
+      }
+      setTooltip({
+        x,
+        y,
+        community,
+        domain: data.domains.find((d) => d.domain_id === community.domain_id),
+      });
+    },
+    [data]
+  );
+
   // Shift+drag rectangle selection
   const [selectRect, setSelectRect] = useState<SelectRect | null>(null);
   const isDraggingRef = useRef(false);
@@ -1523,19 +1542,19 @@ export default function GalaxyView() {
     return map;
   }, [data]);
 
-  const visibleClusters = useMemo(() => {
+  const visibleCommunities = useMemo(() => {
     if (!data) return [];
     return activeDomains
-      ? data.clusters.filter((c) => activeDomains.has(c.domain_id))
-      : data.clusters;
+      ? data.communities.filter((c) => activeDomains.has(c.domain_id))
+      : data.communities;
   }, [data, activeDomains]);
 
-  const selectedClusters = useMemo(() => {
+  const selectedCommunities = useMemo(() => {
     if (selectedIds.size === 0) return [];
-    return visibleClusters.filter((c) => selectedIds.has(c.cluster_id));
-  }, [visibleClusters, selectedIds]);
+    return visibleCommunities.filter((c) => selectedIds.has(c.community_id));
+  }, [visibleCommunities, selectedIds]);
 
-  // Fetch detail when exactly one cluster is selected
+  // Fetch detail when exactly one community is selected
   useEffect(() => {
     if (selectedIds.size !== 1) {
       setSingleDetail(null);
@@ -1545,7 +1564,7 @@ export default function GalaxyView() {
     const id = [...selectedIds][0];
     setSingleDetail(null);
     setDetailLoading(true);
-    fetchThemeDetail(id)
+    getCommunity(id)
       .then(setSingleDetail)
       .catch(() => {})
       .finally(() => setDetailLoading(false));
@@ -1553,21 +1572,21 @@ export default function GalaxyView() {
 
   // Click a sphere → single select (or toggle)
   const handleClickSphere = useCallback(
-    (cluster: UniverseCluster) => {
+    (community: UniverseCommunity) => {
       setSelectedIds((prev) => {
-        if (prev.size === 1 && prev.has(cluster.cluster_id)) {
+        if (prev.size === 1 && prev.has(community.community_id)) {
           return EMPTY_SET;
         }
-        return new Set([cluster.cluster_id]);
+        return new Set([community.community_id]);
       });
     },
     []
   );
 
-  // Click on a cluster in multi-select list → drill into single select
+  // Click on a community in multi-select list → drill into single select
   const handleSelectSingleFromMulti = useCallback(
-    (cluster: UniverseCluster) => {
-      setSelectedIds(new Set([cluster.cluster_id]));
+    (community: UniverseCommunity) => {
+      setSelectedIds(new Set([community.community_id]));
     },
     []
   );
@@ -1643,9 +1662,9 @@ export default function GalaxyView() {
         return;
       }
 
-      // Find clusters within the rectangle
+      // Find communities within the rectangle
       const hits = new Set<number>();
-      for (const c of visibleClusters) {
+      for (const c of visibleCommunities) {
         const screen = projectToScreen(c, camera, canvasRect);
         if (
           screen.x >= left &&
@@ -1653,7 +1672,7 @@ export default function GalaxyView() {
           screen.y >= top &&
           screen.y <= bottom
         ) {
-          hits.add(c.cluster_id);
+          hits.add(c.community_id);
         }
       }
 
@@ -1672,7 +1691,7 @@ export default function GalaxyView() {
 
       setSelectRect(null);
     },
-    [selectRect, visibleClusters]
+    [selectRect, visibleCommunities]
   );
 
   const toggleDomain = useCallback(
@@ -1762,13 +1781,14 @@ export default function GalaxyView() {
         <ambientLight intensity={0.4} />
         <directionalLight position={[50, 80, 60]} intensity={0.8} />
         <directionalLight position={[-40, -20, -50]} intensity={0.3} />
-        {visibleClusters.length > 0 && (
-          <ClusterSpheres
-            clusters={visibleClusters}
+        {visibleCommunities.length > 0 && (
+          <CommunitySpheres
+            communities={visibleCommunities}
             colorMap={colorMap}
             selectedIds={selectedIds}
             searchHitIds={searchHitIds}
             onClickSphere={handleClickSphere}
+            onHover={handleHover}
           />
         )}
         <OrbitControls
@@ -1784,22 +1804,100 @@ export default function GalaxyView() {
         />
       </Canvas>
 
+      {/* Hover tooltip */}
+      {tooltip && (
+        <div
+          style={{
+            position: "fixed",
+            left: tooltip.x + 16,
+            top: tooltip.y - 12,
+            background: sidebarColors.bg,
+            border: `1px solid ${tooltip.domain?.color || sidebarColors.border}`,
+            borderRadius: "10px",
+            padding: "12px 16px",
+            pointerEvents: "none",
+            zIndex: 100,
+            maxWidth: "280px",
+            fontFamily: "Inter, sans-serif",
+            backdropFilter: "blur(8px)",
+            boxShadow: "0 8px 32px rgba(0,0,0,0.25)",
+          }}
+        >
+          <div
+            style={{
+              fontWeight: 600,
+              fontSize: "0.9rem",
+              color: sidebarColors.text,
+              marginBottom: "4px",
+              textTransform: "capitalize",
+              lineHeight: 1.3,
+            }}
+          >
+            {tooltip.community.label}
+          </div>
+          {tooltip.domain && (
+            <div
+              style={{
+                display: "inline-block",
+                fontSize: "0.68rem",
+                fontWeight: 500,
+                color: tooltip.domain.color,
+                background: `${tooltip.domain.color}18`,
+                border: `1px solid ${tooltip.domain.color}40`,
+                borderRadius: "9999px",
+                padding: "1px 8px",
+                marginBottom: "8px",
+              }}
+            >
+              {tooltip.domain.label}
+            </div>
+          )}
+          <div
+            style={{
+              color: sidebarColors.textMuted,
+              fontSize: "0.75rem",
+              marginBottom: "6px",
+            }}
+          >
+            {tooltip.community.book_count} books &middot; {tooltip.community.size} topics
+          </div>
+          {tooltip.community.top_topics.length > 0 && (
+            <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
+              {tooltip.community.top_topics.slice(0, 4).map((t) => (
+                <span
+                  key={t}
+                  style={{
+                    background: sidebarColors.chipBg,
+                    borderRadius: "4px",
+                    padding: "2px 7px",
+                    fontSize: "0.68rem",
+                    color: sidebarColors.textMuted,
+                  }}
+                >
+                  {t}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Sidebar */}
       <Sidebar
-        selectedClusters={selectedClusters}
+        selectedCommunities={selectedCommunities}
         singleDetail={singleDetail}
         detailLoading={detailLoading}
         domains={data.domains}
         activeDomains={activeDomains}
         onToggleDomain={toggleDomain}
         onClearDomainFilter={() => setActiveDomains(null)}
-        onSelectCluster={handleSelectSingleFromMulti}
+        onSelectCommunity={handleSelectSingleFromMulti}
         onClose={handleClickEmpty}
         colors={sidebarColors}
         isMobile={isMobile}
         search={{ query: searchQuery, results: searchResults, loading: searchLoading }}
         onSearchChange={handleSearchChange}
-        allClusters={data.clusters}
+        allCommunities={data.communities}
       />
     </div>
   );

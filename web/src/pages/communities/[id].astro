@@ -24,10 +24,10 @@ try {
 }
 ---
 
-<BaseLayout title={community.label} description={`Browse ${community.books.length} books in the "${community.label}" topic community`}>
+<BaseLayout title={community.label} description={`Browse ${community.books.length} books in the "${community.label}" topic`}>
   <header class="mb-8">
     <nav class="text-sm text-[var(--color-text-muted)] mb-4">
-      <a href={url("/clusters")} class="hover:text-[var(--color-text)] transition-colors">Topics</a>
+      <a href={url("/communities")} class="hover:text-[var(--color-text)] transition-colors">Topics</a>
       <span class="mx-2">/</span>
       <span class="text-[var(--color-text)]">{community.label}</span>
     </nav>
