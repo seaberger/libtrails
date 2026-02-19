@@ -214,6 +214,7 @@ def init_chunks_table():
                 label TEXT UNIQUE NOT NULL,
                 embedding BLOB,
                 cluster_id INTEGER,
+                community_id INTEGER,
                 parent_topic_id INTEGER REFERENCES topics(id),
                 occurrence_count INTEGER DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -312,12 +313,79 @@ def init_chunks_table():
                 refreshed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
+            -- Materialized stats: per-book domain membership with concentration scores
+            CREATE TABLE IF NOT EXISTS book_domains (
+                book_id INTEGER NOT NULL,
+                domain_id INTEGER NOT NULL,
+                topic_count INTEGER NOT NULL,
+                book_total_topics INTEGER NOT NULL,
+                concentration REAL NOT NULL,
+                relevance_score REAL NOT NULL,
+                is_primary INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (book_id, domain_id)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_book_domains_domain
+                ON book_domains(domain_id, relevance_score DESC);
+            CREATE INDEX IF NOT EXISTS idx_book_domains_primary
+                ON book_domains(domain_id, is_primary);
+
             -- Materialized stats: per-domain cached stats
             CREATE TABLE IF NOT EXISTS domain_stats (
                 domain_id INTEGER PRIMARY KEY,
                 book_count INTEGER NOT NULL DEFAULT 0,
+                primary_book_count INTEGER NOT NULL DEFAULT 0,
                 sample_books_json TEXT,
                 top_clusters_json TEXT,
+                refreshed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            -- Communities (coarser grouping of topics, between domains and clusters)
+            CREATE TABLE IF NOT EXISTS communities (
+                id INTEGER PRIMARY KEY,
+                label TEXT NOT NULL,
+                domain_id INTEGER REFERENCES domains(id),
+                topic_count INTEGER DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+
+            -- Maps Leiden clusters to communities (majority vote from topic community_ids)
+            CREATE TABLE IF NOT EXISTS cluster_communities (
+                cluster_id INTEGER PRIMARY KEY,
+                community_id INTEGER NOT NULL REFERENCES communities(id)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_cluster_communities_community
+                ON cluster_communities(community_id);
+
+            -- Per-book community membership with concentration scores
+            CREATE TABLE IF NOT EXISTS book_communities (
+                book_id INTEGER NOT NULL,
+                community_id INTEGER NOT NULL,
+                topic_count INTEGER NOT NULL,
+                book_total_topics INTEGER NOT NULL,
+                concentration REAL NOT NULL,
+                relevance_score REAL NOT NULL,
+                is_primary INTEGER NOT NULL DEFAULT 0,
+                PRIMARY KEY (book_id, community_id)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_book_communities_community
+                ON book_communities(community_id, relevance_score DESC);
+            CREATE INDEX IF NOT EXISTS idx_book_communities_primary
+                ON book_communities(community_id, is_primary);
+
+            -- Materialized stats per community
+            CREATE TABLE IF NOT EXISTS community_stats (
+                community_id INTEGER PRIMARY KEY,
+                topic_count INTEGER NOT NULL DEFAULT 0,
+                book_count INTEGER NOT NULL DEFAULT 0,
+                primary_book_count INTEGER NOT NULL DEFAULT 0,
+                top_label TEXT,
+                top_topics_json TEXT,
+                sample_books_json TEXT,
+                domain_id INTEGER,
+                domain_label TEXT,
                 refreshed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
@@ -340,6 +408,23 @@ def init_chunks_table():
         cb_columns = [row[1] for row in cursor.fetchall()]
         if cb_columns and "book_total_topics" not in cb_columns:
             conn.execute("ALTER TABLE cluster_books ADD COLUMN book_total_topics INTEGER DEFAULT 0")
+
+        # Migration: add primary_book_count column to domain_stats table
+        cursor.execute("PRAGMA table_info(domain_stats)")
+        ds_columns = [row[1] for row in cursor.fetchall()]
+        if ds_columns and "primary_book_count" not in ds_columns:
+            conn.execute(
+                "ALTER TABLE domain_stats ADD COLUMN primary_book_count INTEGER NOT NULL DEFAULT 0"
+            )
+
+        # Migration: add community_id column to topics table
+        cursor.execute("PRAGMA table_info(topics)")
+        topic_columns = [row[1] for row in cursor.fetchall()]
+        if topic_columns and "community_id" not in topic_columns:
+            conn.execute("ALTER TABLE topics ADD COLUMN community_id INTEGER")
+
+        # Create index on community_id (safe after migration ensures column exists)
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_topics_community ON topics(community_id)")
 
         conn.commit()
 
@@ -506,6 +591,20 @@ def update_topic_cluster(topic_id: int, cluster_id: int, parent_id: Optional[int
         conn.execute(
             "UPDATE topics SET cluster_id = ?, parent_topic_id = ? WHERE id = ?",
             (cluster_id, parent_id, topic_id),
+        )
+        conn.commit()
+
+
+def batch_update_topic_communities(assignments: list[tuple[int, int]]):
+    """Batch update community_id for multiple topics.
+
+    Args:
+        assignments: List of (topic_id, community_id) tuples.
+    """
+    with get_db() as conn:
+        conn.executemany(
+            "UPDATE topics SET community_id = ? WHERE id = ?",
+            [(cid, tid) for tid, cid in assignments],
         )
         conn.commit()
 

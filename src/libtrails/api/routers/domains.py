@@ -9,7 +9,7 @@ import json
 from fastapi import APIRouter, HTTPException
 
 from ..dependencies import DBConnection
-from ..schemas import BookSummary, DomainDetail, DomainSummary
+from ..schemas import BookSummary, DomainBook, DomainDetail, DomainSummary
 
 router = APIRouter()
 
@@ -21,7 +21,8 @@ def list_domains(db: DBConnection):
 
     cursor.execute("""
         SELECT d.id, d.label, d.cluster_count,
-               ds.book_count, ds.sample_books_json, ds.top_clusters_json
+               ds.book_count, ds.primary_book_count,
+               ds.sample_books_json, ds.top_clusters_json
         FROM domains d
         LEFT JOIN domain_stats ds ON ds.domain_id = d.id
         ORDER BY d.cluster_count DESC
@@ -31,6 +32,7 @@ def list_domains(db: DBConnection):
     result = []
     for row in rows:
         book_count = row["book_count"] or 0
+        primary_book_count = row["primary_book_count"] or 0
         sample_books_raw = json.loads(row["sample_books_json"] or "[]")
         top_clusters = json.loads(row["top_clusters_json"] or "[]")
 
@@ -42,6 +44,7 @@ def list_domains(db: DBConnection):
                 label=row["label"],
                 cluster_count=row["cluster_count"],
                 book_count=book_count,
+                primary_book_count=primary_book_count,
                 sample_books=sample_books,
                 top_clusters=top_clusters,
             )
@@ -77,21 +80,29 @@ def get_domain(db: DBConnection, domain_id: int):
     )
     clusters = [dict(r) for r in cursor.fetchall()]
 
-    # Get all books in domain, ranked by topic relevance
+    # Get books in domain from book_domains, with concentration threshold
     cursor.execute(
         """
         SELECT b.id, b.title, b.author, b.calibre_id,
-               SUM(cb.topic_count) as total_topics
-        FROM cluster_domains cd
-        JOIN cluster_books cb ON cb.cluster_id = cd.cluster_id
-        JOIN books b ON b.id = cb.book_id
-        WHERE cd.domain_id = ?
-        GROUP BY b.id
-        ORDER BY total_topics DESC, b.title
+               bd.concentration, bd.is_primary
+        FROM book_domains bd
+        JOIN books b ON b.id = bd.book_id
+        WHERE bd.domain_id = ? AND bd.concentration >= 0.01
+        ORDER BY bd.relevance_score DESC, b.title
     """,
         (domain_id,),
     )
-    books = [BookSummary(**dict(r)) for r in cursor.fetchall()]
+    books = [
+        DomainBook(
+            id=r["id"],
+            title=r["title"],
+            author=r["author"],
+            calibre_id=r["calibre_id"],
+            concentration=round(r["concentration"], 4),
+            is_primary=bool(r["is_primary"]),
+        )
+        for r in cursor.fetchall()
+    ]
 
     return DomainDetail(
         domain_id=domain_id,

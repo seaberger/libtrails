@@ -555,6 +555,12 @@ First run downloads ~130MB model. Subsequent runs use local cache in `models/`.
 - For background/headless runs, use `screen` + `script` to provide a proper PTY, or disable Rich progress bars entirely.
 - When adding new Progress bars, consider TTY-safe fallbacks for non-interactive use.
 
+### Rich Table Column Truncation
+- **Never use fixed `width=` on Rich Table columns that hold variable-length data** (floats, paths, labels). Rich silently truncates content to fit the width, losing data without warning.
+- Use `no_wrap=True` instead of `width=N` — this prevents wrapping while letting the table auto-size.
+- For very small numbers (e.g. Leiden resolutions like 0.00000282), use scientific notation (`f"{val:.2e}"`) instead of fixed decimal (`f"{val:.6f}"`) to avoid precision loss.
+- Fixed `width=` is only safe for columns with known-bounded content (e.g. integer IDs ≤ 4 digits).
+
 ### Background Command Output
 - **NEVER pipe background Bash commands through `head`, `tail -n`, or other line-limiting filters** — this buffers all output and the output file stays empty until the filter's condition is met or the process ends, making it impossible to monitor progress.
 - Instead, run the command directly with `run_in_background: true` and use `tail` to read the output file afterwards.

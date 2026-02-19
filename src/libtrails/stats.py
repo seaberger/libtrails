@@ -207,11 +207,110 @@ def refresh_cluster_stats(conn: sqlite3.Connection) -> int:
         raise
 
 
-def refresh_domain_stats(conn: sqlite3.Connection) -> int:
-    """Rebuild domain_stats from cluster_stats + cluster_books.
+def refresh_book_domains(conn: sqlite3.Connection) -> int:
+    """Rebuild book_domains from cluster_books + cluster_domains.
 
-    Computes per-domain: book_count, sample_books_json, top_clusters_json.
-    Requires cluster_stats to be populated first.
+    For each (book, domain) pair, aggregates topic counts across all clusters
+    in the domain, computes concentration and relevance scores, and marks
+    each book's highest-scoring domain as primary.
+
+    Requires cluster_books to be populated first.
+    Returns the number of rows inserted.
+    """
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM book_domains")
+
+        # Total corpus for PPMI
+        total_corpus_row = cursor.execute("SELECT SUM(topic_count) FROM cluster_books").fetchone()
+        total_corpus = total_corpus_row[0] if total_corpus_row[0] else 1
+
+        # Aggregate cluster_books by domain: (book_id, domain_id) -> topic_count
+        cursor.execute("""
+            INSERT INTO book_domains (book_id, domain_id, topic_count, book_total_topics,
+                                      concentration, relevance_score, is_primary)
+            SELECT
+                cb.book_id,
+                cd.domain_id,
+                SUM(cb.topic_count) as topic_count,
+                MAX(cb.book_total_topics) as book_total_topics,
+                CAST(SUM(cb.topic_count) AS REAL) / MAX(cb.book_total_topics) as concentration,
+                0.0,  -- placeholder, scored below
+                0
+            FROM cluster_books cb
+            JOIN cluster_domains cd ON cd.cluster_id = cb.cluster_id
+            WHERE cb.book_total_topics > 0
+            GROUP BY cb.book_id, cd.domain_id
+        """)
+        count = cursor.rowcount
+
+        # Compute relevance scores using book_cluster_relevance()
+        # We need domain-level total topics for the PPMI component
+        cursor.execute("""
+            SELECT bd.book_id, bd.domain_id, bd.topic_count, bd.book_total_topics
+            FROM book_domains bd
+        """)
+        rows = cursor.fetchall()
+
+        # Cache domain total topics (sum of all topic_count in that domain's clusters)
+        domain_totals: dict[int, int] = {}
+        cursor.execute("""
+            SELECT cd.domain_id, SUM(cb.topic_count) as total
+            FROM cluster_books cb
+            JOIN cluster_domains cd ON cd.cluster_id = cb.cluster_id
+            GROUP BY cd.domain_id
+        """)
+        for r in cursor.fetchall():
+            domain_totals[r["domain_id"]] = r["total"]
+
+        # Batch update relevance scores
+        updates = []
+        for r in rows:
+            domain_total = domain_totals.get(r["domain_id"], 1)
+            score = book_cluster_relevance(
+                topics_in_cluster=r["topic_count"],
+                total_topics_book=r["book_total_topics"],
+                total_topics_cluster=domain_total,
+                total_corpus=total_corpus,
+                min_topics=1,  # lower threshold for domains (aggregated)
+            )
+            updates.append((score, r["book_id"], r["domain_id"]))
+
+        cursor.executemany(
+            "UPDATE book_domains SET relevance_score = ? WHERE book_id = ? AND domain_id = ?",
+            updates,
+        )
+
+        # Mark is_primary: each book's single highest-scoring domain
+        cursor.execute("""
+            UPDATE book_domains SET is_primary = 1
+            WHERE rowid IN (
+                SELECT rowid FROM (
+                    SELECT rowid,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY book_id
+                               ORDER BY relevance_score DESC
+                           ) as rn
+                    FROM book_domains
+                    WHERE relevance_score > 0
+                )
+                WHERE rn = 1
+            )
+        """)
+
+        conn.commit()
+        return count
+    except Exception:
+        conn.rollback()
+        raise
+
+
+def refresh_domain_stats(conn: sqlite3.Connection) -> int:
+    """Rebuild domain_stats from book_domains + cluster_stats.
+
+    Computes per-domain: book_count (≥1% concentration), primary_book_count,
+    sample_books_json (top 5 by relevance), top_clusters_json.
+    Requires book_domains and cluster_stats to be populated first.
 
     Returns the number of domains with stats.
     """
@@ -219,81 +318,44 @@ def refresh_domain_stats(conn: sqlite3.Connection) -> int:
         cursor = conn.cursor()
         cursor.execute("DELETE FROM domain_stats")
 
-        # Total corpus for PPMI (computed once)
-        total_corpus_row = cursor.execute("SELECT SUM(topic_count) FROM cluster_books").fetchone()
-        total_corpus = total_corpus_row[0] if total_corpus_row[0] else 1
-
         cursor.execute("SELECT id FROM domains")
         domains = cursor.fetchall()
 
         for domain_row in domains:
             domain_id = domain_row["id"]
 
-            # Get cluster IDs in this domain
+            # Book count: books with ≥1% concentration in this domain
             cursor.execute(
-                "SELECT cluster_id FROM cluster_domains WHERE domain_id = ?",
-                (domain_id,),
-            )
-            cluster_ids = [r["cluster_id"] for r in cursor.fetchall()]
-
-            if not cluster_ids:
-                cursor.execute(
-                    """
-                    INSERT INTO domain_stats (domain_id, book_count, sample_books_json, top_clusters_json)
-                    VALUES (?, 0, '[]', '[]')
-                """,
-                    (domain_id,),
-                )
-                continue
-
-            placeholders = ",".join("?" * len(cluster_ids))
-
-            # Book count: distinct books across all clusters in domain
-            cursor.execute(
-                f"""
-                SELECT COUNT(DISTINCT book_id) as cnt
-                FROM cluster_books
-                WHERE cluster_id IN ({placeholders})
+                """
+                SELECT COUNT(*) as cnt FROM book_domains
+                WHERE domain_id = ? AND concentration >= 0.01
             """,
-                cluster_ids,
+                (domain_id,),
             )
             book_count = cursor.fetchone()["cnt"]
 
-            # Sample books: top 5 by relevance score across domain clusters
+            # Primary book count: books where this is their top domain
             cursor.execute(
-                f"""
-                SELECT b.id, b.title, b.author, b.calibre_id,
-                       SUM(cb.topic_count) as domain_topics,
-                       cb.book_total_topics
-                FROM cluster_books cb
-                JOIN books b ON b.id = cb.book_id
-                WHERE cb.cluster_id IN ({placeholders}) AND b.calibre_id IS NOT NULL
-                GROUP BY b.id
+                """
+                SELECT COUNT(*) as cnt FROM book_domains
+                WHERE domain_id = ? AND is_primary = 1
             """,
-                cluster_ids,
+                (domain_id,),
             )
-            domain_book_rows = cursor.fetchall()
+            primary_book_count = cursor.fetchone()["cnt"]
 
-            # Total topics across all clusters in this domain
+            # Sample books: top 5 by relevance_score from book_domains
             cursor.execute(
-                f"""
-                SELECT SUM(topic_count) FROM cluster_books
-                WHERE cluster_id IN ({placeholders})
+                """
+                SELECT b.id, b.title, b.author, b.calibre_id
+                FROM book_domains bd
+                JOIN books b ON b.id = bd.book_id
+                WHERE bd.domain_id = ? AND b.calibre_id IS NOT NULL
+                ORDER BY bd.relevance_score DESC
+                LIMIT 5
             """,
-                cluster_ids,
+                (domain_id,),
             )
-            domain_total = cursor.fetchone()[0] or 1
-
-            scored = []
-            for r in domain_book_rows:
-                score = book_cluster_relevance(
-                    topics_in_cluster=r["domain_topics"],
-                    total_topics_book=r["book_total_topics"],
-                    total_topics_cluster=domain_total,
-                    total_corpus=total_corpus,
-                )
-                scored.append((score, r))
-            scored.sort(key=lambda x: x[0], reverse=True)
             sample_books = [
                 {
                     "id": r["id"],
@@ -301,19 +363,20 @@ def refresh_domain_stats(conn: sqlite3.Connection) -> int:
                     "author": r["author"],
                     "calibre_id": r["calibre_id"],
                 }
-                for _, r in scored[:5]
+                for r in cursor.fetchall()
             ]
 
             # Top 5 clusters by size
             cursor.execute(
-                f"""
-                SELECT cluster_id, size, top_label as label
-                FROM cluster_stats
-                WHERE cluster_id IN ({placeholders})
-                ORDER BY size DESC
+                """
+                SELECT cs.cluster_id, cs.size, cs.top_label as label
+                FROM cluster_stats cs
+                JOIN cluster_domains cd ON cd.cluster_id = cs.cluster_id
+                WHERE cd.domain_id = ?
+                ORDER BY cs.size DESC
                 LIMIT 5
             """,
-                cluster_ids,
+                (domain_id,),
             )
             top_clusters = [
                 {"cluster_id": r["cluster_id"], "label": r["label"], "size": r["size"]}
@@ -322,14 +385,248 @@ def refresh_domain_stats(conn: sqlite3.Connection) -> int:
 
             cursor.execute(
                 """
-                INSERT INTO domain_stats (domain_id, book_count, sample_books_json, top_clusters_json)
-                VALUES (?, ?, ?, ?)
+                INSERT INTO domain_stats
+                    (domain_id, book_count, primary_book_count, sample_books_json, top_clusters_json)
+                VALUES (?, ?, ?, ?, ?)
             """,
-                (domain_id, book_count, json.dumps(sample_books), json.dumps(top_clusters)),
+                (
+                    domain_id,
+                    book_count,
+                    primary_book_count,
+                    json.dumps(sample_books),
+                    json.dumps(top_clusters),
+                ),
             )
 
         conn.commit()
         return len(domains)
+    except Exception:
+        conn.rollback()
+        raise
+
+
+def refresh_book_communities(conn: sqlite3.Connection) -> int:
+    """Rebuild book_communities from cluster_books + cluster_communities.
+
+    For each (book, community) pair, aggregates topic counts across all clusters
+    in the community, computes concentration and relevance scores, and marks
+    each book's highest-scoring community as primary.
+
+    Requires cluster_books and cluster_communities to be populated first.
+    Returns the number of rows inserted.
+    """
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM book_communities")
+
+        # Check if cluster_communities has data
+        cursor.execute("SELECT COUNT(*) FROM cluster_communities")
+        if cursor.fetchone()[0] == 0:
+            conn.commit()
+            return 0
+
+        # Total corpus for PPMI
+        total_corpus_row = cursor.execute("SELECT SUM(topic_count) FROM cluster_books").fetchone()
+        total_corpus = total_corpus_row[0] if total_corpus_row[0] else 1
+
+        # Aggregate cluster_books by community
+        cursor.execute("""
+            INSERT INTO book_communities (book_id, community_id, topic_count, book_total_topics,
+                                          concentration, relevance_score, is_primary)
+            SELECT
+                cb.book_id,
+                cc.community_id,
+                SUM(cb.topic_count) as topic_count,
+                MAX(cb.book_total_topics) as book_total_topics,
+                CAST(SUM(cb.topic_count) AS REAL) / MAX(cb.book_total_topics) as concentration,
+                0.0,
+                0
+            FROM cluster_books cb
+            JOIN cluster_communities cc ON cc.cluster_id = cb.cluster_id
+            WHERE cb.book_total_topics > 0
+            GROUP BY cb.book_id, cc.community_id
+        """)
+        count = cursor.rowcount
+
+        # Compute relevance scores
+        cursor.execute("""
+            SELECT bc.book_id, bc.community_id, bc.topic_count, bc.book_total_topics
+            FROM book_communities bc
+        """)
+        rows = cursor.fetchall()
+
+        # Cache community total topics
+        community_totals: dict[int, int] = {}
+        cursor.execute("""
+            SELECT cc.community_id, SUM(cb.topic_count) as total
+            FROM cluster_books cb
+            JOIN cluster_communities cc ON cc.cluster_id = cb.cluster_id
+            GROUP BY cc.community_id
+        """)
+        for r in cursor.fetchall():
+            community_totals[r["community_id"]] = r["total"]
+
+        # Batch update relevance scores
+        updates = []
+        for r in rows:
+            community_total = community_totals.get(r["community_id"], 1)
+            score = book_cluster_relevance(
+                topics_in_cluster=r["topic_count"],
+                total_topics_book=r["book_total_topics"],
+                total_topics_cluster=community_total,
+                total_corpus=total_corpus,
+                min_topics=1,
+            )
+            updates.append((score, r["book_id"], r["community_id"]))
+
+        cursor.executemany(
+            "UPDATE book_communities SET relevance_score = ? WHERE book_id = ? AND community_id = ?",
+            updates,
+        )
+
+        # Mark is_primary: each book's single highest-scoring community
+        cursor.execute("""
+            UPDATE book_communities SET is_primary = 1
+            WHERE rowid IN (
+                SELECT rowid FROM (
+                    SELECT rowid,
+                           ROW_NUMBER() OVER (
+                               PARTITION BY book_id
+                               ORDER BY relevance_score DESC
+                           ) as rn
+                    FROM book_communities
+                    WHERE relevance_score > 0
+                )
+                WHERE rn = 1
+            )
+        """)
+
+        conn.commit()
+        return count
+    except Exception:
+        conn.rollback()
+        raise
+
+
+def refresh_community_stats(conn: sqlite3.Connection) -> int:
+    """Rebuild community_stats from communities + book_communities.
+
+    Computes per-community: topic_count, book_count (>=1% concentration),
+    primary_book_count, sample_books_json, top_topics_json, domain info.
+    Requires book_communities to be populated first.
+
+    Returns the number of communities with stats.
+    """
+    try:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM community_stats")
+
+        cursor.execute("SELECT id, label, domain_id, topic_count FROM communities")
+        communities = cursor.fetchall()
+
+        # Cache domain labels
+        domain_labels: dict[int, str] = {}
+        cursor.execute("SELECT id, label FROM domains")
+        for r in cursor.fetchall():
+            domain_labels[r["id"]] = r["label"]
+
+        for row in communities:
+            community_id = row["id"]
+            topic_count = row["topic_count"]
+            domain_id = row["domain_id"]
+            domain_label = domain_labels.get(domain_id, "") if domain_id is not None else ""
+
+            # Book count: books with >=1% concentration
+            cursor.execute(
+                """
+                SELECT COUNT(*) as cnt FROM book_communities
+                WHERE community_id = ? AND concentration >= 0.01
+            """,
+                (community_id,),
+            )
+            book_count = cursor.fetchone()["cnt"]
+
+            # Primary book count
+            cursor.execute(
+                """
+                SELECT COUNT(*) as cnt FROM book_communities
+                WHERE community_id = ? AND is_primary = 1
+            """,
+                (community_id,),
+            )
+            primary_book_count = cursor.fetchone()["cnt"]
+
+            # Top label (highest-occurrence topic in community)
+            cursor.execute(
+                """
+                SELECT label FROM topics
+                WHERE community_id = ? AND LENGTH(label) >= 4
+                ORDER BY occurrence_count DESC
+                LIMIT 1
+            """,
+                (community_id,),
+            )
+            label_row = cursor.fetchone()
+            top_label = label_row["label"] if label_row else row["label"]
+
+            # Top 5 topics
+            cursor.execute(
+                """
+                SELECT id, label, occurrence_count as count
+                FROM topics
+                WHERE community_id = ?
+                ORDER BY occurrence_count DESC
+                LIMIT 5
+            """,
+                (community_id,),
+            )
+            top_topics = [dict(r) for r in cursor.fetchall()]
+
+            # Sample books: top 5 by relevance_score
+            cursor.execute(
+                """
+                SELECT b.id, b.title, b.author, b.calibre_id
+                FROM book_communities bc
+                JOIN books b ON b.id = bc.book_id
+                WHERE bc.community_id = ? AND b.calibre_id IS NOT NULL
+                ORDER BY bc.relevance_score DESC
+                LIMIT 5
+            """,
+                (community_id,),
+            )
+            sample_books = [
+                {
+                    "id": r["id"],
+                    "title": r["title"],
+                    "author": r["author"],
+                    "calibre_id": r["calibre_id"],
+                }
+                for r in cursor.fetchall()
+            ]
+
+            cursor.execute(
+                """
+                INSERT INTO community_stats
+                    (community_id, topic_count, book_count, primary_book_count,
+                     top_label, top_topics_json, sample_books_json,
+                     domain_id, domain_label, refreshed_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+            """,
+                (
+                    community_id,
+                    topic_count,
+                    book_count,
+                    primary_book_count,
+                    top_label,
+                    json.dumps(top_topics),
+                    json.dumps(sample_books),
+                    domain_id,
+                    domain_label,
+                ),
+            )
+
+        conn.commit()
+        return len(communities)
     except Exception:
         conn.rollback()
         raise
@@ -356,6 +653,9 @@ def _refresh_all_stats_impl(conn: sqlite3.Connection) -> dict:
 
     cluster_book_rows = refresh_cluster_books(conn)
     cluster_count = refresh_cluster_stats(conn)
+    book_community_rows = refresh_book_communities(conn)
+    community_count = refresh_community_stats(conn)
+    book_domain_rows = refresh_book_domains(conn)
     domain_count = refresh_domain_stats(conn)
 
     elapsed = time.time() - start
@@ -363,6 +663,9 @@ def _refresh_all_stats_impl(conn: sqlite3.Connection) -> dict:
     return {
         "cluster_book_rows": cluster_book_rows,
         "clusters_with_stats": cluster_count,
+        "book_community_rows": book_community_rows,
+        "communities_with_stats": community_count,
+        "book_domain_rows": book_domain_rows,
         "domains_with_stats": domain_count,
         "elapsed_seconds": round(elapsed, 2),
     }

@@ -48,7 +48,19 @@ load_dotenv()
 
 
 class _FlushConsole(Console):
-    """Console that flushes after every print and prepends timestamps for log monitoring."""
+    """Console that flushes after every print and prepends timestamps for log monitoring.
+
+    When stdout is not a TTY (background/pipe mode), uses a wide output width
+    so Rich tables aren't truncated in log files.
+    """
+
+    def __init__(self):
+        import sys
+
+        width = None  # auto-detect for interactive terminals
+        if not sys.stdout.isatty():
+            width = 160  # wide enough for data tables in background/pipe mode
+        super().__init__(width=width)
 
     def print(self, *args, **kwargs):
         from datetime import datetime
@@ -1874,6 +1886,12 @@ def process():
 
 @main.command()
 @click.option(
+    "--tier",
+    type=click.Choice(["cluster", "community"]),
+    default="cluster",
+    help="Clustering tier: 'cluster' (fine, γ=0.001) or 'community' (coarse, γ=5.5e-5)",
+)
+@click.option(
     "--mode",
     type=click.Choice(["cooccurrence", "knn", "full"]),
     default=None,
@@ -1984,6 +2002,7 @@ def process():
     help="File to write progress updates (for background runs)",
 )
 def cluster(
+    tier,
     mode,
     partition_type,
     min_cooccur,
@@ -2023,7 +2042,10 @@ def cluster(
     from .database import get_db
     from .topic_graph import compute_cooccurrences
 
-    console.print(f"[bold]Running clustering (mode={mode}, partition={partition_type})...[/bold]\n")
+    tier_label = "community" if tier == "community" else "cluster"
+    console.print(
+        f"[bold]Running clustering (tier={tier_label}, mode={mode}, partition={partition_type})...[/bold]\n"
+    )
 
     # Check if embeddings exist
     stats = get_indexing_status()
@@ -2140,10 +2162,12 @@ def cluster(
         hub_method=hub_method,
         force_rebuild=force_rebuild,
         progress_file=progress_file,
+        tier=tier,
     )
 
+    unit = "communities" if tier == "community" else "clusters"
     if "error" not in cluster_result:
-        console.print(f"\n  [green]Created {cluster_result['num_clusters']} clusters[/green]")
+        console.print(f"\n  [green]Created {cluster_result['num_clusters']} {unit}[/green]")
         console.print(f"  [dim]Quality score: {cluster_result['modularity']:.4f}[/dim]")
         console.print(
             f"  [dim]Edges: {cluster_result['total_edges']} ({cluster_result.get('edge_types', {})})[/dim]"

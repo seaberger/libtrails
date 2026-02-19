@@ -66,8 +66,14 @@ export interface DomainSummary {
   label: string;
   cluster_count: number;
   book_count: number;
+  primary_book_count: number;
   sample_books: BookSummary[];
   top_clusters: ClusterInfo[];
+}
+
+export interface DomainBook extends BookSummary {
+  concentration: number;
+  is_primary: boolean;
 }
 
 export interface DomainDetail {
@@ -75,7 +81,33 @@ export interface DomainDetail {
   label: string;
   cluster_count: number;
   clusters: ClusterInfo[];
-  books: BookSummary[];
+  books: DomainBook[];
+}
+
+export interface CommunitySummary {
+  community_id: number;
+  label: string;
+  topic_count: number;
+  book_count: number;
+  primary_book_count: number;
+  domain_id: number | null;
+  domain_label: string;
+  sample_books: BookSummary[];
+}
+
+export interface CommunityBook extends BookSummary {
+  concentration: number;
+  is_primary: boolean;
+}
+
+export interface CommunityDetail {
+  community_id: number;
+  label: string;
+  topic_count: number;
+  domain_id: number | null;
+  domain_label: string;
+  clusters: ClusterInfo[];
+  books: CommunityBook[];
 }
 
 export interface UniverseCluster {

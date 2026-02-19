@@ -6,6 +6,7 @@ from contextlib import contextmanager
 import pytest
 
 from libtrails.database import (
+    batch_update_topic_communities,
     get_all_books,
     get_book,
     get_book_by_title,
@@ -64,6 +65,7 @@ def test_db(tmp_path):
             label TEXT UNIQUE,
             embedding BLOB,
             cluster_id INTEGER,
+            community_id INTEGER,
             occurrence_count INTEGER DEFAULT 0
         )
     """)
@@ -358,3 +360,60 @@ class TestTopicOperations:
         conn.close()
 
         assert result == embedding_bytes
+
+
+class TestBatchUpdateTopicCommunities:
+    """Tests for batch community assignment."""
+
+    def test_updates_community_ids(self, test_db, mock_db, monkeypatch):
+        """Test batch updating community_id on topics."""
+        conn = sqlite3.connect(test_db)
+        conn.execute("INSERT INTO topics (id, label) VALUES (1, 'topic_a')")
+        conn.execute("INSERT INTO topics (id, label) VALUES (2, 'topic_b')")
+        conn.execute("INSERT INTO topics (id, label) VALUES (3, 'topic_c')")
+        conn.commit()
+        conn.close()
+
+        from libtrails import database
+
+        monkeypatch.setattr(database, "get_db", mock_db)
+
+        assignments = [(1, 10), (2, 10), (3, 20)]
+        batch_update_topic_communities(assignments)
+
+        conn = sqlite3.connect(test_db)
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute("SELECT id, community_id FROM topics ORDER BY id").fetchall()
+        conn.close()
+
+        assert rows[0]["community_id"] == 10
+        assert rows[1]["community_id"] == 10
+        assert rows[2]["community_id"] == 20
+
+    def test_empty_assignments(self, test_db, mock_db, monkeypatch):
+        """Empty assignments list should not error."""
+        from libtrails import database
+
+        monkeypatch.setattr(database, "get_db", mock_db)
+
+        batch_update_topic_communities([])  # should not raise
+
+    def test_overwrites_existing_community(self, test_db, mock_db, monkeypatch):
+        """Should overwrite any pre-existing community_id."""
+        conn = sqlite3.connect(test_db)
+        conn.execute("INSERT INTO topics (id, label, community_id) VALUES (1, 'topic_a', 5)")
+        conn.commit()
+        conn.close()
+
+        from libtrails import database
+
+        monkeypatch.setattr(database, "get_db", mock_db)
+
+        batch_update_topic_communities([(1, 99)])
+
+        conn = sqlite3.connect(test_db)
+        conn.row_factory = sqlite3.Row
+        row = conn.execute("SELECT community_id FROM topics WHERE id = 1").fetchone()
+        conn.close()
+
+        assert row["community_id"] == 99

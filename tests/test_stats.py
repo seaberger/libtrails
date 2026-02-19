@@ -1,8 +1,16 @@
-"""Tests for book_cluster_relevance scoring function."""
+"""Tests for stats module: scoring function and refresh pipelines."""
+
+import json
 
 import pytest
 
-from libtrails.stats import book_cluster_relevance
+from libtrails.stats import (
+    book_cluster_relevance,
+    refresh_book_communities,
+    refresh_book_domains,
+    refresh_community_stats,
+    refresh_domain_stats,
+)
 
 
 class TestMinTopicsFilter:
@@ -160,3 +168,250 @@ class TestEdgeCases:
         assert score > 0.0
         # Concentration is 1.0, saturated = 1.0 * 2.5 / 2.5 = 1.0
         assert score >= 1.0  # At minimum, saturated=1.0 * (1+ppmi) >= 1.0
+
+
+# ── Integration tests for stats refresh pipeline ──────────────────
+
+
+class TestRefreshBookCommunities:
+    """Tests for refresh_book_communities (cluster_books + cluster_communities → book_communities)."""
+
+    def test_populates_book_communities(self, stats_db):
+        """Should create rows for each (book, community) pair."""
+        count = refresh_book_communities(stats_db)
+
+        # B1 touches C0→Comm0 and C1→Comm1 → 2 rows
+        # B2 touches C0→Comm0 and C1→Comm1 → 2 rows
+        assert count == 4
+
+        rows = stats_db.execute(
+            "SELECT * FROM book_communities ORDER BY book_id, community_id"
+        ).fetchall()
+        assert len(rows) == 4
+
+    def test_concentration_values(self, stats_db):
+        """Concentration = topic_count / book_total_topics."""
+        refresh_book_communities(stats_db)
+
+        # B1 in Comm0: topics=60, total=100 → concentration=0.6
+        row = stats_db.execute(
+            "SELECT concentration FROM book_communities WHERE book_id=1 AND community_id=0"
+        ).fetchone()
+        assert abs(row["concentration"] - 0.6) < 0.001
+
+        # B2 in Comm1: topics=30, total=50 → concentration=0.6
+        row = stats_db.execute(
+            "SELECT concentration FROM book_communities WHERE book_id=2 AND community_id=1"
+        ).fetchone()
+        assert abs(row["concentration"] - 0.6) < 0.001
+
+    def test_relevance_scores_positive(self, stats_db):
+        """All relevance scores should be positive (min_topics=1 for communities)."""
+        refresh_book_communities(stats_db)
+
+        rows = stats_db.execute("SELECT relevance_score FROM book_communities").fetchall()
+        for row in rows:
+            assert row["relevance_score"] > 0.0
+
+    def test_primary_flag_set(self, stats_db):
+        """Each book should have exactly one primary community."""
+        refresh_book_communities(stats_db)
+
+        for book_id in [1, 2]:
+            primary_count = stats_db.execute(
+                "SELECT COUNT(*) as cnt FROM book_communities WHERE book_id=? AND is_primary=1",
+                (book_id,),
+            ).fetchone()["cnt"]
+            assert primary_count == 1
+
+    def test_focused_book_gets_higher_score(self, stats_db):
+        """B2 (30/50=60% concentration in Comm1) should score higher than B1 (40/100=40%) in Comm1."""
+        refresh_book_communities(stats_db)
+
+        b1_score = stats_db.execute(
+            "SELECT relevance_score FROM book_communities WHERE book_id=1 AND community_id=1"
+        ).fetchone()["relevance_score"]
+        b2_score = stats_db.execute(
+            "SELECT relevance_score FROM book_communities WHERE book_id=2 AND community_id=1"
+        ).fetchone()["relevance_score"]
+        assert b2_score > b1_score
+
+    def test_empty_cluster_communities_returns_zero(self, stats_db):
+        """With no cluster_communities data, should return 0 rows."""
+        stats_db.execute("DELETE FROM cluster_communities")
+        stats_db.commit()
+
+        count = refresh_book_communities(stats_db)
+        assert count == 0
+
+    def test_idempotent(self, stats_db):
+        """Running twice should produce the same result."""
+        refresh_book_communities(stats_db)
+        count1 = stats_db.execute("SELECT COUNT(*) FROM book_communities").fetchone()[0]
+
+        refresh_book_communities(stats_db)
+        count2 = stats_db.execute("SELECT COUNT(*) FROM book_communities").fetchone()[0]
+
+        assert count1 == count2
+
+
+class TestRefreshCommunityStats:
+    """Tests for refresh_community_stats (communities + book_communities → community_stats)."""
+
+    def test_populates_community_stats(self, stats_db):
+        """Should create one stats row per community."""
+        refresh_book_communities(stats_db)  # prerequisite
+        count = refresh_community_stats(stats_db)
+
+        assert count == 2
+        rows = stats_db.execute("SELECT * FROM community_stats").fetchall()
+        assert len(rows) == 2
+
+    def test_topic_count_from_communities_table(self, stats_db):
+        """topic_count should come from communities table, not recomputed."""
+        refresh_book_communities(stats_db)
+        refresh_community_stats(stats_db)
+
+        row = stats_db.execute(
+            "SELECT topic_count FROM community_stats WHERE community_id=0"
+        ).fetchone()
+        assert row["topic_count"] == 3  # matches communities table seed
+
+    def test_domain_label_populated(self, stats_db):
+        """domain_label should be set from domains table."""
+        refresh_book_communities(stats_db)
+        refresh_community_stats(stats_db)
+
+        row = stats_db.execute(
+            "SELECT domain_id, domain_label FROM community_stats WHERE community_id=0"
+        ).fetchone()
+        assert row["domain_id"] == 0
+        assert row["domain_label"] == "Science & Tech"
+
+    def test_top_label_from_highest_occurrence_topic(self, stats_db):
+        """top_label should be the highest-occurrence topic with length >= 4."""
+        refresh_book_communities(stats_db)
+        refresh_community_stats(stats_db)
+
+        # Comm0 has topics: quantum mechanics (15), linear algebra (10), thermodynamics (8)
+        row = stats_db.execute(
+            "SELECT top_label FROM community_stats WHERE community_id=0"
+        ).fetchone()
+        assert row["top_label"] == "quantum mechanics"
+
+    def test_sample_books_json_valid(self, stats_db):
+        """sample_books_json should be valid JSON with book data."""
+        refresh_book_communities(stats_db)
+        refresh_community_stats(stats_db)
+
+        row = stats_db.execute(
+            "SELECT sample_books_json FROM community_stats WHERE community_id=0"
+        ).fetchone()
+        books = json.loads(row["sample_books_json"])
+        assert isinstance(books, list)
+        assert len(books) <= 5
+        if books:
+            assert "id" in books[0]
+            assert "title" in books[0]
+
+    def test_book_count_uses_concentration_threshold(self, stats_db):
+        """book_count should only count books with concentration >= 1%."""
+        refresh_book_communities(stats_db)
+        refresh_community_stats(stats_db)
+
+        # All our test books have high concentration (>= 20%), so all should be counted
+        row = stats_db.execute(
+            "SELECT book_count FROM community_stats WHERE community_id=0"
+        ).fetchone()
+        assert row["book_count"] == 2  # Both books touch Comm0
+
+
+class TestRefreshBookDomains:
+    """Tests for refresh_book_domains (cluster_books + cluster_domains → book_domains)."""
+
+    def test_populates_book_domains(self, stats_db):
+        """Should create rows for each (book, domain) pair."""
+        count = refresh_book_domains(stats_db)
+
+        # B1 touches C0→D0 and C1→D1 → 2 rows
+        # B2 touches C0→D0 and C1→D1 → 2 rows
+        assert count == 4
+
+    def test_concentration_correct(self, stats_db):
+        """Concentration should aggregate by domain."""
+        refresh_book_domains(stats_db)
+
+        # B1 in D0: via C0 only → topics=60, total=100 → 0.6
+        row = stats_db.execute(
+            "SELECT concentration FROM book_domains WHERE book_id=1 AND domain_id=0"
+        ).fetchone()
+        assert abs(row["concentration"] - 0.6) < 0.001
+
+    def test_primary_domain_assigned(self, stats_db):
+        """Each book should have exactly one primary domain."""
+        refresh_book_domains(stats_db)
+
+        for book_id in [1, 2]:
+            primary_count = stats_db.execute(
+                "SELECT COUNT(*) as cnt FROM book_domains WHERE book_id=? AND is_primary=1",
+                (book_id,),
+            ).fetchone()["cnt"]
+            assert primary_count == 1
+
+    def test_idempotent(self, stats_db):
+        """Running twice should produce the same result."""
+        refresh_book_domains(stats_db)
+        count1 = stats_db.execute("SELECT COUNT(*) FROM book_domains").fetchone()[0]
+
+        refresh_book_domains(stats_db)
+        count2 = stats_db.execute("SELECT COUNT(*) FROM book_domains").fetchone()[0]
+
+        assert count1 == count2
+
+
+class TestRefreshDomainStats:
+    """Tests for refresh_domain_stats (book_domains + cluster_stats → domain_stats)."""
+
+    def test_populates_domain_stats(self, stats_db):
+        """Should create one stats row per domain."""
+        refresh_book_domains(stats_db)  # prerequisite
+        count = refresh_domain_stats(stats_db)
+
+        assert count == 2
+
+    def test_book_counts(self, stats_db):
+        """book_count should reflect books with >= 1% concentration."""
+        refresh_book_domains(stats_db)
+        refresh_domain_stats(stats_db)
+
+        row = stats_db.execute(
+            "SELECT book_count, primary_book_count FROM domain_stats WHERE domain_id=0"
+        ).fetchone()
+        assert row["book_count"] == 2  # Both books have high concentration in D0
+        assert row["primary_book_count"] >= 1
+
+    def test_sample_books_json_valid(self, stats_db):
+        """sample_books_json should be valid JSON."""
+        refresh_book_domains(stats_db)
+        refresh_domain_stats(stats_db)
+
+        row = stats_db.execute(
+            "SELECT sample_books_json FROM domain_stats WHERE domain_id=0"
+        ).fetchone()
+        books = json.loads(row["sample_books_json"])
+        assert isinstance(books, list)
+
+    def test_top_clusters_json_valid(self, stats_db):
+        """top_clusters_json should be valid JSON with cluster data."""
+        refresh_book_domains(stats_db)
+        refresh_domain_stats(stats_db)
+
+        row = stats_db.execute(
+            "SELECT top_clusters_json FROM domain_stats WHERE domain_id=0"
+        ).fetchone()
+        clusters = json.loads(row["top_clusters_json"])
+        assert isinstance(clusters, list)
+        if clusters:
+            assert "cluster_id" in clusters[0]
+            assert "label" in clusters[0]
+            assert "size" in clusters[0]

@@ -12,11 +12,12 @@ from .config import (
     CLUSTER_MODE,
     CLUSTER_PARTITION_TYPE,
     CLUSTER_RESOLUTION,
+    COMMUNITY_RESOLUTION,
     COOCCURRENCE_MIN_COUNT,
     EMBEDDING_EDGE_THRESHOLD,
     PMI_MIN_THRESHOLD,
 )
-from .database import get_db, update_topic_cluster
+from .database import batch_update_topic_communities, get_db, update_topic_cluster
 
 
 def _log_memory(label: str) -> float:
@@ -383,6 +384,102 @@ def _get_partition(
         raise ValueError(f"Unknown partition type: {partition_type}")
 
 
+def _populate_community_tables(
+    g: ig.Graph,
+    membership: list[int],
+    assignments: dict | None,
+    remove_hubs: bool,
+) -> None:
+    """Create communities table entries and derive cluster_communities mapping.
+
+    After community_id has been saved to topics, this function:
+    1. Creates rows in the `communities` table with auto-generated labels
+    2. Derives `cluster_communities` mapping via majority vote
+    3. Assigns each community to a domain via majority vote from cluster_domains
+    """
+    with get_db() as conn:
+        cursor = conn.cursor()
+
+        # Clear existing community data
+        cursor.execute("DELETE FROM cluster_communities")
+        cursor.execute("DELETE FROM communities")
+
+        # Get distinct community IDs from topics
+        cursor.execute("""
+            SELECT DISTINCT community_id, COUNT(*) as cnt
+            FROM topics
+            WHERE community_id IS NOT NULL
+            GROUP BY community_id
+            ORDER BY community_id
+        """)
+        communities = cursor.fetchall()
+
+        # Create communities with auto-labels (top topic by occurrence)
+        for row in communities:
+            cid = row["community_id"]
+            topic_count = row["cnt"]
+
+            # Get top topic label for auto-naming
+            cursor.execute(
+                """
+                SELECT label FROM topics
+                WHERE community_id = ? AND LENGTH(label) >= 4
+                ORDER BY occurrence_count DESC
+                LIMIT 1
+            """,
+                (cid,),
+            )
+            label_row = cursor.fetchone()
+            label = label_row["label"] if label_row else f"community_{cid}"
+
+            cursor.execute(
+                "INSERT INTO communities (id, label, topic_count) VALUES (?, ?, ?)",
+                (cid, label, topic_count),
+            )
+
+        # Derive cluster_communities: majority vote from topic community_ids
+        cursor.execute("""
+            INSERT OR REPLACE INTO cluster_communities (cluster_id, community_id)
+            SELECT cluster_id, community_id
+            FROM (
+                SELECT cluster_id, community_id, COUNT(*) as cnt,
+                       ROW_NUMBER() OVER (PARTITION BY cluster_id ORDER BY COUNT(*) DESC) as rn
+                FROM topics
+                WHERE cluster_id IS NOT NULL AND community_id IS NOT NULL
+                GROUP BY cluster_id, community_id
+            )
+            WHERE rn = 1
+        """)
+
+        # Assign each community to a domain via majority vote from cluster_domains
+        cursor.execute("""
+            SELECT cc.community_id, cd.domain_id, COUNT(*) as cnt
+            FROM cluster_communities cc
+            JOIN cluster_domains cd ON cd.cluster_id = cc.cluster_id
+            GROUP BY cc.community_id, cd.domain_id
+            ORDER BY cc.community_id, cnt DESC
+        """)
+        domain_votes = cursor.fetchall()
+
+        # Pick top domain per community
+        seen = set()
+        for row in domain_votes:
+            cid = row["community_id"]
+            if cid not in seen:
+                seen.add(cid)
+                cursor.execute(
+                    "UPDATE communities SET domain_id = ? WHERE id = ?",
+                    (row["domain_id"], cid),
+                )
+
+        conn.commit()
+
+    community_count = len(communities)
+    print(f"  Created {community_count} communities with auto-labels")
+    cluster_mapped = len(seen)
+    print(f"  Mapped {cluster_mapped} communities to domains via cluster_domains")
+
+
 def cluster_topics(
     min_cluster_size: int = 3,
     resolution: float = None,
@@ -397,6 +494,7 @@ def cluster_topics(
     hub_method: str = "degree",
     force_rebuild: bool = False,
     progress_file: str | None = None,
+    tier: str = "cluster",
 ) -> dict:
     """
     Cluster topics using the Leiden algorithm.
@@ -413,6 +511,7 @@ def cluster_topics(
         remove_hubs: If True, exclude hub topics from clustering then assign post-hoc
         hub_percentile: Percentile threshold for hub detection (default 95 = top 5%)
         hub_method: Hub detection method - "degree", "generic", or "both"
+        tier: "cluster" (fine, saves to cluster_id) or "community" (coarse, saves to community_id)
 
     Returns:
         Statistics about the clustering
@@ -437,7 +536,7 @@ def cluster_topics(
     if partition_type is None:
         partition_type = CLUSTER_PARTITION_TYPE
     if resolution is None:
-        resolution = CLUSTER_RESOLUTION
+        resolution = COMMUNITY_RESOLUTION if tier == "community" else CLUSTER_RESOLUTION
     if knn_k is None:
         knn_k = CLUSTER_KNN_K
 
@@ -592,42 +691,63 @@ def cluster_topics(
 
     # Save results to database (unless dry run)
     if not dry_run and not sample_size:
-        log_progress(f"Saving {g.vcount()} cluster assignments to database...")
-        save_start = time.time()
-        with get_db() as conn:
-            if remove_hubs and assignments:
-                # Use assignments dict from hub removal
-                for topic_id, cluster_id in assignments.items():
-                    update_topic_cluster(topic_id, cluster_id)
-            else:
-                # Standard membership list
-                for node_idx, cluster_id in enumerate(membership):
-                    topic_id = g.vs[node_idx]["topic_id"]
-                    update_topic_cluster(topic_id, cluster_id)
-            conn.commit()
-        save_elapsed = time.time() - save_start
-        log_progress(f"Saved cluster assignments in {save_elapsed:.1f}s")
+        if tier == "community":
+            # Community tier: batch save to community_id column
+            log_progress(f"Saving {g.vcount()} community assignments to database...")
+            save_start = time.time()
 
-        # Compute and save multi-cluster assignments for hubs
-        if remove_hubs and hub_indices and assignments:
-            print("  Computing multi-cluster hub assignments...")
-            multi_assignments = assign_hubs_multi_cluster(
-                g,
-                hub_indices,
-                assignments,
-                min_connections=3,
-                max_clusters=5,
-            )
-            count = save_multi_cluster_assignments(multi_assignments, assignments)
-            result["multi_cluster_hubs"] = len(multi_assignments)
-            result["multi_cluster_memberships"] = count
-            print(f"  Saved {count} multi-cluster memberships for {len(multi_assignments)} hubs")
+            if remove_hubs and assignments:
+                batch = list(assignments.items())
+            else:
+                batch = [
+                    (g.vs[node_idx]["topic_id"], cid) for node_idx, cid in enumerate(membership)
+                ]
+            batch_update_topic_communities(batch)
+
+            save_elapsed = time.time() - save_start
+            log_progress(f"Saved community assignments in {save_elapsed:.1f}s")
+
+            # Create communities table entries and derive cluster_communities
+            _populate_community_tables(g, membership, assignments, remove_hubs)
+        else:
+            # Cluster tier: row-by-row save to cluster_id column
+            log_progress(f"Saving {g.vcount()} cluster assignments to database...")
+            save_start = time.time()
+            with get_db() as conn:
+                if remove_hubs and assignments:
+                    for topic_id, cluster_id in assignments.items():
+                        update_topic_cluster(topic_id, cluster_id)
+                else:
+                    for node_idx, cluster_id in enumerate(membership):
+                        topic_id = g.vs[node_idx]["topic_id"]
+                        update_topic_cluster(topic_id, cluster_id)
+                conn.commit()
+            save_elapsed = time.time() - save_start
+            log_progress(f"Saved cluster assignments in {save_elapsed:.1f}s")
+
+            # Compute and save multi-cluster assignments for hubs
+            if remove_hubs and hub_indices and assignments:
+                print("  Computing multi-cluster hub assignments...")
+                multi_assignments = assign_hubs_multi_cluster(
+                    g,
+                    hub_indices,
+                    assignments,
+                    min_connections=3,
+                    max_clusters=5,
+                )
+                count = save_multi_cluster_assignments(multi_assignments, assignments)
+                result["multi_cluster_hubs"] = len(multi_assignments)
+                result["multi_cluster_memberships"] = count
+                print(
+                    f"  Saved {count} multi-cluster memberships for {len(multi_assignments)} hubs"
+                )
 
         # Update graph vertex attributes
         g.vs["cluster"] = membership
     else:
         print("\n  [DRY RUN] Skipping database update")
 
+    result["tier"] = tier
     return result
 
 
