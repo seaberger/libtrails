@@ -68,8 +68,15 @@ htmlcov/
 .astro/
 .playwright-mcp/
 
+# Logs directory
+logs/
+
 # Environment variables (API keys)
 .env
 
 # Serena (AI coding assistant)
 .serena/
+
+# Screenshots (root-level only, not docs/ or web/public/)
+/*.png
+/*.jpg
