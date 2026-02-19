@@ -386,7 +386,7 @@ def init_chunks_table():
                 sample_books_json TEXT,
                 domain_id INTEGER,
                 domain_label TEXT,
-                refreshed_at TIMESTAMP
+                refreshed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         """)
 

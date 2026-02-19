@@ -484,3 +484,139 @@ Books assigned to their **primary galaxy** by topic weight, then ranked within c
 - **`book_cluster_relevance()`** in `stats.py` already implements concentration + BM25 + PPMI scoring — this can be extended to domain-level aggregation
 - **App display changes needed**: The themes page currently shows all books per domain; needs to rank by concentration and apply a minimum threshold
 - **More domains may be needed**: 29 is too few for constellations; may need γ ≈ 0.002 (50-60 domains) for the constellation tier, with a separate galaxy grouping above
+
+---
+
+## Phase 6: Demo Library Community Sweep
+
+**Goal**: Find optimal k and γ for community-level Leiden clustering on the demo library, matching the V2 methodology (Phase 2 of `topic_hierarchy_architecture.md`). The demo library has 7x fewer topics than V2, so it needs its own hyperparameter tuning.
+
+**Database**: `demo_library.db`
+- **121,118 topics** with embeddings (384-dim BGE-small)
+- **100 books**, 31,727 chunks
+- **462,873 co-occurrence pairs**
+- **26 domains** (existing)
+- **2,468 clusters** (existing, from earlier Leiden at k=10, γ=0.001)
+
+**V2 reference**: k=4, γ=4.86e-5 → ~230 communities (from 837K topics)
+
+---
+
+### 6a. KNN k Sweep
+
+**Goal**: Find optimal graph density for the demo scale. Tested k=2,3,4,5,6 at fixed γ=0.0001.
+
+| k | Edges | Clusters | Quality | Largest | Leiden time |
+|---|-------|----------|---------|---------|-------------|
+| 2 | 197K | 761 | 454,172 | 2,533 | 1.7s |
+| 3 | 288K | 270 | 559,462 | 2,050 | 2.3s |
+| **4** | **379K** | **186** | **665,094** | **3,145** | **2.7s** |
+| 5 | 470K | 140 | 770,528 | 3,531 | 3.2s |
+| 6 | 560K | 107 | 877,066 | 4,969 | 3.6s |
+
+**Observations**:
+- **k=2**: Very sparse → 761 fragments with large mega-clusters. Too noisy.
+- **k=3**: 270 clusters at this fixed γ — in the right ballpark, denser graph starts consolidating.
+- **k=4**: 186 clusters — close to target. Matches V2 methodology.
+- **k=5-6**: Too dense — only 107-140 mega-clusters with 3,500-5,000 topic maximums.
+
+**Candidates**: k=3 and k=4, consistent with V2 domain sweep findings (Phase 3) where k=3 and k=4 were the finalists.
+
+---
+
+### 6b. Full Resolution Sweep: k=3 and k=4
+
+25 log-spaced resolutions from 1e-6 to 5e-4 for each k value.
+
+#### k=3 (288K edges)
+
+| γ | Clusters | Q | Quality | Significance | Max | Median | Singles | NMI |
+|---|----------|------|---------|-------------|------|--------|---------|------|
+| 1.00e-06 | 47 | 0.005 | 644,794 | 6,805 | 120,683 | 5 | 17 | 0.867 |
+| 1.68e-06 | 98 | 0.021 | 635,012 | 23,584 | 119,329 | 5 | 17 | 0.711 |
+| 2.82e-06 | 161 | 0.054 | 619,332 | 42,268 | 116,655 | 6 | 17 | 0.649 |
+| 3.65e-06 | 235 | 0.081 | 608,221 | 64,939 | 114,335 | 6 | 17 | 0.325 |
+| 4.73e-06 | 139 | 0.425 | 601,308 | 135,280 | 84,199 | 6 | 17 | 0.467 |
+| 7.94e-06 | 88 | 0.750 | 590,476 | 284,294 | 32,832 | 6 | 17 | 0.542 |
+| 1.03e-05 | 76 | 0.809 | 586,406 | 387,973 | 19,298 | 7 | 17 | 0.573 |
+| 1.73e-05 | 84 | 0.849 | 578,830 | 563,904 | 9,475 | 26 | 17 | 0.625 |
+| 2.90e-05 | 105 | 0.857 | 572,743 | 686,889 | 5,226 | 720 | 17 | 0.694 |
+| 4.86e-05 | 157 | 0.857 | 566,973 | 811,389 | 4,276 | 714 | 17 | 0.729 |
+| **6.30e-05** | **196** | **0.857** | **564,311** | **871,591** | **2,750** | **506** | **17** | **0.754** |
+| **8.16e-05** | **237** | **0.855** | **561,757** | **918,349** | **2,279** | **443** | **17** | **0.771** |
+| **1.06e-04** | **281** | **0.852** | **558,781** | **960,615** | **2,308** | **381** | **17** | **0.782** |
+| 1.37e-04 | 345 | 0.850 | 556,062 | 1,006,292 | 1,968 | 304 | 17 | 0.801 |
+| 2.30e-04 | 514 | 0.845 | 550,461 | 1,094,684 | 1,260 | 199 | 17 | 0.834 |
+| 5.00e-04 | 886 | 0.836 | 541,333 | 1,205,346 | 1,053 | 117 | 17 | — |
+
+#### k=4 (379K edges)
+
+| γ | Clusters | Q | Quality | Significance | Max | Median | Singles | NMI |
+|---|----------|------|---------|-------------|------|--------|---------|------|
+| 1.00e-06 | 26 | 0.003 | 796,530 | 4,230 | 120,890 | 1 | 17 | 0.796 |
+| 1.68e-06 | 41 | 0.005 | 786,635 | 8,790 | 120,680 | 5 | 17 | 0.699 |
+| 2.82e-06 | 59 | 0.021 | 770,213 | 25,346 | 119,446 | 6 | 17 | 0.594 |
+| 4.73e-06 | 92 | 0.075 | 744,172 | 63,062 | 115,363 | 6 | 17 | 0.327 |
+| 6.13e-06 | 72 | 0.356 | 731,247 | 112,746 | 87,474 | 6 | 17 | 0.240 |
+| 1.03e-05 | 59 | 0.712 | 710,634 | 310,776 | 34,600 | 7 | 17 | 0.496 |
+| 1.73e-05 | 60 | 0.805 | 696,127 | 536,245 | 14,606 | 11 | 17 | 0.612 |
+| 2.90e-05 | 70 | 0.828 | 686,588 | 736,762 | 7,362 | 799 | 17 | 0.682 |
+| 4.86e-05 | 103 | 0.831 | 677,992 | 883,832 | 5,185 | 865 | 17 | 0.729 |
+| 8.16e-05 | 152 | 0.827 | 668,584 | 1,033,157 | 3,990 | 671 | 17 | 0.757 |
+| **1.06e-04** | **185** | **0.826** | **664,421** | **1,080,034** | **2,825** | **527** | **17** | **0.780** |
+| **1.37e-04** | **235** | **0.822** | **660,261** | **1,156,499** | **2,708** | **455** | **17** | **0.802** |
+| **1.77e-04** | **287** | **0.819** | **655,905** | **2,028** | **356** | **17** | **0.820** | |
+| 2.30e-04 | 345 | 0.816 | 652,062 | 1,268,061 | 1,511 | 305 | 17 | 0.829 |
+| 3.86e-04 | 512 | 0.808 | 642,816 | 1,370,885 | 1,046 | 199 | 17 | 0.854 |
+| 5.00e-04 | 619 | 0.805 | 638,165 | 1,413,690 | 983 | 168 | 17 | — |
+
+#### Observations
+
+Both k values exhibit the **same non-monotonic phase transition** seen in V2 (topic_hierarchy_architecture.md):
+- Cluster count rises, drops sharply (γ ≈ 5-6e-6), then recovers monotonically.
+- The phase transition is a CPM landscape feature — the algorithm discovers a qualitatively different partition structure at that scale.
+- Below the transition: many small fragments + one mega-cluster (Max > 100K). Above: well-distributed communities.
+- **Q stabilizes at ~0.82-0.86** in the post-transition region for both k values.
+- **Singletons constant at 17** across all resolutions and k values — minor.
+
+#### Comparison at ~235 Communities
+
+| Metric | k=3 (γ=8.16e-5) | k=4 (γ=1.37e-4) |
+|--------|-----------------|-----------------|
+| Clusters | 237 | 235 |
+| Q (modularity) | **0.855** | 0.822 |
+| Significance | 918,349 | **1,156,499** |
+| Max size | **2,279** | 2,708 |
+| Median | **443** | 455 |
+| NMI | 0.771 | **0.802** |
+| Singletons | 17 | 17 |
+
+**k=3** has slightly better Q (0.855 vs 0.822) and smaller max cluster.
+**k=4** has 26% higher significance and better NMI stability (0.802 vs 0.771).
+
+This mirrors the V2 domain-level finding (Phase 3d) where k=4 won over k=3 for its higher significance and tighter stability, despite k=3 having marginally better Q.
+
+---
+
+### 6c. Recommendation
+
+**Selected: k=4, γ=1.37e-4** for demo community clustering.
+
+| Metric | Value | vs V2 (k=4, γ=4.86e-5) |
+|--------|-------|------------------------|
+| Communities | 235 | ~230 (comparable) |
+| Q | 0.822 | 0.831 (comparable) |
+| Significance | 1,156,499 | 883,832 (demo higher, smaller graph) |
+| Max | 2,708 | 5,185 (demo smaller, expected at 7x fewer topics) |
+| Median | 455 | 865 (demo smaller, proportional) |
+| NMI | 0.802 | 0.729 (demo more stable) |
+| Singletons | 17 | 17 |
+
+**Rationale**:
+1. **Matches V2 community count** (~235 vs ~230) — same user experience
+2. **Higher resolution** than V2 (1.37e-4 vs 4.86e-5) is expected — smaller corpus needs stronger resolution to produce the same number of communities
+3. **k=4 consistent with V2** — same graph density choice for the same reasons (significance, stability)
+4. **Q well above significance threshold** — 0.822 >> 0.3
+5. **Singletons negligible** — 17 out of 121K topics
+
+**Scaling relationship**: Demo needs γ ~2.8x higher than V2 to produce the same community count at k=4. This makes sense: with 7x fewer topics but only 2.8x higher γ, the demo's communities are proportionally larger relative to corpus size — each community covers more of the 100-book library.

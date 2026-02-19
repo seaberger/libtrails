@@ -607,8 +607,8 @@ def refresh_community_stats(conn: sqlite3.Connection) -> int:
                 INSERT INTO community_stats
                     (community_id, topic_count, book_count, primary_book_count,
                      top_label, top_topics_json, sample_books_json,
-                     domain_id, domain_label)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                     domain_id, domain_label, refreshed_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
             """,
                 (
                     community_id,

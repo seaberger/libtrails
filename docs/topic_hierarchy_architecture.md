@@ -1,4 +1,4 @@
-  # Topic Hierarchy Architecture
+# Topic Hierarchy Architecture
 
 How LibTrails organizes 837K extracted topics into browsable layers for discovery.
 
@@ -148,7 +148,7 @@ Each topic gets two assignments:
 
 ```
 domains (29)
-  └── community_domains → communities (~200)
+  └── communities.domain_id → communities (~200)
        └── cluster_communities → clusters (6,575)
             └── topics (837K)
 ```

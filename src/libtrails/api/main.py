@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
+from ..database import init_chunks_table
 from ..embeddings import embed_text
 from .routers import books, communities, covers, domains, search, themes, universe
 
@@ -14,7 +15,8 @@ logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    """Warm up the embedding model on startup."""
+    """Ensure schema is up-to-date and warm up the embedding model on startup."""
+    init_chunks_table()
     logger.info("Warming up embedding model...")
     embed_text("warmup")
     logger.info("Embedding model ready.")

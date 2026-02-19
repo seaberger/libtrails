@@ -48,7 +48,19 @@ load_dotenv()
 
 
 class _FlushConsole(Console):
-    """Console that flushes after every print and prepends timestamps for log monitoring."""
+    """Console that flushes after every print and prepends timestamps for log monitoring.
+
+    When stdout is not a TTY (background/pipe mode), uses a wide output width
+    so Rich tables aren't truncated in log files.
+    """
+
+    def __init__(self):
+        import sys
+
+        width = None  # auto-detect for interactive terminals
+        if not sys.stdout.isatty():
+            width = 160  # wide enough for data tables in background/pipe mode
+        super().__init__(width=width)
 
     def print(self, *args, **kwargs):
         from datetime import datetime
