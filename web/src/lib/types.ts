@@ -31,7 +31,7 @@ export interface BookDetail extends BookSummary {
 
 export interface ThemeSummary {
   cluster_id: number;
-  community_id?: number;
+  community_id?: number; // Only set in manually-constructed objects (e.g. communities page), not from API
   label: string;
   size: number;
   book_count: number;
