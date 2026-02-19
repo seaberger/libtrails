@@ -345,7 +345,9 @@ def stats_db(tmp_path):
             book_count INTEGER NOT NULL DEFAULT 0,
             primary_book_count INTEGER NOT NULL DEFAULT 0,
             sample_books_json TEXT,
-            top_clusters_json TEXT
+            top_clusters_json TEXT,
+            community_count INTEGER NOT NULL DEFAULT 0,
+            top_communities_json TEXT
         );
 
         CREATE TABLE book_communities (
@@ -416,6 +418,11 @@ def stats_db(tmp_path):
         INSERT INTO cluster_stats (cluster_id, size, book_count, top_label) VALUES
             (0, 3, 2, 'quantum mechanics'),
             (1, 2, 2, 'romantic poetry');
+
+        -- Seed: community_stats (needed by refresh_domain_stats)
+        INSERT INTO community_stats (community_id, topic_count, book_count, top_label, domain_id) VALUES
+            (0, 3, 2, 'Physics & Math', 0),
+            (1, 2, 2, 'Poetry & Fiction', 1);
     """)
     conn.commit()
     yield conn

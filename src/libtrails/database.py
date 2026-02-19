@@ -337,6 +337,8 @@ def init_chunks_table():
                 primary_book_count INTEGER NOT NULL DEFAULT 0,
                 sample_books_json TEXT,
                 top_clusters_json TEXT,
+                community_count INTEGER NOT NULL DEFAULT 0,
+                top_communities_json TEXT,
                 refreshed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
 
