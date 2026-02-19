@@ -124,7 +124,7 @@ This requires fine granularity. A coarser grouping would produce neighborhoods o
 
 ### Architecture
 
-```
+```text
 User-facing                         Internal
 ──────────                          ────────
 Themes tab  →  29 domains           domain_stats, book_domains
@@ -146,7 +146,7 @@ Each topic gets two assignments:
 
 ### Table structure
 
-```
+```text
 domains (29)
   └── communities.domain_id → communities (~200)
        └── cluster_communities → clusters (6,575)
@@ -165,7 +165,7 @@ New tables:
 
 The topic KNN graph is already cached to disk (PR #47). We run Leiden at a higher CPM resolution (γ) to produce ~200 communities directly. This preserves both semantic similarity and co-occurrence signals — the same principled approach as the fine-grained clusters, just at a different scale.
 
-```
+```text
 Topics → KNN graph → Leiden (γ_fine ~ 0.001)  → 6,575 clusters  (search)
                    → Leiden (γ_coarse ~ ???)   → ~200 communities (browsing)
 ```
@@ -266,7 +266,7 @@ Build the ~200 community data, run UMAP, render it, and evaluate. If spatial str
 ## Navigation Model
 
 ### Current (flat)
-```
+```text
 Themes tab: 29 domains → domain detail (all books, flat list)
 Clusters tab: 6,575 clusters → cluster detail (topics + books)
 Universe: 6,575 3D points → click → cluster sidebar
@@ -274,7 +274,7 @@ Books tab: book list → book detail (topics, cluster links)
 ```
 
 ### Proposed (hierarchical, theme-first)
-```
+```text
 Themes tab: 29 domains → primary books + "show more" at ≥5%
 Topics tab: ~200 communities → community detail (books by concentration)
              ↳ filterable by parent domain

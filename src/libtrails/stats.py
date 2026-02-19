@@ -233,8 +233,8 @@ def refresh_book_domains(conn: sqlite3.Connection) -> int:
                 cb.book_id,
                 cd.domain_id,
                 SUM(cb.topic_count) as topic_count,
-                cb.book_total_topics,
-                CAST(SUM(cb.topic_count) AS REAL) / cb.book_total_topics as concentration,
+                MAX(cb.book_total_topics) as book_total_topics,
+                CAST(SUM(cb.topic_count) AS REAL) / MAX(cb.book_total_topics) as concentration,
                 0.0,  -- placeholder, scored below
                 0
             FROM cluster_books cb
@@ -436,8 +436,8 @@ def refresh_book_communities(conn: sqlite3.Connection) -> int:
                 cb.book_id,
                 cc.community_id,
                 SUM(cb.topic_count) as topic_count,
-                cb.book_total_topics,
-                CAST(SUM(cb.topic_count) AS REAL) / cb.book_total_topics as concentration,
+                MAX(cb.book_total_topics) as book_total_topics,
+                CAST(SUM(cb.topic_count) AS REAL) / MAX(cb.book_total_topics) as concentration,
                 0.0,
                 0
             FROM cluster_books cb
