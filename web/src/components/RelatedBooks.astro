@@ -32,9 +32,19 @@ const { books } = Astro.props;
             <p class="text-xs font-medium text-[var(--color-text)] line-clamp-2 group-hover:text-[var(--color-accent)] transition-colors">
               {book.title}
             </p>
-            <p class="text-xs text-[var(--color-text-muted)] mt-0.5">
-              {Math.round(book.similarity * 100)}% match
-            </p>
+            <div class="flex items-center gap-1.5 mt-0.5">
+              <span class="text-xs text-[var(--color-text-muted)]">
+                {Math.round(book.similarity * 100)}%
+              </span>
+              {book.match_type && (
+                <span class:list={[
+                  "match-badge",
+                  `match-badge--${book.match_type}`
+                ]}>
+                  {book.match_type}
+                </span>
+              )}
+            </div>
           </div>
         </a>
       ))}
@@ -49,4 +59,23 @@ const { books } = Astro.props;
     -webkit-box-orient: vertical;
     overflow: hidden;
   }
+
+  .match-badge {
+    display: inline-block;
+    padding: 0 4px;
+    font-size: 0.6rem;
+    line-height: 1.4;
+    border-radius: 3px;
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+  }
+
+  .match-badge--keyword { border-color: #f59e0b; color: #f59e0b; }
+  .match-badge--theme { border-color: #8b5cf6; color: #8b5cf6; }
+  .match-badge--book { border-color: #3b82f6; color: #3b82f6; }
+  .match-badge--content { border-color: #10b981; color: #10b981; }
+  .match-badge--semantic { border-color: #06b6d4; color: #06b6d4; }
+  .match-badge--chunk_semantic { border-color: #06b6d4; color: #06b6d4; }
+  .match-badge--topic { border-color: #6366f1; color: #6366f1; }
 </style>

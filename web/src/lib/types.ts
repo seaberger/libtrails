@@ -16,6 +16,7 @@ export interface TopicInfo {
 
 export interface ThemeRef {
   cluster_id: number;
+  community_id: number | null;
   label: string;
 }
 
@@ -46,6 +47,7 @@ export interface ThemeDetail {
 export interface RelatedBook extends BookSummary {
   shared_topics: number;
   similarity: number;
+  match_type?: string;
 }
 
 export interface SearchResult {
@@ -61,14 +63,23 @@ export interface ClusterInfo {
   book_count?: number;
 }
 
+export interface CommunityRef {
+  community_id: number;
+  label: string;
+  topic_count: number;
+  book_count: number;
+}
+
 export interface DomainSummary {
   domain_id: number;
   label: string;
   cluster_count: number;
   book_count: number;
   primary_book_count: number;
+  community_count: number;
   sample_books: BookSummary[];
   top_clusters: ClusterInfo[];
+  top_communities: CommunityRef[];
 }
 
 export interface DomainBook extends BookSummary {
@@ -110,8 +121,8 @@ export interface CommunityDetail {
   books: CommunityBook[];
 }
 
-export interface UniverseCluster {
-  cluster_id: number;
+export interface UniverseCommunity {
+  community_id: number;
   label: string;
   size: number;
   book_count: number;
@@ -131,7 +142,7 @@ export interface UniverseDomain {
 }
 
 export interface UniverseData {
-  clusters: UniverseCluster[];
+  communities: UniverseCommunity[];
   domains: UniverseDomain[];
 }
 
@@ -155,6 +166,15 @@ export interface HybridClusterResult {
   sample_books: BookSummary[];
 }
 
+export interface HybridCommunityResult {
+  community_id: number;
+  label: string;
+  topic_count: number;
+  book_count: number;
+  score: number;
+  sample_books: BookSummary[];
+}
+
 export interface HybridDomainResult {
   domain_id: number;
   label: string;
@@ -163,7 +183,7 @@ export interface HybridDomainResult {
 }
 
 export interface UniverseSearchResult {
-  cluster_id: number;
+  community_id: number;
   score: number;
 }
 
@@ -174,6 +194,7 @@ export interface HybridSearchResponse {
   timing_ms: number;
   books: HybridBookResult[];
   clusters: HybridClusterResult[];
+  communities: HybridCommunityResult[];
   domains: HybridDomainResult[];
   universe: UniverseSearchResult[];
 }

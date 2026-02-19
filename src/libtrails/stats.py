@@ -289,7 +289,7 @@ def refresh_book_domains(conn: sqlite3.Connection) -> int:
                     SELECT rowid,
                            ROW_NUMBER() OVER (
                                PARTITION BY book_id
-                               ORDER BY relevance_score DESC
+                               ORDER BY relevance_score DESC, rowid ASC
                            ) as rn
                     FROM book_domains
                     WHERE relevance_score > 0
@@ -383,11 +383,41 @@ def refresh_domain_stats(conn: sqlite3.Connection) -> int:
                 for r in cursor.fetchall()
             ]
 
+            # Community count and top communities for this domain
+            cursor.execute(
+                "SELECT COUNT(*) as cnt FROM communities WHERE domain_id = ?",
+                (domain_id,),
+            )
+            community_count = cursor.fetchone()["cnt"]
+
+            cursor.execute(
+                """
+                SELECT c.id as community_id, cs.top_label as label,
+                       cs.topic_count, cs.book_count
+                FROM communities c
+                JOIN community_stats cs ON cs.community_id = c.id
+                WHERE c.domain_id = ?
+                ORDER BY cs.topic_count DESC
+                LIMIT 8
+            """,
+                (domain_id,),
+            )
+            top_communities = [
+                {
+                    "community_id": r["community_id"],
+                    "label": r["label"],
+                    "topic_count": r["topic_count"],
+                    "book_count": r["book_count"],
+                }
+                for r in cursor.fetchall()
+            ]
+
             cursor.execute(
                 """
                 INSERT INTO domain_stats
-                    (domain_id, book_count, primary_book_count, sample_books_json, top_clusters_json)
-                VALUES (?, ?, ?, ?, ?)
+                    (domain_id, book_count, primary_book_count, sample_books_json,
+                     top_clusters_json, community_count, top_communities_json)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
             """,
                 (
                     domain_id,
@@ -395,6 +425,8 @@ def refresh_domain_stats(conn: sqlite3.Connection) -> int:
                     primary_book_count,
                     json.dumps(sample_books),
                     json.dumps(top_clusters),
+                    community_count,
+                    json.dumps(top_communities),
                 ),
             )
 
@@ -492,7 +524,7 @@ def refresh_book_communities(conn: sqlite3.Connection) -> int:
                     SELECT rowid,
                            ROW_NUMBER() OVER (
                                PARTITION BY book_id
-                               ORDER BY relevance_score DESC
+                               ORDER BY relevance_score DESC, rowid ASC
                            ) as rn
                     FROM book_communities
                     WHERE relevance_score > 0

@@ -10,8 +10,6 @@ import type {
   HybridSearchResponse,
   RelatedBook,
   SearchResult,
-  ThemeDetail,
-  ThemeSummary,
   UniverseData,
 } from "./types";
 
@@ -28,24 +26,6 @@ async function fetchJson<T>(path: string): Promise<T> {
     throw new Error(`API error: ${response.status} ${response.statusText}`);
   }
   return response.json();
-}
-
-export async function getThemes(
-  limit = 50,
-  minBooks = 2
-): Promise<ThemeSummary[]> {
-  return fetchJson(`/themes?limit=${limit}&min_books=${minBooks}`);
-}
-
-export async function searchThemes(
-  query: string,
-  limit = 20
-): Promise<ThemeSummary[]> {
-  return fetchJson(`/themes/search?q=${encodeURIComponent(query)}&limit=${limit}`);
-}
-
-export async function getTheme(clusterId: number): Promise<ThemeDetail> {
-  return fetchJson(`/themes/${clusterId}`);
 }
 
 export async function getBooks(
@@ -126,7 +106,7 @@ export async function getUniverse(): Promise<UniverseData> {
 // Hybrid search API
 export async function searchHybrid(
   query: string,
-  scope: "books" | "clusters" | "domains" | "universe",
+  scope: "books" | "clusters" | "communities" | "domains" | "universe",
   limit = 20
 ): Promise<HybridSearchResponse> {
   return fetchJson(

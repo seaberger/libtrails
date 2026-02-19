@@ -1,5 +1,6 @@
 """Hybrid search: FTS5 + sqlite-vec + Reciprocal Rank Fusion."""
 
+import json
 import re
 import sqlite3
 
@@ -493,33 +494,29 @@ def hybrid_search_books(conn: sqlite3.Connection, query: str, limit: int = 20) -
 
     book_map = {row[0]: dict(row) for row in rows}
 
-    # Determine match_type per book
-    fts_book_ids = {bid for bid, _ in fts_books}
-    sem_book_ids = {bid for bid, _ in sem_book_direct}
-    sem_theme_ids = {bid for bid, _ in sem_theme_books}
-    fts_chunk_ids = {bid for bid, _ in fts_chunk_books}
-    sem_chunk_ids = {bid for bid, _ in sem_chunk_books}
-    sem_topic_ids = {bid for bid, _ in sem_topic_books}
+    # Determine match_type per book: whichever signal ranked the book highest
+    signal_labels = [
+        (fts_books, "keyword"),
+        (fts_topic_books, "topic"),
+        (fts_chunk_books, "content"),
+        (sem_topic_books, "semantic"),
+        (sem_theme_books, "theme"),
+        (sem_book_direct, "book"),
+        (sem_chunk_books, "chunk"),
+    ]
+    # For each book, find the signal where it appeared at the lowest rank (= strongest)
+    best_signal: dict[int, tuple[int, str]] = {}  # book_id -> (best_rank, label)
+    for ranked_list, label in signal_labels:
+        for rank, (bid, _score) in enumerate(ranked_list):
+            if bid not in best_signal or rank < best_signal[bid][0]:
+                best_signal[bid] = (rank, label)
 
     results = []
     for book_id, score in fused:
         if book_id not in book_map:
             continue
         b = book_map[book_id]
-        if book_id in fts_book_ids:
-            match_type = "keyword"
-        elif book_id in sem_book_ids:
-            match_type = "book"
-        elif book_id in sem_theme_ids:
-            match_type = "theme"
-        elif book_id in fts_chunk_ids:
-            match_type = "content"
-        elif book_id in sem_chunk_ids:
-            match_type = "chunk_semantic"
-        elif book_id in sem_topic_ids:
-            match_type = "semantic"
-        else:
-            match_type = "topic"
+        match_type = best_signal[book_id][1] if book_id in best_signal else "topic"
         results.append(
             {
                 "book_id": book_id,
@@ -596,6 +593,127 @@ def hybrid_search_clusters(conn: sqlite3.Connection, query: str, limit: int = 20
         )
 
     return results
+
+
+def hybrid_search_communities(conn: sqlite3.Connection, query: str, limit: int = 20) -> list[dict]:
+    """Hybrid community search: aggregates cluster results by community + direct label match."""
+    # Get more clusters than needed, then aggregate
+    cluster_results = hybrid_search_clusters(conn, query, limit=100)
+
+    # Direct community label search
+    community_label_matches = _search_community_labels(conn, query)
+    community_label_scores = dict(community_label_matches)
+
+    # Build community→label mapping for label matches not found via clusters
+    community_labels: dict[int, str] = {}
+    if community_label_matches:
+        community_ids = [cid for cid, _ in community_label_matches]
+        placeholders_c = ",".join("?" * len(community_ids))
+        label_rows = conn.execute(
+            f"SELECT community_id, top_label FROM community_stats WHERE community_id IN ({placeholders_c})",
+            community_ids,
+        ).fetchall()
+        community_labels = {row[0]: row[1] for row in label_rows}
+
+    # Aggregate cluster results by community
+    community_scores: dict[int, dict] = {}
+
+    if cluster_results:
+        cluster_ids = [c["cluster_id"] for c in cluster_results]
+        placeholders = ",".join("?" * len(cluster_ids))
+
+        rows = conn.execute(
+            f"""
+            SELECT cc.cluster_id, cc.community_id,
+                   cs.top_label as label, cs.topic_count, cs.book_count,
+                   cs.sample_books_json
+            FROM cluster_communities cc
+            JOIN community_stats cs ON cs.community_id = cc.community_id
+            WHERE cc.cluster_id IN ({placeholders})
+            """,
+            cluster_ids,
+        ).fetchall()
+
+        cluster_to_community = {row[0]: row for row in rows}
+        cluster_score_map = {c["cluster_id"]: c["score"] for c in cluster_results}
+
+        for cluster_id, score in cluster_score_map.items():
+            if cluster_id not in cluster_to_community:
+                continue
+            row = cluster_to_community[cluster_id]
+            community_id = row["community_id"]
+            if community_id not in community_scores:
+                community_scores[community_id] = {
+                    "community_id": community_id,
+                    "label": row["label"],
+                    "topic_count": row["topic_count"],
+                    "book_count": row["book_count"],
+                    "score": score,
+                    "sample_books_json": row["sample_books_json"],
+                    "matching_clusters": 1,
+                }
+            else:
+                d = community_scores[community_id]
+                d["score"] = max(d["score"], score)
+                d["matching_clusters"] += 1
+
+    # Merge direct community label matches
+    label_boost = 0.02
+    for community_id, label_score in community_label_scores.items():
+        if community_id in community_scores:
+            community_scores[community_id]["score"] += label_boost * label_score
+        elif community_id in community_labels:
+            # Need to fetch stats for this community
+            row = conn.execute(
+                "SELECT topic_count, book_count, sample_books_json FROM community_stats WHERE community_id = ?",
+                (community_id,),
+            ).fetchone()
+            if row:
+                community_scores[community_id] = {
+                    "community_id": community_id,
+                    "label": community_labels[community_id],
+                    "topic_count": row["topic_count"],
+                    "book_count": row["book_count"],
+                    "score": label_boost * label_score,
+                    "sample_books_json": row["sample_books_json"],
+                    "matching_clusters": 0,
+                }
+
+    results = sorted(community_scores.values(), key=lambda x: x["score"], reverse=True)
+    for r in results:
+        r["score"] = round(r["score"], 4)
+    return results[:limit]
+
+
+def _search_community_labels(
+    conn: sqlite3.Connection, query: str, limit: int = 50
+) -> list[tuple[int, float]]:
+    """Search community labels directly via LIKE. Returns [(community_id, score)]."""
+    tokens = re.sub(r"[^\w\s]", " ", query).lower().split()
+    if not tokens:
+        return []
+
+    conditions = " OR ".join("LOWER(COALESCE(top_label, '')) LIKE ?" for _ in tokens)
+    params = [f"%{t}%" for t in tokens]
+
+    try:
+        rows = conn.execute(
+            f"""
+            SELECT community_id, top_label FROM community_stats
+            WHERE {conditions}
+            LIMIT ?
+            """,
+            [*params, limit],
+        ).fetchall()
+    except Exception:
+        return []
+
+    results = []
+    for row in rows:
+        label = (row[1] or "").lower()
+        matched = sum(1 for t in tokens if t in label)
+        results.append((row[0], matched / len(tokens)))
+    return sorted(results, key=lambda x: x[1], reverse=True)
 
 
 def hybrid_search_domains(conn: sqlite3.Connection, query: str, limit: int = 20) -> list[dict]:
@@ -675,6 +793,87 @@ def hybrid_search_domains(conn: sqlite3.Connection, query: str, limit: int = 20)
 
 
 def hybrid_search_universe(conn: sqlite3.Connection, query: str, limit: int = 50) -> list[dict]:
-    """Universe search: returns minimal cluster_id + score pairs for 3D highlighting."""
-    cluster_results = hybrid_search_clusters(conn, query, limit=limit)
-    return [{"cluster_id": c["cluster_id"], "score": c["score"]} for c in cluster_results]
+    """Universe search: returns minimal community_id + score pairs for 3D highlighting.
+
+    Aggregates cluster-level search results by community, keeping the best
+    score per community. Same pattern as hybrid_search_communities() but
+    returns only the IDs and scores needed for sphere highlighting.
+    """
+    cluster_results = hybrid_search_clusters(conn, query, limit=200)
+    if not cluster_results:
+        return []
+
+    cluster_ids = [c["cluster_id"] for c in cluster_results]
+    placeholders = ",".join("?" * len(cluster_ids))
+
+    rows = conn.execute(
+        f"""
+        SELECT cluster_id, community_id
+        FROM cluster_communities
+        WHERE cluster_id IN ({placeholders})
+        """,
+        cluster_ids,
+    ).fetchall()
+
+    cluster_to_community = {row[0]: row[1] for row in rows}
+
+    # Aggregate best score per community
+    best: dict[int, float] = {}
+    for c in cluster_results:
+        community_id = cluster_to_community.get(c["cluster_id"])
+        if community_id is None:
+            continue
+        score = c["score"]
+        if community_id not in best or score > best[community_id]:
+            best[community_id] = score
+
+    results = [
+        {"community_id": cid, "score": round(score, 4)}
+        for cid, score in sorted(best.items(), key=lambda x: x[1], reverse=True)
+    ]
+    return results[:limit]
+
+
+def find_related_books(conn: sqlite3.Connection, book_id: int, limit: int = 12) -> list[dict]:
+    """Find related books using hybrid search on the source book's metadata.
+
+    Builds a query from the book's title, author, and themes, runs it through
+    hybrid_search_books(), filters out the source book, and normalizes scores
+    to 0-1 range.
+    """
+    row = conn.execute(
+        "SELECT title, author, book_themes FROM books WHERE id = ?",
+        (book_id,),
+    ).fetchone()
+    if not row:
+        return []
+
+    title = row["title"] or ""
+    author = row["author"] or ""
+    themes_json = row["book_themes"]
+    themes = json.loads(themes_json) if themes_json else []
+
+    # Build query string matching the book_vectors embedding format
+    query_parts = [f"{title} by {author}"]
+    if themes:
+        query_parts.append("Themes: " + ", ".join(themes[:10]))
+    query = ". ".join(query_parts)
+
+    # Fetch extra results to account for self-filtering
+    raw_results = hybrid_search_books(conn, query, limit + 5)
+
+    # Filter out the source book
+    filtered = [r for r in raw_results if r["book_id"] != book_id][:limit]
+    if not filtered:
+        return filtered
+
+    # Normalize scores to 0-1 (top match ≈ 1.0)
+    max_score = filtered[0]["score"]
+    if max_score > 0:
+        for r in filtered:
+            r["similarity"] = round(r["score"] / max_score, 3)
+    else:
+        for r in filtered:
+            r["similarity"] = 0.0
+
+    return filtered

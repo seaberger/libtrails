@@ -2538,9 +2538,9 @@ def gpu_knn(k: int, force: bool, export_only: bool):
 )
 def generate_universe(output: str | None, n_neighbors: int, min_dist: float, dry_run: bool):
     """
-    Generate UMAP projection of clusters for the Galaxy visualization.
+    Generate UMAP projection of communities for the Galaxy visualization.
 
-    Produces a JSON file with 2D coordinates for every Leiden cluster,
+    Produces a JSON file with 3D coordinates for every community,
     colored by domain assignment. Used by the frontend galaxy homepage.
     """
     import sqlite3
@@ -2553,19 +2553,15 @@ def generate_universe(output: str | None, n_neighbors: int, min_dist: float, dry
         conn.row_factory = sqlite3.Row
         cursor = conn.cursor()
 
-        cursor.execute("""
-            SELECT COUNT(DISTINCT cluster_id) as n
-            FROM topics
-            WHERE cluster_id IS NOT NULL AND cluster_id >= 0
-        """)
-        n_clusters = cursor.fetchone()["n"]
+        cursor.execute("SELECT COUNT(*) as n FROM community_stats WHERE topic_count >= 3")
+        n_communities = cursor.fetchone()["n"]
 
         cursor.execute("SELECT COUNT(*) as n FROM domains")
         n_domains = cursor.fetchone()["n"]
 
         conn.close()
 
-        console.print(f"[bold]Clusters:[/bold] {n_clusters}")
+        console.print(f"[bold]Communities:[/bold] {n_communities}")
         console.print(f"[bold]Domains:[/bold] {n_domains}")
         console.print(f"[bold]UMAP params:[/bold] n_neighbors={n_neighbors}, min_dist={min_dist}")
         console.print("\n[bold yellow]DRY RUN — not generating[/bold yellow]")
@@ -2584,23 +2580,23 @@ def generate_universe(output: str | None, n_neighbors: int, min_dist: float, dry
         min_dist=min_dist,
     )
 
-    n_clusters = len(result["clusters"])
+    n_communities = len(result["communities"])
     n_domains = len(result["domains"])
 
-    console.print(f"\n[green]Saved {n_clusters} clusters across {n_domains} domains[/green]")
+    console.print(f"\n[green]Saved {n_communities} communities across {n_domains} domains[/green]")
     console.print(f"  Output: [cyan]{output_path}[/cyan]")
 
     # Show sample
-    table = Table(title="Sample Clusters")
+    table = Table(title="Sample Communities")
     table.add_column("ID", style="dim", width=6)
     table.add_column("Label", style="cyan")
     table.add_column("Books", justify="right", width=6)
     table.add_column("Domain", style="green")
     table.add_column("Position")
 
-    for cd in result["clusters"][:10]:
+    for cd in result["communities"][:10]:
         table.add_row(
-            str(cd["cluster_id"]),
+            str(cd["community_id"]),
             cd["label"][:30],
             str(cd["book_count"]),
             cd["domain_label"][:20],

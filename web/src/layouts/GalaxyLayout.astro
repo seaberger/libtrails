@@ -180,7 +180,7 @@ const isActive = (path: string) => {
       <div class="links">
         <a href={url("/")} class:list={[isActive("/") && "active"]}>Universe</a>
         <a href={url("/themes")} class:list={[isActive("/themes") && "active"]}>Themes</a>
-        <a href={url("/clusters")} class:list={[isActive("/clusters") && "active"]}>Topics</a>
+        <a href={url("/communities")} class:list={[isActive("/communities") && "active"]}>Topics</a>
         <a href={url("/books")} class:list={[isActive("/books") && "active"]}>Books</a>
         <a href={url("/about")} class:list={[isActive("/about") && "active"]}>About</a>
         <button class="theme-toggle" id="theme-toggle" aria-label="Toggle theme">
@@ -219,7 +219,7 @@ const isActive = (path: string) => {
     <div class="galaxy-mobile-menu" id="galaxy-mobile-menu">
       <a href={url("/")} class:list={[isActive("/") && "active"]}>Universe</a>
       <a href={url("/themes")} class:list={[isActive("/themes") && "active"]}>Themes</a>
-      <a href={url("/clusters")} class:list={[isActive("/clusters") && "active"]}>Topics</a>
+      <a href={url("/communities")} class:list={[isActive("/communities") && "active"]}>Topics</a>
       <a href={url("/books")} class:list={[isActive("/books") && "active"]}>Books</a>
       <a href={url("/about")} class:list={[isActive("/about") && "active"]}>About</a>
       <button id="galaxy-mobile-theme-toggle" style="display:flex;align-items:center;gap:0.5rem;">

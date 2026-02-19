@@ -484,6 +484,54 @@ With BGE + cosine distance, semantic search produces realistic scores:
 
 ---
 
+## Local Development
+
+### Starting the Dev Servers
+
+```bash
+# API server (FastAPI on port 8000, uses demo database)
+LIBTRAILS_DB=demo uv run uvicorn libtrails.api:app --port 8000
+
+# Frontend dev server (Astro on port 4321, proxies /api/* to port 8000)
+cd web && npm run dev
+```
+
+Both servers must be running for the full app to work locally. Astro proxies `/api/*` to the FastAPI backend (configured in `web/astro.config.mjs`).
+
+### Port Conflicts
+
+If port 8000 is already in use from a previous session:
+
+```bash
+# Find the PID(s)
+lsof -ti :8000
+
+# Kill them, then restart
+kill <PID>
+```
+
+### Testing API Endpoints
+
+**Important (zsh):** Always quote URLs containing `?` — zsh treats `?` as a glob character.
+
+```bash
+# Correct
+curl -s "localhost:8000/api/v1/books/55/related?limit=10" | python3 -m json.tool
+
+# Wrong — zsh glob error
+curl -s localhost:8000/api/v1/books/55/related?limit=10
+```
+
+### Alternative: CLI serve command
+
+```bash
+LIBTRAILS_DB=demo uv run libtrails serve --port 8000
+```
+
+This wraps uvicorn but direct `uv run uvicorn libtrails.api:app` gives more control (reload, workers, etc.).
+
+---
+
 ## Deployment (sbergman.net)
 
 ### Quick Deploy (after local changes)
