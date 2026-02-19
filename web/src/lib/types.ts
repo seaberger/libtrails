@@ -12,6 +12,7 @@ export interface TopicInfo {
   label: string;
   count: number;
   cluster_id: number | null;
+  community_id: number | null;
 }
 
 export interface ThemeRef {
@@ -30,6 +31,7 @@ export interface BookDetail extends BookSummary {
 
 export interface ThemeSummary {
   cluster_id: number;
+  community_id?: number;
   label: string;
   size: number;
   book_count: number;

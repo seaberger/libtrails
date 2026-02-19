@@ -86,14 +86,23 @@ const domains = await getDomains();
             <div class="mb-6">
               <h3 class="text-sm font-medium text-[var(--color-text)] mb-3">Top Topics</h3>
               <div class="flex flex-wrap gap-2">
-                {(domain.top_communities?.length ? domain.top_communities : domain.top_clusters).slice(0, 8).map((item: any) => (
-                  <a
-                    href={url(`/communities/${item.community_id ?? item.cluster_id}`)}
-                    class="px-3 py-1.5 bg-[var(--color-bg)] text-sm text-[var(--color-text)] rounded-full hover:bg-[var(--color-accent)] hover:text-white transition-colors"
-                  >
-                    {item.label}
-                  </a>
-                ))}
+                {(domain.top_communities?.length ? domain.top_communities : domain.top_clusters).slice(0, 8).map((item: any) => {
+                  const communityId = item.community_id;
+                  return communityId != null ? (
+                    <a
+                      href={url(`/communities/${communityId}`)}
+                      class="px-3 py-1.5 bg-[var(--color-bg)] text-sm text-[var(--color-text)] rounded-full hover:bg-[var(--color-accent)] hover:text-white transition-colors"
+                    >
+                      {item.label}
+                    </a>
+                  ) : (
+                    <span
+                      class="px-3 py-1.5 bg-[var(--color-bg)] text-sm text-[var(--color-text)] rounded-full"
+                    >
+                      {item.label}
+                    </span>
+                  );
+                })}
               </div>
             </div>
 

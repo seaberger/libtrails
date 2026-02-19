@@ -19,6 +19,7 @@ class TopicInfo(BaseModel):
     label: str
     count: int
     cluster_id: int | None = None
+    community_id: int | None = None
 
 
 class ThemeRef(BaseModel):

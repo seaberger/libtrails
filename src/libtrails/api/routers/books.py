@@ -95,10 +95,11 @@ def get_book(db: DBConnection, book_id: int):
     # Get topics for this book with occurrence counts
     cursor.execute(
         """
-        SELECT t.id, t.label, COUNT(*) as count, t.cluster_id
+        SELECT t.id, t.label, COUNT(*) as count, t.cluster_id, cc.community_id
         FROM topics t
         JOIN chunk_topic_links ctl ON ctl.topic_id = t.id
         JOIN chunks c ON c.id = ctl.chunk_id
+        LEFT JOIN cluster_communities cc ON cc.cluster_id = t.cluster_id
         WHERE c.book_id = ?
         GROUP BY t.id
         ORDER BY count DESC

@@ -6,7 +6,8 @@ import { getCommunities, getDomains, getCoverUrl } from '../../lib/api';
 
 // Read optional domain filter from query string
 const domainParam = Astro.url.searchParams.get('domain');
-const domainId = domainParam != null ? Number(domainParam) : undefined;
+const parsedDomainId = domainParam != null ? Number(domainParam) : NaN;
+const domainId = Number.isFinite(parsedDomainId) ? parsedDomainId : undefined;
 
 const communities = await getCommunities(domainId);
 const basePath = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
@@ -47,6 +48,7 @@ if (domainId != null) {
     {communities.map(community => (
       <ThemeCard theme={{
         cluster_id: community.community_id,
+        community_id: community.community_id,
         label: community.label,
         size: community.topic_count,
         book_count: community.book_count,
