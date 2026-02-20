@@ -392,7 +392,7 @@ def refresh_domain_stats(conn: sqlite3.Connection) -> int:
 
             cursor.execute(
                 """
-                SELECT c.id as community_id, cs.top_label as label,
+                SELECT c.id as community_id, c.label,
                        cs.topic_count, cs.book_count
                 FROM communities c
                 JOIN community_stats cs ON cs.community_id = c.id
@@ -588,18 +588,21 @@ def refresh_community_stats(conn: sqlite3.Connection) -> int:
             )
             primary_book_count = cursor.fetchone()["cnt"]
 
-            # Top label (highest-occurrence topic in community)
-            cursor.execute(
-                """
-                SELECT label FROM topics
-                WHERE community_id = ? AND LENGTH(label) >= 4
-                ORDER BY occurrence_count DESC
-                LIMIT 1
-            """,
-                (community_id,),
-            )
-            label_row = cursor.fetchone()
-            top_label = label_row["label"] if label_row else row["label"]
+            # Top label: prefer LLM-generated name from communities table,
+            # fall back to highest-occurrence topic if no name set
+            top_label = row["label"]
+            if not top_label:
+                cursor.execute(
+                    """
+                    SELECT label FROM topics
+                    WHERE community_id = ? AND LENGTH(label) >= 4
+                    ORDER BY occurrence_count DESC
+                    LIMIT 1
+                """,
+                    (community_id,),
+                )
+                label_row = cursor.fetchone()
+                top_label = label_row["label"] if label_row else f"community_{community_id}"
 
             # Top 5 topics
             cursor.execute(
