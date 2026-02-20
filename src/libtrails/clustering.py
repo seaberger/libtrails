@@ -410,7 +410,7 @@ def split_mega_communities(
         g: The full topic graph (with all nodes/edges)
         membership: Community assignments from the first Leiden pass
         size_threshold: Communities larger than this get split
-        split_resolution: Resolution for sub-graph CPM (default: 10x base_resolution)
+        split_resolution: Resolution for sub-graph CPM (default: 2x base_resolution)
         base_resolution: The resolution used in the first pass
         max_comm_size: Cap for sub-communities (passed to Leiden)
 

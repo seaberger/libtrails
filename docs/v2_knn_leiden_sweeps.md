@@ -1151,3 +1151,365 @@ The structural misalignment is the dominant quality issue. Running communities o
 - The structural benefit of nesting outweighs the statistical metrics
 
 **Next step**: Dry run at k=6 with `--max-community-size 2500` to find the right γ for ~600-700 communities and verify nesting improvement. Based on Phase 8 sweep data, k=5 at γ=5.5e-5 gave 652 communities, so k=6 should be in a similar range (γ≈6-7e-5).
+
+---
+
+## Phase 10: Two-Pass Split-Mega Communities — k=10 vs k=6
+
+**Date**: Feb 20, 2026
+
+### Motivation
+
+Phase 9 showed that `max_comm_size` produces well-capped communities but revealed a critical structural problem: communities built on a k=10 graph don't nest cleanly inside clusters built on a k=6 graph (99.3% of clusters split across 3+ communities). The recommendation was to re-run communities on k=6 for clean hierarchy nesting.
+
+However, rather than abandoning k=10 entirely, we wanted a rigorous comparison. The two options:
+
+1. **k=10 with split-mega**: Maximizes semantic connectivity and significance, accepts some nesting misalignment
+2. **k=6 with split-mega**: Same graph as clusters, enables clean cluster→community→domain hierarchy
+
+### Approach: Two-Pass Split-Mega Pipeline
+
+Instead of `max_comm_size` (which caps during the Leiden optimization), we implemented a **two-pass split-mega approach**:
+
+1. **Pass 1**: Run Leiden CPM at a low γ to find ~300-400 natural communities (some will be mega-communities with 5,000-20,000+ topics)
+2. **Pass 2**: For each community exceeding a size threshold (default 2,500), extract its subgraph from the KNN topic graph and run a second Leiden CPM pass at 2× the base γ, recursively splitting until all sub-communities are below the threshold
+
+This differs from Phase 9's `max_comm_size` approach because:
+- Pass 1 runs unconstrained — Leiden finds the natural partition without optimizer constraints
+- Pass 2 uses the same algorithm (CPM) on subgraphs rather than a different method (Surprise)
+- Recursive splitting handles deeply nested mega-communities
+- The split resolution (2× base γ) was chosen to find meaningful sub-structure without over-fragmenting
+
+**Implementation**: `split_mega_communities()` added to `clustering.py`, wired into `cluster_topics()` via `--split-mega` and `--split-threshold` CLI flags.
+
+```bash
+# Two-pass: natural communities + split megas above 2500
+libtrails cluster --tier community --knn-k 6 --resolution 4e-5 --split-mega --split-threshold 2500
+```
+
+### γ Selection for ~300-400 Initial Communities
+
+Targeted ~300-400 communities in pass 1 to produce ~700-800 after splitting:
+
+| k | γ | Pass 1 communities | Largest | After split (est.) |
+|---|---|-------------------|---------|-------------------|
+| 10 | 7e-5 | 337 | 19,625 | ~700-750 |
+| 6 | 4e-5 | 364 | 11,754 | ~700-800 |
+| 6 | 3e-5 | 264 | 18,048 | too few initial |
+
+k=10 at γ=7e-5 and k=6 at γ=4e-5 both land in the target range. Note: k=6 produces smaller mega-communities at similar γ values because the sparser graph has fewer bridging edges.
+
+### Full Run Results
+
+Both configurations ran with `--split-mega --split-threshold 2500 --skip-cooccur` (co-occurrences unchanged):
+
+#### k=10, γ=7e-5, split-mega (threshold=2500)
+
+| Metric | Value |
+|--------|-------|
+| **Pass 1 communities** | 337 |
+| **After split** | **715** |
+| **Quality (pre-split)** | 7,006,667 |
+| **Leiden time** | 61.6s |
+| **Split time** | 15.9s |
+| **Graph edges** | 6.4M |
+
+**Size distribution**:
+
+| Stat | Value |
+|------|-------|
+| Median | 1,037 |
+| Mean | 1,171 |
+| Stdev | 883 |
+| Max | 2,500 |
+| P10 | 182 |
+| P25 | 425 |
+| P75 | 1,710 |
+| P90 | 2,383 |
+
+**Size buckets**:
+
+| Range | Count |
+|-------|-------|
+| 0–100 | 109 |
+| 100–500 | 118 |
+| 500–1,000 | 117 |
+| 1,000–1,500 | 98 |
+| 1,500–2,000 | 82 |
+| 2,000–2,500 | 191 |
+
+#### k=6, γ=4e-5, split-mega (threshold=2500)
+
+| Metric | Value |
+|--------|-------|
+| **Pass 1 communities** | 364 |
+| **After split** | **770** |
+| **Quality (pre-split)** | 4,673,570 |
+| **Leiden time** | 37.3s |
+| **Split time** | 11.3s |
+| **Graph edges** | 3.2M |
+
+**Size distribution**:
+
+| Stat | Value |
+|------|-------|
+| Median | 912 |
+| Mean | 1,087 |
+| Stdev | 890 |
+| Max | 2,500 |
+| P10 | 112 |
+| P25 | 306 |
+| P75 | 1,685 |
+| P90 | 2,403 |
+
+**Size buckets**:
+
+| Range | Count |
+|-------|-------|
+| 0–100 | 149 |
+| 100–500 | 121 |
+| 500–1,000 | 137 |
+| 1,000–1,500 | 99 |
+| 1,500–2,000 | 77 |
+| 2,000–2,500 | 187 |
+
+### Quality Comparison: k=10 vs k=6
+
+#### Domain Coherence
+
+For each community, what percentage of its topics share the dominant domain (via the existing cluster→domain mapping). Higher = community is thematically purer within the domain hierarchy.
+
+| Metric | k=10 (715 comms) | k=6 (770 comms) | Winner |
+|--------|-------------------|------------------|--------|
+| **Median** | 60.7% | **63.5%** | **k=6** |
+| **Mean** | 60.8% | **63.4%** | **k=6** |
+| **P25** | 46.3% | **47.1%** | k=6 |
+| **P75** | 73.1% | **78.9%** | **k=6** |
+| **High (≥80%)** | 129 (18%) | **175 (23%)** | **k=6** |
+| **Medium (50–80%)** | 360 (51%) | 361 (48%) | — |
+| **Low (<50%)** | **213 (30%)** | 221 (29%) | **k=6** |
+
+k=6 has **3 percentage points higher median domain coherence** and significantly more high-coherence communities (23% vs 18%). This is expected: k=6 communities live on the same graph as k=6 clusters, which are the basis for domain assignments.
+
+#### Cluster-Community Nesting
+
+How well do Surprise clusters (k=6 graph) fit inside CPM communities? A "pure" cluster has all its topics in one community. A "mostly-pure" cluster has ≥80% in one community.
+
+| Metric | k=10 (715 comms) | k=6 (770 comms) | Winner |
+|--------|-------------------|------------------|--------|
+| **Pure (100%)** | 25 (0.4%) | **36 (0.5%)** | k=6 |
+| **Mostly-pure (≥80%)** | 1,306 (20%) | **1,827 (28%)** | **k=6** |
+| **Fragmented (<80%)** | 5,269 (80%) | **4,748 (72%)** | **k=6** |
+| **Avg communities/cluster** | 19.0 | **14.9** | **k=6** |
+
+k=6 has 40% more mostly-pure clusters (1,827 vs 1,306) and 8 percentage points fewer fragmented clusters. Topics that belong to the same fine-grained cluster are far more likely to end up in the same community when both tiers use the same graph.
+
+#### Summary Table
+
+| Metric | k=10 γ=7e-5 | k=6 γ=4e-5 | Notes |
+|--------|-------------|------------|-------|
+| Communities | 715 | 770 | Both in target range |
+| Quality (pre-split) | **7,006,667** | 4,673,570 | Not comparable across graph densities |
+| Leiden time | 61.6s | **37.3s** | k=6 ~40% faster |
+| Split time | 15.9s | **11.3s** | k=6 has smaller megas |
+| Size median | 1,037 | **912** | k=6 slightly smaller |
+| Size max | 2,500 | 2,500 | Both capped by threshold |
+| Domain coherence (median) | 60.7% | **63.5%** | k=6 +3pp |
+| High coherence (≥80%) | 18% | **23%** | k=6 +5pp |
+| Mostly-pure clusters | 20% | **28%** | k=6 +8pp |
+| Fragmented clusters | 80% | **72%** | k=6 -8pp |
+| Avg comms/cluster | 19.0 | **14.9** | k=6 better nesting |
+
+### Decision: k=6, γ=4e-5 with split-mega
+
+**Selected**: k=6 over k=10 for community-tier clustering.
+
+**Rationale**:
+
+1. **Hierarchy alignment wins.** The three-tier hierarchy (domains → communities → clusters) works best when each tier subdivides the one above. k=6 communities live on the same graph as k=6 clusters, enabling 28% of clusters to be "mostly pure" within a community vs only 20% at k=10. This is the single most important structural property.
+
+2. **Domain coherence is meaningfully better.** 63.5% vs 60.7% median coherence means communities are 3 percentage points more likely to map cleanly to a single domain. 23% of k=6 communities have ≥80% coherence vs only 18% at k=10.
+
+3. **Quality scores are not comparable.** k=10's higher quality (7.0M vs 4.7M) reflects its denser graph (6.4M vs 3.2M edges), not better community structure. The Phase 8 analysis already noted this: "significance is not directly comparable across graph densities."
+
+4. **Performance is better.** k=6 runs 40% faster (37s + 11s vs 62s + 16s) with half the memory footprint.
+
+5. **Phase 8's k=10 rationale was exploration-centric.** The argument for k=10 was "more connections = more discovery paths." But the Phase 9 structural analysis showed this comes at the cost of clean hierarchy nesting, which is more important for the UI (communities must map to domains and contain clusters).
+
+### Applied Configuration
+
+```text
+k=6, γ=4e-5 (CPM), split-mega threshold=2500, split resolution=8e-5 (2×base)
+→ Pass 1: 364 natural communities
+→ Pass 2: splits megas → 770 final communities
+→ All mapped to 66 domains via cluster→community→domain chain
+→ LLM-named with gemma-3-27b-it via LM Studio (3090 GPU, 8 parallel workers)
+```
+
+### LLM Community Naming
+
+After clustering, each community was named using `gemma-3-27b-it` on the remote RTX 3090:
+
+- **Script**: `experiments/name_communities.py`
+- **Method**: Top 30 topics by occurrence count per community → structured JSON prompt → 2-5 word noun phrase
+- **Model**: `gemma-3-27b-it` via LM Studio at `192.168.1.36:1234`
+- **Workers**: 8 parallel (ThreadPoolExecutor)
+- **Throughput**: ~1.3 names/sec
+- **Total time**: ~9 min for 739 non-singleton communities
+
+Sample names (from 770 communities):
+- "Napoleonic & Restoration France" (2,320 topics)
+- "American Slavery & Abolition" (1,904 topics)
+- "Hogwarts Conflicts & Relationships" (1,898 topics)
+- "Deep Learning & Model Evaluation" (847 topics)
+- "Artisan Bread & Pastries" (612 topics)
+- "Kafka on the Shore Mysteries" (462 topics)
+- "Icelandic Noir & Psychological Crime" (285 topics)
+
+### Files
+
+| File | Description |
+|------|-------------|
+| `src/libtrails/clustering.py` | `split_mega_communities()` function, `split_mega`/`split_threshold` params on `cluster_topics()` |
+| `src/libtrails/cli.py` | `--split-mega`, `--split-threshold` CLI options |
+| `experiments/name_communities.py` | LLM community naming script (3090 remote, 8 workers) |
+
+## Phase 11: Community Structural Analysis & Cleanup
+
+After LLM naming (Phase 10), a full structural analysis was performed on the 739 communities to evaluate separation quality and identify communities that should be merged, pruned, or reassigned.
+
+### Size Distribution (739 communities pre-cleanup)
+
+| Bucket | Communities | Topics |
+|--------|------------|--------|
+| 1–10 | 21 | 134 |
+| 11–50 | 57 | 1,355 |
+| 51–100 | 25 | 1,768 |
+| 101–500 | 127 | 39,099 |
+| 501–1,000 | 133 | 98,147 |
+| 1,001–2,000 | 174 | 251,913 |
+| 2,001–2,500 | 189 | 444,891 |
+
+Median: 1,006 topics. The split-mega pass capped communities at 2,500 — 189 communities hit this ceiling.
+
+### Graph Conductance (KNN Edge-Cut Analysis)
+
+Using the k=7 KNN graph (k=6 clustering + 1):
+
+| Metric | Value |
+|--------|-------|
+| Total KNN edges (directed) | 5,861,148 |
+| Intra-community edges | 4,288,408 (73.2%) |
+| Inter-community edges | 1,572,740 (26.8%) |
+| Mean per-community conductance | 0.284 |
+| Median per-community conductance | 0.277 |
+
+**73% of KNN edges stay within their community** — strong evidence that Leiden found real structure in the graph. The edge-cut ratio of 0.27 is good for 726+ communities.
+
+Most-cohesive communities (lowest conductance): "Historical Usury & Finance" (0.077), "Bayonet Combat & History" (0.119), "Haiku Poetry & Tradition" (0.126). These are tightly-clustered niche topics.
+
+Leakiest communities were all tiny (< 10 topics) with conductance > 0.5 — too small for meaningful graph boundaries.
+
+### Cluster Exclusivity
+
+Every Leiden cluster belongs to **exactly one community**. Zero overlap. The split-mega pass created clean, non-overlapping partitions of the cluster space.
+
+| Metric | Value |
+|--------|-------|
+| Total clusters in communities | 6,562 |
+| Exclusive to 1 community | 6,562 (100%) |
+| Shared by 2+ communities | 0 (0%) |
+
+### Book Overlap Between Communities
+
+Only **2 community pairs** had Jaccard book overlap > 0.70 (out of all same-domain pairs):
+
+| C1 | C2 | Jaccard | Domain |
+|----|-----|---------|--------|
+| "Self-Control & Transformation" | "Identity Formation & Self" | 0.724 | Psychology & Self-Improvement |
+| "Identity Formation & Self" | "Future Planning & Uncertainty" | 0.714 | Psychology & Self-Improvement |
+
+Both in Psychology & Self-Improvement — these share many of the same self-help books but cover different aspects. Not candidates for merging.
+
+### Centroid Similarity (Embedding Space)
+
+Top same-domain pairs by centroid cosine similarity:
+
+| Pair | Cosine | Domain |
+|------|--------|--------|
+| "Sweet & Savory Sauces" vs "Italian & French Sauces" | 0.985 | Culinary Arts |
+| "Forbidden & First Loves" vs "Complex Romantic Entanglements" | 0.985 | Love & Relationships |
+| "Artistic Expression & Creativity" vs "Killing Commendatore & Art" | 0.983 | Art & Archaeology |
+| "Hyperion Cantos Universe" vs "The New Sun Intrigue" | 0.983 | Speculative Fiction |
+| "Meat Preparation & Techniques" vs "Poultry, Seafood & Technique" | 0.982 | Culinary Arts |
+
+These are semantically close but represent different sub-topics (different sauces, different sci-fi universes, different proteins). The split-mega pass correctly separated them from the same mega-community.
+
+### Domain-Level Coherence
+
+Every domain scored **"well differentiated"** — no domain had problematically high internal similarity between its communities.
+
+| Domain | Communities | Avg Internal Sim | Max Pair Sim |
+|--------|------------|-----------------|--------------|
+| Culinary Arts | 15 | 0.852 | 0.985 |
+| Character Drama & Emotion | 49 | 0.899 | 0.980 |
+| Speculative Fiction | 48 | 0.848 | 0.983 |
+| Religion & Classical Learning | 20 | 0.904 | 0.980 |
+| Technical & Quantitative | 14 | 0.911 | 0.978 |
+
+Culinary Arts has the highest pair similarity (sauces) but lowest average (0.852), meaning its communities span a wide range from coffee to bread to restaurant culture.
+
+### Cleanup Actions
+
+**1. Fixed book-specific community name:**
+- Community 392: "Kafka's Legal Predicament" → "Legal Systems & Proceedings" (2,500 topics, Law & Justice)
+
+**2. Deleted 13 singleton orphans** (1 topic each, no domain connections, no cluster relationships):
+- Topics like "mollie katzen biography", "al thawra district history" — noise from extraction
+- Their topics were unlinked (`community_id = NULL`)
+
+**3. Assigned domains to 58 formerly-orphaned communities** using vote-based matching:
+- For each orphan, counted which domain its topics' sibling clusters most often belonged to
+- 11 manual overrides for bad auto-matches (e.g., "War Cries & Rallies" → Modern Warfare instead of Family & Parenthood)
+- Key assignments: "Polish History & Politics" → Ancient & Medieval History, "Silicon Valley Tech & Culture" → Business & Investing, "Memorization Techniques & History" → Education & Training
+
+**4. Absorbed 19 tiny communities (< 10 topics, 114 topics total) into nearest large neighbors:**
+- Nearest neighbor determined by centroid cosine similarity
+- Examples: "Japanese Poetry Tradition" (6 topics) → "Poetry History & Craft", "Convict Labor Systems" (5 topics) → "Prison Life & Conditions"
+- 1 manual override: "Mollie Katzen Recipes" (1 topic) → "Professional Kitchen Dynamics" (best culinary match)
+
+### Final State
+
+```text
+Communities: 707 (down from 770 initial, 739 after first naming pass)
+  - 13 singletons deleted
+  - 19 tiny communities absorbed
+  - 1 name fixed (Kafka)
+  - 58 orphans assigned to domains
+  - 11 domain overrides applied
+
+All 707 communities have:
+  ✓ LLM-generated names (gemma-3-27b-it)
+  ✓ Domain assignments (66 domains)
+  ✓ ≥ 10 topics each
+  ✓ 100% cluster exclusivity (no overlap)
+
+Size range: 10–2,509 topics (median ~1,020)
+Total topics covered: 837,307 (13 unlinked singleton topics)
+Graph conductance: 73.2% intra-community edges
+```
+
+### Assessment
+
+**No merges needed.** The community structure is strong:
+- Clean non-overlapping cluster partitions
+- Very low book overlap between same-domain pairs (only 2 pairs > 0.70 Jaccard)
+- Good differentiation within every domain
+- 73% of graph edges stay within communities
+- The only structural weakness was tiny communities (< 10 topics) with high conductance — all absorbed
+
+### Next Steps
+
+- Frontend integration: show communities in the Universe page between clusters and domains
+- Verify book→community primary assignment quality
+- Consider re-running community naming for the 19 target communities that absorbed tiny neighbors (their topic composition changed slightly)
