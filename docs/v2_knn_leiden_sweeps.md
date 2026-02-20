@@ -1513,3 +1513,75 @@ Graph conductance: 73.2% intra-community edges
 - Frontend integration: show communities in the Universe page between clusters and domains
 - Verify book→community primary assignment quality
 - Consider re-running community naming for the 19 target communities that absorbed tiny neighbors (their topic composition changed slightly)
+
+---
+
+## Retrospective: The Journey to a Three-Tier Topic Hierarchy
+
+### What We Built
+
+A three-tier hierarchy for 837,320 topics extracted from 921 books:
+
+```
+66 Domains (hand-labeled super-clusters)
+  └── 707 Communities (LLM-named, CPM Leiden with split-mega)
+        └── 6,562 Clusters (Surprise Leiden, auto-labeled by top topic)
+```
+
+Each tier serves a different browsing purpose:
+- **Domains** answer "What broad subjects does this library cover?" — Culinary Arts, Speculative Fiction, Modern Warfare
+- **Communities** answer "What are the major topic areas within a subject?" — Artisan Bread & Pastries, Pasta & Italian Cuisine, Restaurant Dining & Culture
+- **Clusters** answer "What specific topics appear across books?" — sourdough starter maintenance, pasta dough hydration ratios
+
+### Key Decisions and Why
+
+**1. KNN graph over co-occurrence graph (Phase 1)**
+
+Early experiments used PMI-weighted co-occurrence edges. These produced reasonable clusters but suffered from a frequency bias — common topics connected to everything. The KNN approach (embed each topic, connect k nearest neighbors) gives every topic exactly k connections regardless of frequency, producing more balanced communities.
+
+**2. k=6 for both clusters and communities (Phases 1, 10)**
+
+We tested k=3 through k=31. Lower k fragments topics into too many tiny clusters; higher k creates mega-blobs. k=6 hits the sweet spot: 6,534 clusters with the largest at 748 topics. Crucially, using the same k for both tiers means communities subdivide cleanly — 28% of clusters nest purely inside one community, vs only 20% when communities used k=10.
+
+**3. Surprise for clusters, CPM for communities (Phases 2, 8-10)**
+
+Surprise (resolution-free) naturally finds fine-grained clusters without requiring a resolution parameter. CPM (resolution-based) gives us a tuning knob to target a specific community count. This two-algorithm approach lets each tier optimize independently while sharing the same underlying graph.
+
+**4. Two-pass split-mega over max_comm_size (Phases 9-10)**
+
+Phase 9 tried Leiden's built-in `max_comm_size` parameter, which constrains the optimizer during partitioning. This worked but produced communities with worse domain coherence because the optimizer was fighting the constraint. The two-pass approach — unconstrained Leiden first, then surgical splits of mega-communities — preserves the natural partition structure while still capping community size at 2,500 topics.
+
+**5. GPU KNN on the RTX 3090 (Phase 1)**
+
+Building a k-nearest-neighbor graph for 837K 384-dimensional vectors takes ~115 minutes on a MacBook CPU but only ~30 seconds on the 3090 GPU via FAISS. This 225x speedup made iterative experimentation feasible — we ran dozens of sweep configurations across Phases 1-10.
+
+### What Surprised Us
+
+- **Domain coherence tracked graph alignment, not quality score.** k=10 had higher raw Leiden quality (7.0M vs 4.7M) but worse structural metrics. The quality score reflects graph density, not how well communities map to the existing hierarchy.
+
+- **The community tier barely needed cleanup.** Out of 770 initial communities, only 13 were true noise (singletons with no connections), 19 were too small to matter, and 1 had a misleading name. The rest were structurally sound with no merge candidates.
+
+- **LLM naming at scale worked flawlessly.** gemma-3-27b-it named all 739 communities in 9 minutes with zero failures using 8 parallel workers on the 3090. The names ("Napoleonic & Bourbon France", "Black Holes & Wormholes", "Hogwarts Relationships & Conflicts") are descriptive and distinguish communities within the same domain.
+
+### Final Configuration
+
+| Parameter | Clusters | Communities | Domains |
+|-----------|----------|-------------|---------|
+| **Graph** | k=6 KNN (GPU) | k=6 KNN (GPU) | k=4 cluster centroid KNN |
+| **Algorithm** | Surprise (resolution-free) | CPM γ=4e-5 + split-mega | CPM γ=0.0028 |
+| **Count** | 6,562 | 707 | 66 |
+| **Size range** | 1–748 topics | 10–2,509 topics | 1–49 communities |
+| **Labels** | Auto (top topic) | LLM (gemma-3-27b-it) | Hand-curated |
+| **Quality** | 3,545,096 | 4,673,570 (pre-split) | — |
+
+### Infrastructure
+
+| Component | Machine | Time |
+|-----------|---------|------|
+| KNN graph (837K vectors) | RTX 3090 GPU | ~30s |
+| Cluster Leiden (Surprise) | MacBook CPU | ~32s |
+| Community Leiden (CPM + split) | MacBook CPU | ~49s |
+| Community naming (739 calls) | RTX 3090 (gemma-3-27b-it) | ~9 min |
+| Domain generation + labeling | MacBook + manual | ~2 hours |
+| Stats refresh (707 communities) | MacBook | ~7 min |
+| **Total pipeline** | | **~3 hours** (mostly manual review) |
