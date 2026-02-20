@@ -2001,6 +2001,23 @@ def process():
     default=None,
     help="File to write progress updates (for background runs)",
 )
+@click.option(
+    "--max-community-size",
+    type=int,
+    default=0,
+    help="Cap community size during Leiden optimization (0 = no limit)",
+)
+@click.option(
+    "--split-mega",
+    is_flag=True,
+    help="Split oversized communities via second Leiden pass on subgraphs",
+)
+@click.option(
+    "--split-threshold",
+    type=int,
+    default=2500,
+    help="Communities larger than this get split (default: 2500)",
+)
 def cluster(
     tier,
     mode,
@@ -2022,6 +2039,9 @@ def cluster(
     auto_select,
     force_rebuild,
     progress_file,
+    max_community_size,
+    split_mega,
+    split_threshold,
 ):
     """Run topic clustering with configurable options.
 
@@ -2143,6 +2163,12 @@ def cluster(
             console.print(f"\n[dim]Sweep results saved to {sweep_output}[/dim]")
         return
 
+    if split_mega and tier != "community":
+        console.print(
+            "[yellow]Warning: --split-mega only applies to --tier community, ignoring[/yellow]"
+        )
+        split_mega = False
+
     # Standard clustering path
     if dry_run or sample_size:
         console.print("\n[bold yellow]Step 2/2: Clustering topics (DRY RUN)[/bold yellow]")
@@ -2163,6 +2189,9 @@ def cluster(
         force_rebuild=force_rebuild,
         progress_file=progress_file,
         tier=tier,
+        max_comm_size=max_community_size,
+        split_mega=split_mega,
+        split_threshold=split_threshold,
     )
 
     unit = "communities" if tier == "community" else "clusters"
@@ -2180,6 +2209,10 @@ def cluster(
             console.print(
                 f"  [dim]Hubs removed: {cluster_result['hubs_removed']} (method={cluster_result.get('hub_method')})[/dim]"
             )
+
+        # Show max community size constraint
+        if cluster_result.get("max_comm_size"):
+            console.print(f"  [dim]Max community size: {cluster_result['max_comm_size']}[/dim]")
 
         # Show top clusters
         if cluster_result.get("cluster_sizes"):

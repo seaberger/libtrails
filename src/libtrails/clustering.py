@@ -1,7 +1,7 @@
 """Leiden clustering for hierarchical topic organization."""
 
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from typing import Optional
 
 import igraph as ig
@@ -169,6 +169,7 @@ def cluster_without_hubs(
     hub_indices: set[int],
     partition_type: str = "cpm",
     resolution: float = 0.005,
+    max_comm_size: int = 0,
 ) -> tuple[dict, leidenalg.VertexPartition]:
     """
     Cluster with hub topics removed, then assign hubs to nearest cluster.
@@ -196,7 +197,7 @@ def cluster_without_hubs(
     print(f"  Subgraph edges: {subgraph.ecount()} (original: {g.ecount()})")
 
     # Cluster the non-hub subgraph
-    partition = _get_partition(subgraph, partition_type, resolution)
+    partition = _get_partition(subgraph, partition_type, resolution, max_comm_size)
 
     # Assign clusters to non-hub topics
     assignments = {}
@@ -339,6 +340,7 @@ def _get_partition(
     g: ig.Graph,
     partition_type: str,
     resolution: float,
+    max_comm_size: int = 0,
 ) -> leidenalg.VertexPartition:
     """Get Leiden partition with appropriate settings.
 
@@ -346,6 +348,7 @@ def _get_partition(
         g: The igraph Graph to cluster
         partition_type: One of "modularity", "surprise", or "cpm"
         resolution: Resolution parameter (used for modularity and cpm)
+        max_comm_size: Maximum community size (0 = no limit)
 
     Returns:
         A leidenalg VertexPartition
@@ -355,6 +358,9 @@ def _get_partition(
     if weights:
         print(f"  Using edge weights (min={min(weights):.3f}, max={max(weights):.3f})")
 
+    if max_comm_size > 0:
+        print(f"  Max community size: {max_comm_size}")
+
     if partition_type == "modularity":
         # Use RB version for resolution tuning (γ=1.0 gives standard modularity)
         return leidenalg.find_partition(
@@ -362,6 +368,7 @@ def _get_partition(
             leidenalg.RBConfigurationVertexPartition,
             weights=weights,
             resolution_parameter=resolution,
+            max_comm_size=max_comm_size,
         )
 
     elif partition_type == "surprise":
@@ -370,6 +377,7 @@ def _get_partition(
             g,
             leidenalg.SurpriseVertexPartition,
             weights=weights,
+            max_comm_size=max_comm_size,
         )
 
     elif partition_type == "cpm":
@@ -378,10 +386,111 @@ def _get_partition(
             leidenalg.CPMVertexPartition,
             weights=weights,
             resolution_parameter=resolution,
+            max_comm_size=max_comm_size,
         )
 
     else:
         raise ValueError(f"Unknown partition type: {partition_type}")
+
+
+def split_mega_communities(
+    g: ig.Graph,
+    membership: list[int],
+    size_threshold: int = 2500,
+    split_resolution: float | None = None,
+    base_resolution: float = 1e-4,
+    max_comm_size: int = 2500,
+) -> list[int]:
+    """Split oversized communities by re-running Leiden CPM on their subgraphs.
+
+    For each community exceeding size_threshold, extracts the induced subgraph
+    and runs CPM with max_comm_size to find natural sub-communities within the cap.
+
+    Args:
+        g: The full topic graph (with all nodes/edges)
+        membership: Community assignments from the first Leiden pass
+        size_threshold: Communities larger than this get split
+        split_resolution: Resolution for sub-graph CPM (default: 2x base_resolution)
+        base_resolution: The resolution used in the first pass
+        max_comm_size: Cap for sub-communities (passed to Leiden)
+
+    Returns:
+        Updated membership list with mega-communities replaced by sub-communities,
+        all IDs renumbered sequentially from 0.
+    """
+    if split_resolution is None:
+        split_resolution = base_resolution * 2
+
+    # Count community sizes
+    comm_sizes = Counter(c for c in membership if c >= 0)
+    mega_ids = {c for c, size in comm_sizes.items() if size > size_threshold}
+
+    if not mega_ids:
+        print(f"  [SPLIT] No communities exceed threshold ({size_threshold})")
+        return membership
+
+    mega_ids_sorted = sorted(mega_ids, key=lambda c: comm_sizes[c], reverse=True)
+    print(f"\n  [SPLIT] Found {len(mega_ids)} mega-communities (>{size_threshold} topics):")
+    print(
+        f"  [SPLIT] Using CPM split resolution: {split_resolution:.2e}, max_comm_size={max_comm_size}"
+    )
+    for c in mega_ids_sorted:
+        print(f"    Community {c}: {comm_sizes[c]} topics")
+
+    # Build new membership: start with non-mega communities (keep original IDs for now)
+    new_membership = list(membership)
+    next_id = max(membership) + 1
+
+    for mega_id in mega_ids_sorted:
+        # Find node indices belonging to this mega-community
+        node_indices = [i for i, c in enumerate(membership) if c == mega_id]
+
+        # Extract subgraph
+        subgraph = g.subgraph(node_indices)
+
+        # Run Leiden CPM with max_comm_size on subgraph
+        weights = subgraph.es["weight"] if "weight" in subgraph.es.attributes() else None
+        sub_partition = leidenalg.find_partition(
+            subgraph,
+            leidenalg.CPMVertexPartition,
+            weights=weights,
+            resolution_parameter=split_resolution,
+            max_comm_size=max_comm_size,
+        )
+
+        sub_membership = sub_partition.membership
+        n_sub = len(set(sub_membership))
+        sub_sizes = Counter(sub_membership)
+        largest_sub = max(sub_sizes.values())
+
+        print(
+            f"    Community {mega_id} ({comm_sizes[mega_id]} topics) "
+            f"→ {n_sub} sub-communities (largest: {largest_sub})"
+        )
+
+        # Map sub-community IDs to new global IDs
+        sub_id_map = {}
+        for sub_id in sorted(set(sub_membership)):
+            sub_id_map[sub_id] = next_id
+            next_id += 1
+
+        # Update membership for nodes in this mega-community
+        for local_idx, global_idx in enumerate(node_indices):
+            new_membership[global_idx] = sub_id_map[sub_membership[local_idx]]
+
+    # Renumber all IDs sequentially from 0
+    unique_ids = sorted(set(c for c in new_membership if c >= 0))
+    id_remap = {old: new for new, old in enumerate(unique_ids)}
+    final_membership = [id_remap.get(c, -1) for c in new_membership]
+
+    final_count = len(set(c for c in final_membership if c >= 0))
+    original_count = len(set(c for c in membership if c >= 0))
+    print(
+        f"\n  [SPLIT] Result: {original_count} communities → {final_count} "
+        f"(split {len(mega_ids)} mega-communities)"
+    )
+
+    return final_membership
 
 
 def _populate_community_tables(
@@ -495,6 +604,9 @@ def cluster_topics(
     force_rebuild: bool = False,
     progress_file: str | None = None,
     tier: str = "cluster",
+    max_comm_size: int = 0,
+    split_mega: bool = False,
+    split_threshold: int = 2500,
 ) -> dict:
     """
     Cluster topics using the Leiden algorithm.
@@ -512,6 +624,7 @@ def cluster_topics(
         hub_percentile: Percentile threshold for hub detection (default 95 = top 5%)
         hub_method: Hub detection method - "degree", "generic", or "both"
         tier: "cluster" (fine, saves to cluster_id) or "community" (coarse, saves to community_id)
+        max_comm_size: Maximum community size for Leiden (0 = no limit)
 
     Returns:
         Statistics about the clustering
@@ -626,20 +739,48 @@ def cluster_topics(
         hub_indices = identify_hub_topics(g, method=hub_method, percentile=hub_percentile)
 
         assignments, partition = cluster_without_hubs(
-            g, hub_indices, partition_type=partition_type, resolution=resolution
+            g,
+            hub_indices,
+            partition_type=partition_type,
+            resolution=resolution,
+            max_comm_size=max_comm_size,
         )
 
         # Build membership list for result calculation
         membership = [assignments.get(g.vs[i]["topic_id"], -1) for i in range(g.vcount())]
     else:
         # Standard clustering
-        partition = _get_partition(g, partition_type, resolution)
+        partition = _get_partition(g, partition_type, resolution, max_comm_size)
         membership = partition.membership
         assignments = None
 
     elapsed = time.time() - start_time
     mem_after_leiden = _log_memory("After Leiden")
     log_progress(f"Leiden completed in {elapsed:.1f}s")
+
+    # Capture pre-split quality (partition object won't reflect post-split membership)
+    presplit_quality = partition.quality()
+
+    # Optional: split mega-communities via second Leiden pass on subgraphs
+    if split_mega and tier == "community":
+        split_start = time.time()
+        membership = split_mega_communities(
+            g,
+            membership,
+            size_threshold=split_threshold,
+            base_resolution=resolution,
+            max_comm_size=split_threshold,  # cap sub-communities at threshold
+        )
+        split_elapsed = time.time() - split_start
+        log_progress(f"Split pass completed in {split_elapsed:.1f}s")
+
+        # Rebuild assignments from updated membership (needed if remove_hubs=True)
+        if remove_hubs and assignments:
+            assignments = {
+                g.vs[node_idx]["topic_id"]: cid
+                for node_idx, cid in enumerate(membership)
+                if cid >= 0
+            }
 
     # Calculate cluster sizes
     cluster_sizes = defaultdict(int)
@@ -653,7 +794,7 @@ def cluster_topics(
         "total_edges": g.ecount(),
         "edge_types": edge_type_counts,
         "num_clusters": len(set(c for c in membership if c >= 0)),
-        "modularity": partition.quality(),
+        "modularity": presplit_quality,
         "partition_type": partition_type,
         "resolution": resolution,
         "mode": mode,
@@ -668,6 +809,9 @@ def cluster_topics(
         result["hubs_removed"] = len(hub_indices) if hub_indices else 0
         result["hub_method"] = hub_method
         result["hub_percentile"] = hub_percentile
+
+    if max_comm_size > 0:
+        result["max_comm_size"] = max_comm_size
 
     # Add memory and scaling estimates for dry runs
     if sample_size and sample_size < full_node_count:
@@ -765,6 +909,7 @@ def sweep_resolutions(
     output_path: str | None = None,
     force_rebuild: bool = False,
     progress_file: str | None = None,
+    max_comm_size: int = 0,
 ) -> dict:
     """Run a multi-resolution Leiden CPM sweep to find optimal resolution.
 
@@ -915,6 +1060,7 @@ def sweep_resolutions(
             dry_run=False,
             force_rebuild=force_rebuild,
             progress_file=progress_file,
+            max_comm_size=max_comm_size,
         )
         result["cluster_result"] = cluster_result
 

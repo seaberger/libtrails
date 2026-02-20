@@ -74,6 +74,9 @@ logs/
 # Environment variables (API keys)
 .env
 
+# Private infrastructure details (IPs, MACs, SSH credentials)
+PRIVATE.md
+
 # Serena (AI coding assistant)
 .serena/
 

@@ -344,16 +344,14 @@ def refresh_domain_stats(conn: sqlite3.Connection) -> int:
             )
             primary_book_count = cursor.fetchone()["cnt"]
 
-            # Sample books: top 5 primary books by topic_count (absolute contribution)
-            # Using is_primary=1 prevents small niche books from dominating via
-            # high concentration; topic_count rewards genuine domain coverage.
+            # Sample books: top 5 by concentration (primary first, then others)
             cursor.execute(
                 """
                 SELECT b.id, b.title, b.author, b.calibre_id
                 FROM book_domains bd
                 JOIN books b ON b.id = bd.book_id
-                WHERE bd.domain_id = ? AND bd.is_primary = 1 AND b.calibre_id IS NOT NULL
-                ORDER BY bd.topic_count DESC
+                WHERE bd.domain_id = ? AND b.calibre_id IS NOT NULL
+                ORDER BY bd.is_primary DESC, bd.concentration DESC
                 LIMIT 5
             """,
                 (domain_id,),
@@ -394,7 +392,7 @@ def refresh_domain_stats(conn: sqlite3.Connection) -> int:
 
             cursor.execute(
                 """
-                SELECT c.id as community_id, cs.top_label as label,
+                SELECT c.id as community_id, c.label,
                        cs.topic_count, cs.book_count
                 FROM communities c
                 JOIN community_stats cs ON cs.community_id = c.id
@@ -590,18 +588,21 @@ def refresh_community_stats(conn: sqlite3.Connection) -> int:
             )
             primary_book_count = cursor.fetchone()["cnt"]
 
-            # Top label (highest-occurrence topic in community)
-            cursor.execute(
-                """
-                SELECT label FROM topics
-                WHERE community_id = ? AND LENGTH(label) >= 4
-                ORDER BY occurrence_count DESC
-                LIMIT 1
-            """,
-                (community_id,),
-            )
-            label_row = cursor.fetchone()
-            top_label = label_row["label"] if label_row else row["label"]
+            # Top label: prefer LLM-generated name from communities table,
+            # fall back to highest-occurrence topic if no name set
+            top_label = row["label"]
+            if not top_label:
+                cursor.execute(
+                    """
+                    SELECT label FROM topics
+                    WHERE community_id = ? AND LENGTH(label) >= 4
+                    ORDER BY occurrence_count DESC
+                    LIMIT 1
+                """,
+                    (community_id,),
+                )
+                label_row = cursor.fetchone()
+                top_label = label_row["label"] if label_row else f"community_{community_id}"
 
             # Top 5 topics
             cursor.execute(
@@ -616,14 +617,14 @@ def refresh_community_stats(conn: sqlite3.Connection) -> int:
             )
             top_topics = [dict(r) for r in cursor.fetchall()]
 
-            # Sample books: top 5 primary books by topic_count
+            # Sample books: top 5 by concentration (primary first, then others)
             cursor.execute(
                 """
                 SELECT b.id, b.title, b.author, b.calibre_id
                 FROM book_communities bc
                 JOIN books b ON b.id = bc.book_id
-                WHERE bc.community_id = ? AND bc.is_primary = 1 AND b.calibre_id IS NOT NULL
-                ORDER BY bc.topic_count DESC
+                WHERE bc.community_id = ? AND b.calibre_id IS NOT NULL
+                ORDER BY bc.is_primary DESC, bc.concentration DESC
                 LIMIT 5
             """,
                 (community_id,),
