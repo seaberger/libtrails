@@ -339,6 +339,7 @@ def _get_partition(
     g: ig.Graph,
     partition_type: str,
     resolution: float,
+    max_comm_size: int = 0,
 ) -> leidenalg.VertexPartition:
     """Get Leiden partition with appropriate settings.
 
@@ -346,6 +347,7 @@ def _get_partition(
         g: The igraph Graph to cluster
         partition_type: One of "modularity", "surprise", or "cpm"
         resolution: Resolution parameter (used for modularity and cpm)
+        max_comm_size: Maximum community size (0 = no limit)
 
     Returns:
         A leidenalg VertexPartition
@@ -355,6 +357,9 @@ def _get_partition(
     if weights:
         print(f"  Using edge weights (min={min(weights):.3f}, max={max(weights):.3f})")
 
+    if max_comm_size > 0:
+        print(f"  Max community size: {max_comm_size}")
+
     if partition_type == "modularity":
         # Use RB version for resolution tuning (γ=1.0 gives standard modularity)
         return leidenalg.find_partition(
@@ -362,6 +367,7 @@ def _get_partition(
             leidenalg.RBConfigurationVertexPartition,
             weights=weights,
             resolution_parameter=resolution,
+            max_comm_size=max_comm_size,
         )
 
     elif partition_type == "surprise":
@@ -370,6 +376,7 @@ def _get_partition(
             g,
             leidenalg.SurpriseVertexPartition,
             weights=weights,
+            max_comm_size=max_comm_size,
         )
 
     elif partition_type == "cpm":
@@ -378,6 +385,7 @@ def _get_partition(
             leidenalg.CPMVertexPartition,
             weights=weights,
             resolution_parameter=resolution,
+            max_comm_size=max_comm_size,
         )
 
     else:
@@ -495,6 +503,7 @@ def cluster_topics(
     force_rebuild: bool = False,
     progress_file: str | None = None,
     tier: str = "cluster",
+    max_comm_size: int = 0,
 ) -> dict:
     """
     Cluster topics using the Leiden algorithm.
@@ -512,6 +521,7 @@ def cluster_topics(
         hub_percentile: Percentile threshold for hub detection (default 95 = top 5%)
         hub_method: Hub detection method - "degree", "generic", or "both"
         tier: "cluster" (fine, saves to cluster_id) or "community" (coarse, saves to community_id)
+        max_comm_size: Maximum community size for Leiden (0 = no limit)
 
     Returns:
         Statistics about the clustering
@@ -633,7 +643,7 @@ def cluster_topics(
         membership = [assignments.get(g.vs[i]["topic_id"], -1) for i in range(g.vcount())]
     else:
         # Standard clustering
-        partition = _get_partition(g, partition_type, resolution)
+        partition = _get_partition(g, partition_type, resolution, max_comm_size)
         membership = partition.membership
         assignments = None
 
@@ -668,6 +678,9 @@ def cluster_topics(
         result["hubs_removed"] = len(hub_indices) if hub_indices else 0
         result["hub_method"] = hub_method
         result["hub_percentile"] = hub_percentile
+
+    if max_comm_size > 0:
+        result["max_comm_size"] = max_comm_size
 
     # Add memory and scaling estimates for dry runs
     if sample_size and sample_size < full_node_count:

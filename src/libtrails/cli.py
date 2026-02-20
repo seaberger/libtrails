@@ -2001,6 +2001,12 @@ def process():
     default=None,
     help="File to write progress updates (for background runs)",
 )
+@click.option(
+    "--max-community-size",
+    type=int,
+    default=0,
+    help="Cap community size during Leiden optimization (0 = no limit)",
+)
 def cluster(
     tier,
     mode,
@@ -2022,6 +2028,7 @@ def cluster(
     auto_select,
     force_rebuild,
     progress_file,
+    max_community_size,
 ):
     """Run topic clustering with configurable options.
 
@@ -2163,6 +2170,7 @@ def cluster(
         force_rebuild=force_rebuild,
         progress_file=progress_file,
         tier=tier,
+        max_comm_size=max_community_size,
     )
 
     unit = "communities" if tier == "community" else "clusters"
@@ -2180,6 +2188,10 @@ def cluster(
             console.print(
                 f"  [dim]Hubs removed: {cluster_result['hubs_removed']} (method={cluster_result.get('hub_method')})[/dim]"
             )
+
+        # Show max community size constraint
+        if cluster_result.get("max_comm_size"):
+            console.print(f"  [dim]Max community size: {cluster_result['max_comm_size']}[/dim]")
 
         # Show top clusters
         if cluster_result.get("cluster_sizes"):
