@@ -391,7 +391,13 @@ lm_studio:
 
 Can also be set via env vars: `LM_STUDIO_THEME_API_BASE`, `LM_STUDIO_CHUNK_API_BASE`.
 
-**Note**: The 3090 PC IP may change on reboot (DHCP). If unreachable, scan with `arp -a` + curl port 1234.
+**Note**: The 3090 PC has static IP `192.168.1.36` (set manually in Windows network settings).
+
+**3090 PC Remote Access**:
+- **SSH into WSL2**: `ssh seanb@192.168.1.36 -p 2222`
+- **Physical NIC**: Intel I219-V, MAC `9C:6B:00:0A:73:D2`
+- **Wake-on-LAN**: `wakeonlan -i 192.168.1.255 9C:6B:00:0A:73:D2` (install: `brew install wakeonlan`)
+- **GPU KNN**: `run_gpu_knn(k=N)` in `gpu_knn.py` — exports embeddings, SSH upload, FAISS on 3090, download results
 
 ### config.py Settings
 
