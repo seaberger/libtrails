@@ -188,9 +188,7 @@ def create_demo_db(library_dir: Path, db_path: Path) -> None:
             else:
                 cursor.execute("INSERT INTO authors (name) VALUES (?)", (author,))
                 author_id = cursor.lastrowid
-            cursor.execute(
-                "INSERT OR IGNORE INTO book_authors VALUES (?, ?)", (book_id, author_id)
-            )
+            cursor.execute("INSERT OR IGNORE INTO book_authors VALUES (?, ?)", (book_id, author_id))
 
         # Add tags
         cal_cursor.execute(

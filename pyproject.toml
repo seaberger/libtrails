@@ -42,6 +42,8 @@ api = [
     "fastapi>=0.109.0",
     "uvicorn[standard]>=0.27.0",
     "pydantic>=2.0.0",
+    "onnxruntime>=1.20.0",
+    "tokenizers>=0.15.0",
 ]
 viz = [
     "umap-learn>=0.5.6",
@@ -90,3 +92,4 @@ python_version = "3.11"
 warn_return_any = true
 warn_unused_ignores = true
 ignore_missing_imports = true
+

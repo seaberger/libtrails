@@ -31,8 +31,7 @@ try:
     import httpx
 except ImportError as e:
     raise SystemExit(
-        "Missing dependency: httpx\n"
-        "Install with: uv add httpx  (or: pip install httpx)"
+        "Missing dependency: httpx\nInstall with: uv add httpx  (or: pip install httpx)"
     ) from e
 
 

@@ -1,10 +1,11 @@
 """Tests for embedding generation functionality."""
 
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 import numpy as np
 
 from libtrails.embeddings import (
+    EMBEDDING_DIMENSION,
     bytes_to_embedding,
     cosine_similarity,
     cosine_similarity_matrix,
@@ -98,60 +99,85 @@ class TestCosineSimilarity:
 
 
 class TestEmbedText:
-    """Tests for text embedding with mocked model."""
+    """Tests for text embedding with mocked backend."""
 
-    @patch("libtrails.embeddings.get_model")
-    def test_embed_single_text(self, mock_get_model):
-        """Test embedding a single text."""
-        mock_model = MagicMock()
-        mock_model.encode.return_value = np.array([[0.1, 0.2, 0.3]])
-        mock_get_model.return_value = mock_model
+    @patch("libtrails.embeddings._backend", "sentence-transformers")
+    @patch("libtrails.embeddings._st_model")
+    def test_embed_single_text_st(self, mock_model):
+        """Test embedding a single text via sentence-transformers."""
+        mock_model.encode.return_value = np.array([0.1, 0.2, 0.3])
 
         result = embed_text("test text")
 
         assert isinstance(result, np.ndarray)
         mock_model.encode.assert_called_once()
 
-    @patch("libtrails.embeddings.get_model")
-    def test_embed_multiple_texts(self, mock_get_model):
-        """Test embedding multiple texts."""
-        mock_model = MagicMock()
+    @patch("libtrails.embeddings._backend", "sentence-transformers")
+    @patch("libtrails.embeddings._st_model")
+    def test_embed_multiple_texts_st(self, mock_model):
+        """Test embedding multiple texts via sentence-transformers."""
         mock_model.encode.return_value = np.array(
             [
                 [0.1, 0.2, 0.3],
                 [0.4, 0.5, 0.6],
             ]
         )
-        mock_get_model.return_value = mock_model
 
         result = embed_texts(["text one", "text two"])
 
         assert result.shape[0] == 2
         mock_model.encode.assert_called_once()
 
+    @patch("libtrails.embeddings._backend", "onnx")
+    @patch("libtrails.embeddings._onnx_encode")
+    def test_embed_single_text_onnx(self, mock_encode):
+        """Test embedding a single text via ONNX."""
+        mock_encode.return_value = np.array([[0.1, 0.2, 0.3]])
+
+        result = embed_text("test text")
+
+        assert isinstance(result, np.ndarray)
+        mock_encode.assert_called_once_with(["test text"])
+
+    @patch("libtrails.embeddings._backend", "onnx")
+    @patch("libtrails.embeddings._onnx_encode")
+    def test_embed_multiple_texts_onnx(self, mock_encode):
+        """Test embedding multiple texts via ONNX."""
+        mock_encode.return_value = np.array(
+            [
+                [0.1, 0.2, 0.3],
+                [0.4, 0.5, 0.6],
+            ]
+        )
+
+        result = embed_texts(["text one", "text two"])
+
+        assert result.shape[0] == 2
+        mock_encode.assert_called_once_with(["text one", "text two"])
+
+    def test_embed_texts_empty_list(self):
+        """embed_texts([]) should return an empty (0, 384) array without loading any backend."""
+        result = embed_texts([])
+
+        assert result.shape == (0, EMBEDDING_DIMENSION)
+        assert result.dtype == np.float32
+
 
 class TestModelInfo:
     """Tests for model information retrieval."""
 
-    @patch("libtrails.embeddings.get_model")
-    @patch("libtrails.embeddings.MODEL_CACHE_DIR")
-    def test_get_model_info(self, mock_cache_dir, mock_get_model):
-        """Test retrieving model info."""
-        mock_model = MagicMock()
-        mock_model.get_sentence_embedding_dimension.return_value = 384
-        mock_get_model.return_value = mock_model
-        mock_cache_dir.exists.return_value = True
-
+    @patch("libtrails.embeddings._backend", "onnx")
+    def test_get_model_info_has_required_fields(self):
+        """Test retrieving model info contains expected keys."""
         result = get_model_info()
 
         assert "name" in result
         assert "dimension" in result
+        assert "backend" in result
         assert result["dimension"] == 384
 
-    @patch("libtrails.embeddings._model", None)
     def test_get_embedding_dimension(self):
         """Test getting embedding dimension."""
-        # Should return the configured dimension
         dim = get_embedding_dimension()
 
         assert isinstance(dim, int)

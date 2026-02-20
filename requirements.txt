@@ -43,6 +43,8 @@ scikit-learn>=1.0.0      # K-means for super-clustering
 fastapi>=0.109.0
 uvicorn[standard]>=0.27.0
 pydantic>=2.0.0
+onnxruntime>=1.20.0      # Lightweight ONNX inference (replaces PyTorch on server)
+tokenizers>=0.15.0       # HuggingFace tokenizer for ONNX embedding path
 
 # ============================================
 # Visualization (Galaxy View)

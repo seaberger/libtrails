@@ -453,6 +453,32 @@ CREATE VIRTUAL TABLE topic_vectors USING vec0(
 
 ---
 
+## Server Embedding Model (ONNX)
+
+The production server uses ONNX Runtime instead of PyTorch for embedding inference. This reduces the embedding model's memory footprint from ~300 MB (PyTorch + sentence-transformers) to ~50 MB (ONNX Runtime + tokenizers), eliminating swap-to-disk latency on the 1 GB RAM Lightsail instance.
+
+**How it works:**
+- `embeddings.py` auto-detects the ONNX model at `models/bge-small-onnx/model.onnx`
+- If found (and `onnxruntime` + `tokenizers` are installed), uses ONNX for inference
+- Falls back to sentence-transformers/PyTorch when ONNX model isn't available
+- Both backends produce identical embeddings (verified to cosine similarity 1.000000)
+
+**Exporting the ONNX model** (one-time, done locally):
+```bash
+# Requires: optimum[onnxruntime] (install temporarily for export)
+uv add --dev 'optimum[onnxruntime]'
+uv run python scripts/export_onnx.py
+```
+
+**Deploying to server:**
+```bash
+scp -r models/bge-small-onnx <user>@<your-server>:/path/to/libtrails/models/
+```
+
+The server's `[api]` optional dependency includes `onnxruntime` and `tokenizers`, so no PyTorch is needed on the server.
+
+---
+
 ## Key Dependencies
 
 | Package | Purpose |
@@ -461,7 +487,8 @@ CREATE VIRTUAL TABLE topic_vectors USING vec0(
 | `docling` | Layout-aware PDF extraction |
 | `pypdf` | Lightweight PDF text extraction |
 | `litellm` | Unified LLM API (Gemini, LM Studio, OpenAI) |
-| `sentence-transformers` | BGE-small-en-v1.5 embeddings (384 dims) |
+| `sentence-transformers` | BGE-small-en-v1.5 embeddings, 384 dims (local dev/indexing) |
+| `onnxruntime` | Lightweight ONNX inference for server deployment (~50 MB vs ~300 MB) |
 | `sqlite-vec` | Vector similarity search in SQLite |
 | `python-igraph` | Graph construction |
 | `leidenalg` | Leiden community detection |
@@ -503,6 +530,7 @@ Books with matching topics:
 ## Roadmap
 
 ### Completed
+- [x] ONNX Runtime embedding backend for fast, low-memory server inference
 - [x] EPUB parsing with paragraph-preserving HTML extraction
 - [x] Recursive text chunking (paragraphs → sentences → words)
 - [x] Two-pass topic extraction (themes + contextualized chunk topics)
@@ -527,7 +555,6 @@ Books with matching topics:
 - [ ] Cross-book trail generation
 - [ ] Book recommendations based on topic overlap
 - [ ] Domain filtering on clusters page
-- [ ] Deploy to cloud (AWS Lightsail)
 - [ ] Calibre plugin integration
 
 ---
