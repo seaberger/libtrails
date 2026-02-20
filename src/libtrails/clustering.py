@@ -183,8 +183,6 @@ def cluster_without_hubs(
     Returns:
         Tuple of (assignments dict mapping topic_id -> cluster_id, partition object)
     """
-    from collections import Counter
-
     # Create subgraph without hubs
     non_hub_indices = [i for i in range(g.vcount()) if i not in hub_indices]
     subgraph = g.subgraph(non_hub_indices)
@@ -254,8 +252,6 @@ def assign_hubs_multi_cluster(
     Returns:
         dict mapping topic_id -> list of (cluster_id, strength) tuples
     """
-    from collections import Counter
-
     hub_multi_assignments = {}
 
     for hub_idx in hub_indices:

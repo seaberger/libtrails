@@ -1522,7 +1522,7 @@ Graph conductance: 73.2% intra-community edges
 
 A three-tier hierarchy for 837,320 topics extracted from 921 books:
 
-```
+```text
 66 Domains (hand-labeled super-clusters)
   └── 707 Communities (LLM-named, CPM Leiden with split-mega)
         └── 6,562 Clusters (Surprise Leiden, auto-labeled by top topic)

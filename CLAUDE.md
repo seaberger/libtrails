@@ -389,7 +389,7 @@ lm_studio:
   chunk_api_base: http://<GPU_HOST>:1234     # 12b on remote 3090
 ```
 
-Can also be set via env vars: `LM_STUDIO_THEME_API_BASE`, `LM_STUDIO_CHUNK_API_BASE`.
+It can also be set via env vars: `LM_STUDIO_THEME_API_BASE`, `LM_STUDIO_CHUNK_API_BASE`.
 
 **3090 PC Remote Access**: See `~/.libtrails/config.yaml` for host/port details. GPU KNN pipeline is in `gpu_knn.py` (`run_gpu_knn(k=N)`) — exports embeddings, SSH upload, FAISS on 3090, download results. Wake-on-LAN supported (`brew install wakeonlan`).
 
