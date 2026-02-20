@@ -19,7 +19,7 @@ ST_MODEL_PATH = MODEL_DIR / "BAAI_bge-small-en-v1.5"
 ONNX_OUTPUT_DIR = MODEL_DIR / "bge-small-onnx"
 
 
-def main():
+def main() -> None:
     if not ST_MODEL_PATH.exists():
         print(f"Error: sentence-transformers model not found at {ST_MODEL_PATH}")
         print(

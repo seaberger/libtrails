@@ -455,7 +455,7 @@ CREATE VIRTUAL TABLE topic_vectors USING vec0(
 
 ## Server Embedding Model (ONNX)
 
-The production server uses ONNX Runtime instead of PyTorch for embedding inference. This reduces the uvicorn process memory from ~400 MB to ~150 MB, eliminating swap-to-disk latency on the 1 GB RAM Lightsail instance.
+The production server uses ONNX Runtime instead of PyTorch for embedding inference. This reduces the embedding model's memory footprint from ~300 MB (PyTorch + sentence-transformers) to ~50 MB (ONNX Runtime + tokenizers), eliminating swap-to-disk latency on the 1 GB RAM Lightsail instance.
 
 **How it works:**
 - `embeddings.py` auto-detects the ONNX model at `models/bge-small-onnx/model.onnx`
@@ -472,7 +472,7 @@ uv run python scripts/export_onnx.py
 
 **Deploying to server:**
 ```bash
-scp -r models/bge-small-onnx ubuntu@52.25.145.220:/home/ubuntu/projects/libtrails/models/
+scp -r models/bge-small-onnx <user>@<your-server>:/path/to/libtrails/models/
 ```
 
 The server's `[api]` optional dependency includes `onnxruntime` and `tokenizers`, so no PyTorch is needed on the server.

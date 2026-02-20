@@ -5,6 +5,7 @@ from unittest.mock import patch
 import numpy as np
 
 from libtrails.embeddings import (
+    EMBEDDING_DIMENSION,
     bytes_to_embedding,
     cosine_similarity,
     cosine_similarity_matrix,
@@ -152,12 +153,20 @@ class TestEmbedText:
         result = embed_texts(["text one", "text two"])
 
         assert result.shape[0] == 2
-        mock_encode.assert_called_once()
+        mock_encode.assert_called_once_with(["text one", "text two"])
+
+    def test_embed_texts_empty_list(self):
+        """embed_texts([]) should return an empty (0, 384) array without loading any backend."""
+        result = embed_texts([])
+
+        assert result.shape == (0, EMBEDDING_DIMENSION)
+        assert result.dtype == np.float32
 
 
 class TestModelInfo:
     """Tests for model information retrieval."""
 
+    @patch("libtrails.embeddings._backend", "onnx")
     def test_get_model_info_has_required_fields(self):
         """Test retrieving model info contains expected keys."""
         result = get_model_info()
@@ -167,8 +176,6 @@ class TestModelInfo:
         assert "backend" in result
         assert result["dimension"] == 384
 
-    @patch("libtrails.embeddings._backend", None)
-    @patch("libtrails.embeddings._st_model", None)
     def test_get_embedding_dimension(self):
         """Test getting embedding dimension."""
         dim = get_embedding_dimension()

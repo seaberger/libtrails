@@ -57,20 +57,27 @@ def _try_load_onnx() -> bool:
         logger.info("Loaded ONNX embedding model (%s)", onnx_path)
         return True
     except ImportError:
+        _onnx_session = None
+        _onnx_tokenizer = None
         logger.debug(
             "onnxruntime or tokenizers not installed, falling back to sentence-transformers"
         )
         return False
     except Exception:
+        _onnx_session = None
+        _onnx_tokenizer = None
         logger.warning(
             "Failed to load ONNX model, falling back to sentence-transformers", exc_info=True
         )
         return False
 
 
-def _load_sentence_transformers():
-    """Load the sentence-transformers model (PyTorch-based)."""
-    global _st_model, _backend
+def _ensure_st_loaded():
+    """Load the sentence-transformers model without changing the active backend."""
+    global _st_model
+
+    if _st_model is not None:
+        return
 
     from sentence_transformers import SentenceTransformer
 
@@ -83,7 +90,6 @@ def _load_sentence_transformers():
         _st_model = SentenceTransformer(MODEL_NAME)
         _st_model.save(str(local_model_path))
 
-    _backend = "sentence-transformers"
     logger.info("Loaded sentence-transformers embedding model")
 
 
@@ -94,7 +100,8 @@ def _ensure_backend():
         return
 
     if not _try_load_onnx():
-        _load_sentence_transformers()
+        _ensure_st_loaded()
+        _backend = "sentence-transformers"
 
 
 def _onnx_encode(texts: list[str]) -> np.ndarray:
@@ -124,10 +131,12 @@ def _onnx_encode(texts: list[str]) -> np.ndarray:
 
 
 def get_model():
-    """Get the sentence-transformers model (forces ST backend for bulk operations)."""
-    global _st_model
-    if _st_model is None:
-        _load_sentence_transformers()
+    """Get the sentence-transformers model for bulk operations.
+
+    This loads sentence-transformers without overriding the active backend,
+    so embed_text()/embed_texts() continue using ONNX if it was loaded first.
+    """
+    _ensure_st_loaded()
     return _st_model
 
 
@@ -151,6 +160,9 @@ def embed_texts(texts: list[str], batch_size: int = 32) -> np.ndarray:
     Returns:
         np.ndarray of shape (len(texts), 384)
     """
+    if len(texts) == 0:
+        return np.empty((0, EMBEDDING_DIMENSION), dtype=np.float32)
+
     _ensure_backend()
 
     if _backend == "onnx":
