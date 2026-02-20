@@ -2163,6 +2163,12 @@ def cluster(
             console.print(f"\n[dim]Sweep results saved to {sweep_output}[/dim]")
         return
 
+    if split_mega and tier != "community":
+        console.print(
+            "[yellow]Warning: --split-mega only applies to --tier community, ignoring[/yellow]"
+        )
+        split_mega = False
+
     # Standard clustering path
     if dry_run or sample_size:
         console.print("\n[bold yellow]Step 2/2: Clustering topics (DRY RUN)[/bold yellow]")

@@ -1,7 +1,7 @@
 """Leiden clustering for hierarchical topic organization."""
 
 import sys
-from collections import defaultdict
+from collections import Counter, defaultdict
 from typing import Optional
 
 import igraph as ig
@@ -418,8 +418,6 @@ def split_mega_communities(
         Updated membership list with mega-communities replaced by sub-communities,
         all IDs renumbered sequentially from 0.
     """
-    from collections import Counter
-
     if split_resolution is None:
         split_resolution = base_resolution * 2
 
@@ -760,6 +758,9 @@ def cluster_topics(
     mem_after_leiden = _log_memory("After Leiden")
     log_progress(f"Leiden completed in {elapsed:.1f}s")
 
+    # Capture pre-split quality (partition object won't reflect post-split membership)
+    presplit_quality = partition.quality()
+
     # Optional: split mega-communities via second Leiden pass on subgraphs
     if split_mega and tier == "community":
         split_start = time.time()
@@ -773,6 +774,14 @@ def cluster_topics(
         split_elapsed = time.time() - split_start
         log_progress(f"Split pass completed in {split_elapsed:.1f}s")
 
+        # Rebuild assignments from updated membership (needed if remove_hubs=True)
+        if remove_hubs and assignments:
+            assignments = {
+                g.vs[node_idx]["topic_id"]: cid
+                for node_idx, cid in enumerate(membership)
+                if cid >= 0
+            }
+
     # Calculate cluster sizes
     cluster_sizes = defaultdict(int)
     for cluster_id in membership:
@@ -785,7 +794,7 @@ def cluster_topics(
         "total_edges": g.ecount(),
         "edge_types": edge_type_counts,
         "num_clusters": len(set(c for c in membership if c >= 0)),
-        "modularity": partition.quality(),
+        "modularity": presplit_quality,
         "partition_type": partition_type,
         "resolution": resolution,
         "mode": mode,
@@ -900,6 +909,7 @@ def sweep_resolutions(
     output_path: str | None = None,
     force_rebuild: bool = False,
     progress_file: str | None = None,
+    max_comm_size: int = 0,
 ) -> dict:
     """Run a multi-resolution Leiden CPM sweep to find optimal resolution.
 
@@ -1050,6 +1060,7 @@ def sweep_resolutions(
             dry_run=False,
             force_rebuild=force_rebuild,
             progress_file=progress_file,
+            max_comm_size=max_comm_size,
         )
         result["cluster_result"] = cluster_result
 
