@@ -622,3 +622,439 @@ This mirrors the V2 domain-level finding (Phase 3d) where k=4 won over k=3 for i
 5. **Singletons negligible** — 17 out of 121K topics
 
 **Scaling relationship**: Demo needs γ ~2.8x higher than V2 to produce the same community count at k=4. This makes sense: with 7x fewer topics but only 2.8x higher γ, the demo's communities are proportionally larger relative to corpus size — each community covers more of the 100-book library.
+
+---
+
+## Phase 7: Higher-Resolution Domain Sweep (55-75 Domains)
+
+**Goal**: Instead of the current approach (k=4, γ=0.0008 → 25 domains + K-means mega-domain splitting), find parameters for a single Leiden pass that directly produces 55-75 domains. The 929-book library spans too many genres to compress into 25 themes — the mega-domain (#0 with 1,239 clusters) and cross-domain contamination (e.g. baseball in "Modern Conflict & Warfare") suggest the library needs finer-grained top-level categories.
+
+**Motivation**: Second-pass splitting (Leiden or K-means on mega-domain subgraphs) is a workaround for insufficient initial resolution. A single well-tuned pass is cleaner and avoids hybrid methodology issues.
+
+**Method**: Same infrastructure as Phase 3 — `build_cluster_graph()` + `leiden_sweep()` from sweep.py. Swept k=3 (16,287 edges) and k=4 (21,550 edges) across 20 log-spaced resolutions each.
+
+---
+
+### 7a. k=3 Sweep (γ = 0.0008–0.0025)
+
+| γ | Domains | Q | Sig | Max | Median | Mean | P10 | P90 | Singles | NMI |
+|---|---------|-------|--------|-----|--------|------|-----|-----|---------|------|
+| 8.00e-04 | 39 | 0.775 | 29,892 | 646 | 135 | 168.3 | 59 | 269 | 0 | 0.833 |
+| 8.49e-04 | 43 | 0.773 | 30,260 | 681 | 108 | 152.6 | 56 | 286 | 0 | 0.825 |
+| 9.02e-04 | 41 | 0.772 | 30,417 | 643 | 143 | 160.0 | 55 | 292 | 0 | 0.853 |
+| 9.58e-04 | 45 | 0.773 | 31,304 | 648 | 108 | 145.8 | 62 | 261 | 0 | 0.793 |
+| 1.02e-03 | 46 | 0.767 | 30,560 | 937 | 107 | 142.7 | 48 | 241 | 0 | 0.808 |
+| 1.08e-03 | 52 | 0.770 | 32,091 | 680 | 97 | 126.2 | 35 | 236 | 0 | 0.855 |
+| 1.15e-03 | 53 | 0.770 | 32,647 | 613 | 98 | 123.8 | 49 | 226 | 0 | 0.861 |
+| 1.22e-03 | 54 | 0.769 | 32,582 | 616 | 87 | 121.5 | 48 | 231 | 0 | 0.859 |
+| **1.29e-03** | **58** | **0.767** | **33,103** | **581** | **86** | **113.1** | **37** | **216** | **0** | **0.841** |
+| 1.37e-03 | 58 | 0.767 | 33,207 | 589 | 87 | 113.1 | 42 | 222 | 0 | 0.854 |
+| **1.46e-03** | **61** | **0.767** | **33,886** | **573** | **90** | **107.6** | **37** | **203** | **0** | **0.863** |
+| **1.55e-03** | **68** | **0.765** | **34,639** | **572** | **78** | **96.5** | **28** | **182** | **0** | **0.861** |
+| **1.64e-03** | **67** | **0.764** | **34,772** | **537** | **80** | **97.9** | **34** | **163** | **0** | **0.879** |
+| **1.74e-03** | **71** | **0.764** | **35,109** | **541** | **71** | **92.4** | **28** | **180** | **0** | **0.876** |
+| 1.85e-03 | 77 | 0.760 | 35,639 | 519 | 67 | 85.2 | 25 | 155 | 0 | 0.860 |
+| 1.97e-03 | 80 | 0.758 | 35,747 | 545 | 68 | 82.0 | 23 | 147 | 0 | 0.845 |
+| 2.09e-03 | 84 | 0.753 | 36,551 | 394 | 63 | 78.1 | 27 | 144 | 0 | 0.841 |
+| 2.22e-03 | 87 | 0.749 | 36,853 | 370 | 62 | 75.4 | 27 | 130 | 0 | 0.856 |
+| 2.35e-03 | 93 | 0.746 | 37,649 | 339 | 55 | 70.6 | 25 | 118 | 0 | 0.838 |
+| 2.50e-03 | 94 | 0.745 | 37,577 | 395 | 56 | 69.8 | 26 | 128 | 0 | — |
+
+### 7b. k=4 Sweep (γ = 0.0012–0.0035)
+
+| γ | Domains | Q | Sig | Max | Median | Mean | P10 | P90 | Singles | NMI |
+|---|---------|-------|--------|------|--------|------|-----|-----|---------|------|
+| 1.20e-03 | 40 | 0.737 | 36,210 | 1,035 | 109 | 164.1 | 52 | 279 | 0 | 0.831 |
+| 1.27e-03 | 36 | 0.738 | 35,804 | 971 | 149 | 182.3 | 55 | 270 | 0 | 0.805 |
+| 1.34e-03 | 40 | 0.741 | 37,380 | 629 | 127 | 164.1 | 50 | 262 | 0 | 0.850 |
+| 1.42e-03 | 44 | 0.737 | 38,446 | 655 | 115 | 149.1 | 44 | 259 | 0 | 0.858 |
+| 1.50e-03 | 45 | 0.739 | 38,591 | 619 | 105 | 145.8 | 39 | 256 | 0 | 0.846 |
+| 1.59e-03 | 46 | 0.737 | 38,883 | 622 | 105 | 142.7 | 54 | 252 | 0 | 0.816 |
+| 1.68e-03 | 49 | 0.733 | 39,453 | 647 | 99 | 133.9 | 48 | 242 | 0 | 0.873 |
+| **1.78e-03** | **55** | **0.730** | **40,642** | **640** | **89** | **119.3** | **40** | **225** | **0** | **0.879** |
+| **1.88e-03** | **57** | **0.728** | **40,803** | **594** | **80** | **115.1** | **33** | **210** | **0** | **0.843** |
+| **1.99e-03** | **58** | **0.729** | **41,399** | **591** | **90** | **113.1** | **38** | **187** | **0** | **0.866** |
+| **2.11e-03** | **58** | **0.728** | **41,248** | **495** | **88** | **113.1** | **41** | **206** | **0** | **0.870** |
+| **2.23e-03** | **60** | **0.729** | **41,753** | **481** | **86** | **109.4** | **41** | **205** | **0** | **0.879** |
+| **2.36e-03** | **65** | **0.727** | **42,252** | **480** | **80** | **101.0** | **29** | **193** | **0** | **0.877** |
+| **2.50e-03** | **68** | **0.725** | **42,716** | **482** | **75** | **96.5** | **34** | **198** | **0** | **0.876** |
+| **2.64e-03** | **72** | **0.723** | **43,321** | **475** | **64** | **91.1** | **35** | **165** | **0** | **0.869** |
+| 2.79e-03 | 74 | 0.721 | 43,618 | 475 | 65 | 88.7 | 32 | 165 | 0 | 0.864 |
+| 2.96e-03 | 77 | 0.719 | 44,069 | 429 | 66 | 85.2 | 23 | 171 | 0 | 0.859 |
+| 3.13e-03 | 79 | 0.716 | 44,130 | 423 | 64 | 83.1 | 22 | 148 | 0 | 0.875 |
+| 3.31e-03 | 84 | 0.712 | 44,947 | 409 | 61 | 78.1 | 26 | 139 | 0 | 0.860 |
+| 3.50e-03 | 95 | 0.707 | 46,044 | 420 | 57 | 69.1 | 19 | 125 | 0 | — |
+
+### 7c. k=5 Sweep (γ = 0.0015–0.006)
+
+Graph: 6,562 nodes, 26,746 edges.
+
+| γ | Domains | Q | Sig | Max | Median | Mean | P10 | P90 | Singles | NMI |
+|---|---------|-------|--------|-----|--------|------|-----|-----|---------|------|
+| 1.50e-03 | 35 | 0.715 | 41,701 | 991 | 156 | 187.5 | 65 | 309 | 0 | 0.789 |
+| 1.61e-03 | 39 | 0.719 | 43,665 | 628 | 141 | 168.3 | 50 | 283 | 0 | 0.863 |
+| 1.74e-03 | 40 | 0.716 | 44,608 | 607 | 138 | 164.1 | 49 | 264 | 0 | 0.873 |
+| 1.87e-03 | 41 | 0.716 | 44,799 | 607 | 120 | 160.0 | 58 | 278 | 0 | 0.867 |
+| 2.01e-03 | 42 | 0.713 | 45,316 | 553 | 128 | 156.2 | 56 | 269 | 0 | 0.850 |
+| 2.16e-03 | 49 | 0.712 | 46,855 | 540 | 102 | 133.9 | 35 | 226 | 0 | 0.878 |
+| 2.32e-03 | 50 | 0.709 | 46,946 | 517 | 103 | 131.2 | 38 | 236 | 0 | 0.855 |
+| 2.50e-03 | 52 | 0.709 | 47,512 | 487 | 95 | 126.2 | 46 | 221 | 0 | 0.852 |
+| **2.69e-03** | **56** | **0.706** | **48,195** | **467** | **88** | **117.2** | **32** | **217** | **0** | **0.889** |
+| **2.89e-03** | **64** | **0.703** | **49,593** | **469** | **75** | **102.5** | **31** | **205** | **0** | **0.889** |
+| **3.11e-03** | **63** | **0.704** | **49,624** | **438** | **77** | **104.2** | **33** | **207** | **0** | **0.875** |
+| **3.35e-03** | **67** | **0.698** | **50,498** | **433** | **75** | **97.9** | **28** | **190** | **0** | **0.883** |
+| **3.60e-03** | **68** | **0.697** | **50,634** | **429** | **73** | **96.5** | **31** | **183** | **0** | **0.866** |
+| **3.87e-03** | **72** | **0.693** | **51,459** | **429** | **73** | **91.1** | **32** | **180** | **0** | **0.863** |
+| 4.17e-03 | 79 | 0.690 | 52,325 | 412 | 71 | 83.1 | 26 | 148 | 0 | 0.872 |
+| 4.48e-03 | 85 | 0.683 | 53,026 | 395 | 56 | 77.2 | 26 | 159 | 0 | 0.877 |
+| 4.82e-03 | 91 | 0.684 | 53,748 | 382 | 57 | 72.1 | 24 | 128 | 1 | 0.875 |
+| 5.19e-03 | 95 | 0.679 | 54,051 | 366 | 54 | 69.1 | 24 | 110 | 0 | 0.882 |
+| 5.58e-03 | 99 | 0.676 | 54,592 | 418 | 52 | 66.3 | 24 | 111 | 0 | 0.880 |
+| 6.00e-03 | 109 | 0.668 | 55,453 | 332 | 49 | 60.2 | 21 | 90 | 0 | — |
+
+### 7d. k=6 Sweep (γ = 0.002–0.008)
+
+Graph: 6,562 nodes, 31,985 edges.
+
+| γ | Domains | Q | Sig | Max | Median | Mean | P10 | P90 | Singles | NMI |
+|---|---------|-------|--------|-----|--------|------|-----|-----|---------|------|
+| 2.00e-03 | 34 | 0.702 | 48,604 | 664 | 158 | 193.0 | 48 | 375 | 0 | 0.848 |
+| 2.15e-03 | 40 | 0.699 | 50,438 | 565 | 137 | 164.1 | 48 | 330 | 0 | 0.838 |
+| 2.31e-03 | 40 | 0.698 | 50,857 | 604 | 135 | 164.1 | 46 | 299 | 0 | 0.828 |
+| 2.49e-03 | 44 | 0.694 | 52,102 | 544 | 125 | 149.1 | 35 | 278 | 0 | 0.858 |
+| 2.68e-03 | 46 | 0.693 | 52,495 | 534 | 103 | 142.7 | 48 | 292 | 0 | 0.870 |
+| 2.88e-03 | 50 | 0.691 | 53,627 | 547 | 93 | 131.2 | 35 | 248 | 0 | 0.862 |
+| 3.10e-03 | 51 | 0.689 | 54,031 | 509 | 92 | 128.7 | 36 | 280 | 0 | 0.888 |
+| 3.33e-03 | 51 | 0.690 | 54,118 | 524 | 82 | 128.7 | 36 | 244 | 0 | 0.869 |
+| **3.59e-03** | **58** | **0.684** | **55,509** | **485** | **80** | **113.1** | **32** | **234** | **0** | **0.876** |
+| **3.86e-03** | **62** | **0.682** | **56,447** | **483** | **73** | **105.8** | **28** | **208** | **0** | **0.862** |
+| **4.15e-03** | **67** | **0.678** | **57,443** | **455** | **71** | **97.9** | **27** | **192** | **0** | **0.875** |
+| **4.46e-03** | **70** | **0.674** | **57,897** | **442** | **67** | **93.7** | **28** | **187** | **0** | **0.858** |
+| **4.80e-03** | **74** | **0.671** | **59,174** | **408** | **71** | **88.7** | **27** | **181** | **0** | **0.881** |
+| 5.16e-03 | 77 | 0.668 | 59,254 | 417 | 65 | 85.2 | 29 | 157 | 0 | 0.885 |
+| 5.55e-03 | 82 | 0.662 | 60,149 | 380 | 63 | 80.0 | 27 | 141 | 0 | 0.883 |
+| 5.98e-03 | 89 | 0.658 | 60,974 | 384 | 58 | 73.7 | 23 | 131 | 0 | 0.883 |
+| 6.43e-03 | 89 | 0.657 | 60,992 | 359 | 58 | 73.7 | 27 | 126 | 0 | 0.890 |
+| 6.91e-03 | 102 | 0.649 | 62,446 | 361 | 54 | 64.3 | 18 | 106 | 0 | 0.904 |
+| 7.44e-03 | 104 | 0.646 | 62,303 | 331 | 52 | 63.1 | 16 | 100 | 0 | 0.897 |
+| 8.00e-03 | 112 | 0.640 | 62,885 | 334 | 50 | 58.6 | 16 | 103 | 3 | — |
+
+---
+
+### 7e. Cross-k Analysis
+
+**All four k values produce viable 55-75 domain partitions with zero singletons.**
+
+Comparison at ~67 domains (closest point for each k):
+
+| Metric | k=3 (γ=1.64e-3) | k=4 (γ=2.36e-3) | k=5 (γ=3.35e-3) | k=6 (γ=4.15e-3) |
+|--------|-----------------|-----------------|-----------------|-----------------|
+| Domains | 67 | 65 | 67 | 67 |
+| Q (modularity) | **0.764** | 0.727 | 0.698 | 0.678 |
+| Significance | 34,772 | 42,252 | 50,498 | **57,443** |
+| Max domain | 537 | **480** | 433 | 455 |
+| Median | **80** | **80** | 75 | 71 |
+| Mean | 97.9 | 101.0 | 97.9 | 97.9 |
+| P10 | 34 | 29 | 28 | 27 |
+| P90 | 163 | 193 | 190 | 192 |
+| NMI | **0.879** | 0.877 | 0.883 | 0.875 |
+| Singletons | 0 | 0 | 0 | 0 |
+
+#### Trends across k
+
+- **Q decreases monotonically** with k: 0.764 → 0.727 → 0.698 → 0.678. Denser graphs have lower modularity because edges bridge more communities.
+- **Significance increases monotonically** with k: 34,772 → 42,252 → 50,498 → 57,443. More edges = more statistical signal to differentiate from random graphs. However, significance is not directly comparable across different graph densities — it naturally grows with edge count.
+- **Max domain is similar** across all k values (433–537 at ~67 domains). No mega-domains at any k.
+- **Median domain size converges** around 71–80 for all k values at this domain count.
+- **NMI stability is uniformly high** (0.875–0.883) — all partitions are robust.
+- **P10 decreases slightly** with k (34 → 27), meaning the smallest domains get a bit smaller with denser graphs.
+
+#### k=3 vs k=4 vs k=5 vs k=6: Which to choose?
+
+The key tradeoff is **Q vs. domain cohesion**:
+
+- **k=3** has the highest Q (0.764) and best P10 (34), but significance is lowest. The sparser graph may under-connect related clusters.
+- **k=4** balances Q (0.727) with higher significance and the smallest max domain (480). This was the winner in Phase 3 for 25 domains.
+- **k=5** gives even higher significance (50,498) and lower max (433), with only modest Q loss (0.698). The additional edges may help connect clusters that k=4 misses.
+- **k=6** maximizes significance (57,443) but Q drops to 0.678 and P10 falls to 27. At higher k, denser connectivity can over-merge and blur domain boundaries.
+
+**Significance scaling caveat**: Higher k means more edges, which mechanically inflates significance scores. The ~65% increase from k=3 to k=6 partly reflects the ~2x edge count increase (16K → 32K), not purely better structure. Comparing significance across different k values requires normalizing by edge count or using a k-independent metric.
+
+**Improvement over Phase 3 (25-domain) approach:**
+
+| Aspect | Phase 3 (25 domains) | Phase 7 (65 domains) |
+|--------|---------------------|---------------------|
+| Domains | 25 (+ 5 from mega-split = 29) | 60–70 |
+| Max domain | 1,185 clusters (mega!) | 430–540 clusters |
+| Methodology | Two-pass (Leiden + K-means split) | Single Leiden pass |
+| Contamination risk | High (diverse topics forced together) | Lower (finer granularity) |
+| Manual curation | Heavy (29 labels + merge/split) | More labels, but cleaner groups |
+
+---
+
+#### Quick Reference
+
+| k | Q | Sig | Max | Median | P10 | NMI | Verdict |
+|---|-------|--------|-----|--------|-----|------|---------|
+| 3 | **0.764** | 34,772 | 537 | **80** | **34** | 0.879 | Highest Q, but sparser graph may under-connect |
+| 4 | 0.727 | 42,252 | **480** | **80** | 29 | 0.877 | Validated in Phase 3, good all-around |
+| **5** | **0.698** | **50,498** | **433** | **75** | **28** | **0.883** | **Lowest max domain, best connectivity** |
+| 6 | 0.678 | 57,443 | 455 | 71 | 27 | 0.875 | Diminishing returns, Q drops further |
+
+- **Q drops steadily** with higher k (0.764 → 0.678) — sparser graphs have cleaner modularity
+- **Significance climbs** with k but partly mechanical (more edges = more signal, not directly comparable across k)
+- **Max domain smallest at k=5** (433) — denser graph connects more clusters without over-merging
+- **P10 favors lower k** — smallest domains more viable at k=3 (34 clusters) vs k=6 (27)
+- **NMI uniformly high** (0.875–0.883) — all partitions are robust regardless of k
+
+---
+
+### 7f. Recommendation
+
+**Selected: k=5, γ=0.0035** for ~67 domains.
+
+k=5 offers the best balance of connectivity and domain cohesion. The denser graph (26,746 edges vs k=4's 21,550) helps related clusters find each other without the over-merging seen at k=6. Easy to fall back to k=3 or k=4 if domain inspection reveals issues.
+
+| k | γ | Domains | Q | Max | Median | P10 | Notes |
+|---|---|---------|-------|-----|--------|-----|-------|
+| 5 | 0.0029 | 64 | 0.703 | 469 | 75 | 31 | Conservative |
+| **5** | **0.0035** | **67** | **0.698** | **433** | **75** | **28** | **Selected** |
+| 5 | 0.0039 | 72 | 0.693 | 429 | 73 | 32 | Fine-grained |
+
+**Next step**: Run `regenerate-domains` at k=5, γ=0.0035, inspect domain contents, then decide if the granularity is right before proceeding to LLM labeling.
+
+### 7g. Domain Generation & Labeling
+
+**Generated**: `regenerate-domains --method leiden --cluster-knn-k 5 --resolution 0.0035`
+- **Result**: 66 domains from 6,562 Leiden clusters
+- **185 outlier clusters** reassigned (threshold=0.7)
+- **Largest domain**: 463 clusters (7% of total — down from 1,239 / 19% in old 25-domain setup)
+
+**Cross-domain contamination check** (old setup had baseball/fitness mixed into military):
+- Domain 12 "Modern Warfare & Geopolitics": Clean — 75 military topics, 0 baseball, 2 fitness
+- Domain 18 "Games, Sports & Competition": Absorbed the games/sports/fitness content into its own domain
+
+**LLM auto-labeling**: gemma-3-27b via LM Studio (localhost:1234) generated initial labels for all 66 domains from top-20 aggregated topics per domain. Several labels were misleading — the 27b model often latched onto surface-level keywords rather than understanding the domain's true content.
+
+**Manual curation**: Claude Opus 4.6 reviewed top-30 topics for all 66 domains and produced curated labels. Key fixes:
+
+| Domain | gemma-3-27b (misleading) | Curated (accurate) | Why |
+|--------|--------------------------|-------------------|-----|
+| 9 | Advanced Military Science | **Sci-Fi Technology & Space** | Soft blades, lightspeed ships, space elevators — nothing military |
+| 18 | Strategic Conflict & Survival | **Games, Sports & Competition** | Baseball, card games, pull-ups, tennis, chess |
+| 34 | Security & Intrusion | **Buildings & Physical Spaces** | House/palace architecture, hotels, log cabins |
+| 58 | Political Intrigue & Power | **Royal Courts & Dynasties** | 90% ASOIAF + historical monarchy |
+| 25 | European Family & Society | **European Literary Fiction** | Buddenbrooks, Glass Bead Game, Man Without Qualities |
+| 2 | Science & Technology | **Technical & Quantitative** | ML/programming + physics + trading — not just "science" |
+| 30 | Global History & Fiction | **Colonialism & the Tropics** | Cholera, Panama Canal, Congo reform, García Márquez |
+| 28 | Hidden Histories & Upheaval | **Coming of Age & Hidden Pasts** | WWI childhood, concealed identity, generational trauma |
+| 48 | Social & Economic Dislocation | **Migration & Displacement** | Reunions, housing crisis, La Bestia, refugees |
+| 20 | Power, Intrigue & Perception | **Philosophy & Character Study** | Cynic philosophy, Stoic indifferents, Belbo, Aschenbach |
+
+**Full curated domain list** (66 domains, sorted by cluster count):
+
+| ID | Clusters | Label |
+|----|----------|-------|
+| 0 | 463 | Speculative Fiction |
+| 1 | 455 | Character Drama & Emotion |
+| 2 | 252 | Technical & Quantitative |
+| 3 | 220 | Business & Investing |
+| 4 | 217 | Psychology & Self-Improvement |
+| 5 | 202 | Religion & Classical Learning |
+| 6 | 200 | Culinary Arts |
+| 7 | 189 | Politics & Governance |
+| 8 | 178 | Writing Craft & Publishing |
+| 9 | 154 | Sci-Fi Technology & Space |
+| 10 | 153 | Natural Environments & Wilderness |
+| 11 | 144 | Literary Figures & Criticism |
+| 12 | 133 | Modern Warfare & Geopolitics |
+| 13 | 128 | Society & Social Order |
+| 14 | 127 | Early American History |
+| 15 | 126 | Fear & Anxiety |
+| 16 | 120 | Survival & Animal Encounters |
+| 17 | 115 | Family & Parenthood |
+| 18 | 111 | Games, Sports & Competition |
+| 19 | 108 | Espionage & Secrecy |
+| 20 | 107 | Ancient & Medieval History |
+| 21 | 106 | Philosophy & Character Study |
+| 22 | 104 | Weapons & Authority |
+| 23 | 102 | Health, Medicine & Biology |
+| 24 | 95 | Philosophy & Epistemology |
+| 25 | 87 | European Literary Fiction |
+| 26 | 87 | Education & Training |
+| 27 | 86 | Coming of Age & Hidden Pasts |
+| 28 | 84 | Civil Rights & World History |
+| 29 | 84 | Crime & Investigation |
+| 30 | 82 | Love & Relationships |
+| 31 | 80 | Art, Treasure & Archaeology |
+| 32 | 79 | Medicine & Drug Trade |
+| 33 | 77 | Buildings & Physical Spaces |
+| 34 | 76 | Colonialism & the Tropics |
+| 35 | 75 | Economic Theory & Systems |
+| 36 | 73 | Cities & Urban Life |
+| 37 | 69 | Catastrophe & Destruction |
+| 38 | 68 | Death & Mortality |
+| 39 | 68 | Land, Agriculture & Forestry |
+| 40 | 68 | Communication & Messaging |
+| 41 | 63 | Maritime & Naval |
+| 42 | 56 | Law & Justice |
+| 43 | 54 | Employment & Institutional Power |
+| 44 | 53 | Travel & Transportation |
+| 45 | 53 | Identity & Fate |
+| 46 | 52 | Migration & Displacement |
+| 47 | 52 | Music & Performance |
+| 48 | 51 | Crafts & Trades |
+| 49 | 50 | Vices & Indulgence |
+| 50 | 49 | Sexuality & Gender |
+| 51 | 47 | Language & Linguistics |
+| 52 | 43 | Celebrations & Gatherings |
+| 53 | 42 | Eastern Philosophy & Asian History |
+| 54 | 41 | Film, Photography & Theatre |
+| 55 | 38 | Media & Journalism |
+| 56 | 37 | Light, Darkness & Color |
+| 57 | 37 | Climate & Energy |
+| 58 | 35 | Royal Courts & Dynasties |
+| 59 | 35 | Time & Temporality |
+| 60 | 34 | Psychic Powers & Perception |
+| 61 | 26 | AI & Technological Progress |
+| 62 | 24 | Magic & Fairy Tales |
+| 63 | 16 | Wounds & Battlefield Medicine |
+| 64 | 15 | Historiography |
+| 65 | 7 | Fire & Flames |
+
+**Files**:
+- `experiments/super_clusters_k5_g0035.json` — raw 66-domain Leiden output
+- `experiments/domain_labels_k5_g0035.json` — gemma-3-27b auto-labels (superseded)
+- `experiments/domain_labels_final.py` — curated label mapping + JSON generator
+- `experiments/domain_labels_final.json` — final curated labels for `load-domains`
+
+**Verdict**: The higher-resolution 66-domain Leiden clustering (k=5, γ=0.0035) produces clean, thematically distinct domains without the mega-domain problem or cross-domain contamination of the old 25-domain approach. The library's 921 books span genuinely diverse subject matter that warrants this granularity.
+
+---
+
+## Phase 8: Community-Level Sweep (Multi-k, Targeting 500-700)
+
+**Date**: Feb 19, 2026
+**Goal**: Find optimal k and γ for ~600 communities (intermediate tier between 6,575 clusters and 66 domains).
+**Motivation**: The existing 253 communities (k=6, γ=5.5e-5) are too few for 837K topics — 65% had zero primary books, communities averaged 3,310 topics (6.4x larger than demo library communities), and the max community had 20,290 topics.
+
+**Script**: `experiments/community_sweep_v2.py`
+**Data**: `experiments/community_sweep_v2_results.json`
+
+### Parameters
+
+| k | GPU cache k | Graph edges | γ range | Leiden time/res | Total sweep |
+|---|-------------|-------------|---------|-----------------|-------------|
+| 3 | 4 | 1,976,070 | 5e-5 to 5e-4 | 23.7s | 474s |
+| 4 | 5 | 2,611,909 | 4e-5 to 4e-4 | 29.5s | 591s |
+| 5 | 6 | 3,247,209 | 3e-5 to 3e-4 | 33.4s | 669s |
+| 7 | 8 | 4,514,774 | 2e-5 to 2.5e-4 | 44.2s | 884s |
+| 10 | 11 | 6,416,705 | 1.5e-5 to 2e-4 | 60.0s | 1200s |
+
+20 log-spaced resolutions per k value. Total runtime: ~63 min on Mac M-series CPU.
+
+### Cross-k Comparison at ~600 Communities
+
+| k | γ | N | Q | Sig (M) | Max | Med | Mean | P10 | P90 | NMI | Singletons |
+|---|---|---|---|---------|-----|-----|------|-----|-----|-----|------------|
+| 3 | 5.0e-5 | 1,243* | 0.754 | 8.2 | 3,956 | 524 | 674 | 207 | 1,352 | 0.77 | 13 |
+| 4 | 4.0e-5 | 648 | 0.734 | 9.1 | 11,617 | 938 | 1,292 | 333 | 2,777 | 0.77 | 13 |
+| 5 | 4.9e-5 | 579 | 0.715 | 10.7 | 10,714 | 975 | 1,446 | 321 | 3,160 | 0.79 | 13 |
+| 7 | 7.6e-5 | 585 | 0.685 | 14.1 | 12,369 | 1,002 | 1,431 | 267 | 3,207 | 0.82 | 13 |
+| 10 | 1.2e-4 | 566 | 0.658 | 18.9 | 16,207 | 1,017 | 1,479 | 250 | 3,133 | 0.85 | 15 |
+
+*k=3 can't reach 600 — its sparsest graph already fragments into 1,243+ communities.
+
+### Per-k Results in 500-700 Range
+
+**k=4** (2.6M edges):
+
+| γ | N | Q | Sig (M) | Max | Med | Mean | P10 | P90 | NMI |
+|---|---|---|---------|-----|-----|------|-----|-----|-----|
+| 4.00e-5 | 648 | 0.734 | 9.1 | 11,617 | 938 | 1,292 | 333 | 2,777 | 0.77 |
+
+Only one point in range. Max cluster very large (11.6K).
+
+**k=5** (3.2M edges):
+
+| γ | N | Q | Sig (M) | Max | Med | Mean | P10 | P90 | NMI |
+|---|---|---|---------|-----|-----|------|-----|-----|-----|
+| 4.32e-5 | 507 | 0.719 | 10.5 | 17,593 | 1,126 | 1,652 | 360 | 3,556 | 0.79 |
+| 4.87e-5 | 579 | 0.715 | 10.7 | 10,714 | 975 | 1,446 | 321 | 3,160 | 0.79 |
+| 5.50e-5 | 652 | 0.713 | 10.9 | 14,332 | 891 | 1,284 | 311 | 2,770 | 0.80 |
+
+**k=7** (4.5M edges):
+
+| γ | N | Q | Sig (M) | Max | Med | Mean | P10 | P90 | NMI |
+|---|---|---|---------|-----|-----|------|-----|-----|-----|
+| 6.62e-5 | 518 | 0.690 | 13.8 | 16,835 | 1,081 | 1,616 | 289 | 3,344 | 0.81 |
+| 7.56e-5 | 585 | 0.685 | 14.1 | 12,369 | 1,002 | 1,431 | 267 | 3,207 | 0.82 |
+| 8.63e-5 | 656 | 0.683 | 14.4 | 9,494 | 877 | 1,276 | 274 | 2,795 | 0.83 |
+
+**k=10** (6.4M edges):
+
+| γ | N | Q | Sig (M) | Max | Med | Mean | P10 | P90 | NMI |
+|---|---|---|---------|-----|-----|------|-----|-----|-----|
+| 1.16e-4 | 566 | 0.658 | 18.9 | 16,207 | 1,017 | 1,479 | 250 | 3,133 | 0.85 |
+| 1.33e-4 | 643 | 0.653 | 19.3 | 8,717 | 873 | 1,302 | 241 | 2,918 | 0.86 |
+
+### Key Observations
+
+1. **Significance increases monotonically with k** (8M → 19M): denser graphs detect more statistically significant community structure. This is the strongest quality signal.
+
+2. **NMI stability increases with k** (0.77 → 0.85): denser graphs produce more reproducible partitions across runs.
+
+3. **Modularity Q decreases with k** (0.75 → 0.66): expected — denser random graphs have higher baseline modularity, so absolute Q values drop. This is a normalization artifact, not a quality decline.
+
+4. **All k values produce mega-communities**: Max cluster ranges from 9K-17K at ~600 communities. This is a persistent property of the topic graph — some topics form very dense cliques (e.g., speculative fiction worldbuilding).
+
+5. **Size distributions are similar across k at ~600N**: median ~900-1000, mean ~1300-1500, P90 ~2800-3200. The choice of k doesn't dramatically change the distribution shape.
+
+6. **Singletons are constant** (~13-15): these are isolated nodes in the topic graph regardless of k.
+
+### Analysis: k=7 vs k=10 for Book Discovery
+
+The metrics don't tell the full story. What matters is the user experience: **coherence** (does the community grouping make sense?) and **surprise** (do I discover connections I didn't expect?).
+
+**Why k=10 wins for exploration:**
+
+1. **More connections = more discovery paths.** When a topic connects to 10 nearest neighbors instead of 7, books get linked through more semantic pathways. A book about cooking that discusses food chemistry connects to science books through more routes. This captures the "surprising but valid" connections that make exploration valuable.
+
+2. **Communities are more "earned."** To split a denser graph (6.4M edges) into ~600 communities, Leiden uses a higher γ (1.33e-4 vs 8.6e-5). Each community must have substantially higher internal density than the surrounding graph. The 19.3M significance score means these communities are statistically very "real" — not artifacts of graph sparsity.
+
+3. **Higher NMI (0.86 vs 0.83) = reproducibility over time.** As new books are added to the library and topics reprocessed, k=10 communities absorb new topics into existing communities more consistently rather than reshuffling. This matters for a growing library — community links shared today should still work after the next extraction run.
+
+4. **Significance validates the structure.** 19.3M vs 14.4M means k=10's communities are 34% more statistically significant. Users are seeing genuine thematic clusters, not noise.
+
+**The counterargument for k=7:** Sparser graphs create tighter semantic boundaries. A community about "maritime & naval" won't accidentally absorb "travel & transportation" through bridging connections. For precise categorization (like library shelving), k=7's tighter boundaries would win — but that's what the 6,575 fine-grained clusters are for. Communities serve a different purpose: broad thematic exploration.
+
+**The mega-community problem exists at both k values** and needs a separate solution (see below).
+
+### Decision: k=10, γ=1.33e-4 → ~643 Communities
+
+**Selected**: k=10 with second-pass splitting of mega-communities.
+
+**Rationale**: The three-tier hierarchy uses different graph densities at each level:
+- **Fine clusters** (6,575): k=6, γ=0.001 — tight, specific topic groupings
+- **Communities** (~600): k=10, γ=1.33e-4 — broad thematic exploration with maximal semantic connectivity
+- **Domains** (66): k=5, γ=0.0035 on cluster centroids — high-level categorization
+
+Each tier uses the graph density appropriate to its granularity. Communities are the discovery tier — maximizing connections serves their purpose.
+
+### Two-Pass Mega-Community Splitting Plan
+
+At k=10, γ=1.33e-4, the partition has 643 communities but the largest is 8,717 topics — too broad for coherent browsing. The size distribution (P90=2,918) means roughly the top 10-15% of communities need splitting.
+
+**Approach: Surprise (resolution-free) within subgraphs**
+
+1. Run initial community clustering: k=10, γ=1.33e-4
+2. Identify mega-communities above a size threshold (~2,500 topics)
+3. For each mega-community: extract the topic subgraph and run `SurpriseVertexPartition` (no γ parameter — Surprise naturally finds the best partition based on the subgraph's own structure)
+4. Replace each mega-community with its sub-communities
+5. Merge and renumber: final community IDs, update all mapping tables
+6. Auto-label with gemma-3-27b (top-30 topics per community → label)
+7. Manual review pass: refine labels, merge any that are too similar
+
+**Why Surprise for the second pass?** Surprise is resolution-free — it adapts to each mega-community's internal density without manual γ tuning. A dense speculative fiction mega-community might split into 4-5 sub-communities, while a sparser one might only split into 2. This is the same quality function already used for fine-grained clusters, so it's well-tested on this topic graph.
+
+k=3 and k=4 are ruled out — too sparse, poor significance, and k=3 can't even reach 600.
