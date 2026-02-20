@@ -288,12 +288,26 @@ class TestRefreshCommunityStats:
         assert row["domain_id"] == 0
         assert row["domain_label"] == "Science & Tech"
 
-    def test_top_label_from_highest_occurrence_topic(self, stats_db):
-        """top_label should be the highest-occurrence topic with length >= 4."""
+    def test_top_label_prefers_llm_name(self, stats_db):
+        """top_label should prefer the LLM-generated community name when available."""
         refresh_book_communities(stats_db)
         refresh_community_stats(stats_db)
 
-        # Comm0 has topics: quantum mechanics (15), linear algebra (10), thermodynamics (8)
+        # Comm0 has LLM label 'Physics & Math' in communities table
+        row = stats_db.execute(
+            "SELECT top_label FROM community_stats WHERE community_id=0"
+        ).fetchone()
+        assert row["top_label"] == "Physics & Math"
+
+    def test_top_label_falls_back_to_topic(self, stats_db):
+        """top_label should fall back to highest-occurrence topic when no LLM name."""
+        # Clear the LLM label for community 0
+        stats_db.execute("UPDATE communities SET label = '' WHERE id = 0")
+        stats_db.commit()
+
+        refresh_book_communities(stats_db)
+        refresh_community_stats(stats_db)
+
         row = stats_db.execute(
             "SELECT top_label FROM community_stats WHERE community_id=0"
         ).fetchone()
