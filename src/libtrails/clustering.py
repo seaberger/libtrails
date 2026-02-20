@@ -169,6 +169,7 @@ def cluster_without_hubs(
     hub_indices: set[int],
     partition_type: str = "cpm",
     resolution: float = 0.005,
+    max_comm_size: int = 0,
 ) -> tuple[dict, leidenalg.VertexPartition]:
     """
     Cluster with hub topics removed, then assign hubs to nearest cluster.
@@ -196,7 +197,7 @@ def cluster_without_hubs(
     print(f"  Subgraph edges: {subgraph.ecount()} (original: {g.ecount()})")
 
     # Cluster the non-hub subgraph
-    partition = _get_partition(subgraph, partition_type, resolution)
+    partition = _get_partition(subgraph, partition_type, resolution, max_comm_size)
 
     # Assign clusters to non-hub topics
     assignments = {}
@@ -636,7 +637,11 @@ def cluster_topics(
         hub_indices = identify_hub_topics(g, method=hub_method, percentile=hub_percentile)
 
         assignments, partition = cluster_without_hubs(
-            g, hub_indices, partition_type=partition_type, resolution=resolution
+            g,
+            hub_indices,
+            partition_type=partition_type,
+            resolution=resolution,
+            max_comm_size=max_comm_size,
         )
 
         # Build membership list for result calculation

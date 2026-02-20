@@ -395,7 +395,7 @@ Ran 30 random seeds (42–71) at 8 candidate configurations. For each config, co
 
 ### Applied Configuration
 
-```
+```text
 k=4, gamma=0.0008, min_similarity=0.3, outlier_reassignment=True (threshold=0.7)
 → 25 domains (87 outlier clusters reassigned)
 → Mega-domain #0 (1,239 clusters) split into 5 sub-groups
@@ -1074,7 +1074,7 @@ The two-pass splitting plan from Phase 8 was abandoned after testing revealed fu
 
 **Solution**: `leidenalg.find_partition()` has a built-in `max_comm_size` parameter that constrains the optimizer during partitioning. No second pass needed — Leiden respects the cap during its own refinement loop.
 
-```
+```bash
 libtrails cluster --tier community --knn-k 10 --resolution 1.33e-4 --max-community-size 2500
 ```
 
