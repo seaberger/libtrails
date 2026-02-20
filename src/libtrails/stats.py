@@ -344,16 +344,14 @@ def refresh_domain_stats(conn: sqlite3.Connection) -> int:
             )
             primary_book_count = cursor.fetchone()["cnt"]
 
-            # Sample books: top 5 primary books by topic_count (absolute contribution)
-            # Using is_primary=1 prevents small niche books from dominating via
-            # high concentration; topic_count rewards genuine domain coverage.
+            # Sample books: top 5 by concentration (primary first, then others)
             cursor.execute(
                 """
                 SELECT b.id, b.title, b.author, b.calibre_id
                 FROM book_domains bd
                 JOIN books b ON b.id = bd.book_id
-                WHERE bd.domain_id = ? AND bd.is_primary = 1 AND b.calibre_id IS NOT NULL
-                ORDER BY bd.topic_count DESC
+                WHERE bd.domain_id = ? AND b.calibre_id IS NOT NULL
+                ORDER BY bd.is_primary DESC, bd.concentration DESC
                 LIMIT 5
             """,
                 (domain_id,),
@@ -616,14 +614,14 @@ def refresh_community_stats(conn: sqlite3.Connection) -> int:
             )
             top_topics = [dict(r) for r in cursor.fetchall()]
 
-            # Sample books: top 5 primary books by topic_count
+            # Sample books: top 5 by concentration (primary first, then others)
             cursor.execute(
                 """
                 SELECT b.id, b.title, b.author, b.calibre_id
                 FROM book_communities bc
                 JOIN books b ON b.id = bc.book_id
-                WHERE bc.community_id = ? AND bc.is_primary = 1 AND b.calibre_id IS NOT NULL
-                ORDER BY bc.topic_count DESC
+                WHERE bc.community_id = ? AND b.calibre_id IS NOT NULL
+                ORDER BY bc.is_primary DESC, bc.concentration DESC
                 LIMIT 5
             """,
                 (community_id,),
