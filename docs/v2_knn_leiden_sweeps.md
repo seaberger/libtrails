@@ -1058,3 +1058,96 @@ At k=10, γ=1.33e-4, the partition has 643 communities but the largest is 8,717 
 **Why Surprise for the second pass?** Surprise is resolution-free — it adapts to each mega-community's internal density without manual γ tuning. A dense speculative fiction mega-community might split into 4-5 sub-communities, while a sparser one might only split into 2. This is the same quality function already used for fine-grained clusters, so it's well-tested on this topic graph.
 
 k=3 and k=4 are ruled out — too sparse, poor significance, and k=3 can't even reach 600.
+
+---
+
+## Phase 9: Community Clustering with `max_comm_size` — Results & Analysis
+
+**Date**: Feb 19, 2026
+
+### Approach: Single-Pass with `max_comm_size`
+
+The two-pass splitting plan from Phase 8 was abandoned after testing revealed fundamental issues:
+
+1. **Surprise (resolution-free) over-splits**: On dense KNN subgraphs, `SurpriseVertexPartition` finds very fine-grained structure — 400-800+ sub-communities per mega-community instead of the expected 3-5.
+2. **CPM sub-splitting is hard to tune**: Tested 2x, 5x, and 10x the pass-1 resolution on V2. Results ranged from ineffective (2x: largest sub-community 87% of parent) to extreme (10x: 2,268 total communities).
+
+**Solution**: `leidenalg.find_partition()` has a built-in `max_comm_size` parameter that constrains the optimizer during partitioning. No second pass needed — Leiden respects the cap during its own refinement loop.
+
+```
+libtrails cluster --tier community --knn-k 10 --resolution 1.33e-4 --max-community-size 2500
+```
+
+### Results: k=10, γ=1.33e-4, max_comm_size=2500
+
+| Metric | Unconstrained | With max_comm_size=2500 |
+|--------|---------------|------------------------|
+| Communities | 626 | **728** |
+| Max size | 10,469 | **2,500** |
+| Quality | 6,784,073 | **6,683,630** (1.5% lower) |
+| Leiden time | 59s | 57s |
+| At cap (2500) | — | 7 communities |
+
+**Size distribution**:
+
+| Percentile | Value |
+|------------|-------|
+| P10 | 314 |
+| P25 | 533 |
+| Median | 986 |
+| P75 | 1,783 |
+| P90 | 2,414 |
+| Max | 2,500 |
+| Mean | 1,171 |
+| Singletons | 13 (junk extraction artifacts) |
+
+### Structural Analysis
+
+**What works well:**
+- Size distribution is excellent — no mega-communities, `max_comm_size` cap barely constrains (only 7 at cap)
+- All 936 books covered with community assignments, clean primary assignments (no duplicates)
+- All 66 domains have communities mapped (median 9 per domain)
+- Quality loss from the constraint is negligible (1.5%)
+- Several spot-checked communities show good thematic coherence (cooking, writing craft, Dune, romance)
+
+**Critical finding — cluster-community misalignment:**
+
+| Metric | Value |
+|--------|-------|
+| Clusters in exactly 1 community | 29 (0.4%) |
+| Clusters split across 2 communities | 20 (0.3%) |
+| Clusters split across 3+ communities | **6,526 (99.3%)** |
+| Max communities per cluster | 65 |
+| Median majority-community fraction | 62.1% |
+| Clusters with ≥50% in majority community | 67.4% |
+
+**Root cause**: Clusters were built on a k=6 KNN graph (3.2M edges) while communities use k=10 (6.4M edges). Different graph densities carve the topic space along fundamentally different boundaries. Clusters cannot nest inside communities because they live on different graphs.
+
+**Downstream effects:**
+
+| Metric | Value | Impact |
+|--------|-------|--------|
+| Domain coherence (median) | 53.3% | Community→domain mapping is noisy (issue #57) |
+| Communities with <30% domain coherence | 127 (17.8%) | Significant minority are poorly assigned |
+| Communities with 0 primary books | 345 (47.4%) | Many communities lack a "flagship" book |
+| Communities per book (median) | 252 | Books spread very broadly across communities |
+| Communities per book (P10) | 90 | Even niche books appear in many communities |
+| Primary books per community (median) | 1 | Most communities have ≤1 primary book |
+
+**13 unmapped communities**: All singletons (1 topic each) from orphan clusters 6562-6574 with no domain assignment. Extraction artifacts — malformed passage quotes, misspelled names, place names. Not real communities.
+
+### Recommendation: Re-run at k=6
+
+The structural misalignment is the dominant quality issue. Running communities on the same k=6 graph as clusters would:
+
+1. **Enable clean nesting** — clusters become subsets of communities (same graph, different resolution)
+2. **Improve domain coherence** — the hierarchy becomes a clean chain: domains → communities → clusters
+3. **Reduce "zero primary books"** — community boundaries aligned with cluster structure better capture book-level patterns
+4. **Simplify the architecture** — one graph for both tiers instead of two
+
+**Tradeoffs**: k=6 has lower significance (~11M vs 19M) and NMI stability (0.80 vs 0.86). However:
+- Significance is not comparable across graph densities (the doc notes this in Phase 8)
+- NMI 0.80 is still robust
+- The structural benefit of nesting outweighs the statistical metrics
+
+**Next step**: Dry run at k=6 with `--max-community-size 2500` to find the right γ for ~600-700 communities and verify nesting improvement. Based on Phase 8 sweep data, k=5 at γ=5.5e-5 gave 652 communities, so k=6 should be in a similar range (γ≈6-7e-5).
