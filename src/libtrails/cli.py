@@ -2007,6 +2007,17 @@ def process():
     default=0,
     help="Cap community size during Leiden optimization (0 = no limit)",
 )
+@click.option(
+    "--split-mega",
+    is_flag=True,
+    help="Split oversized communities via second Leiden pass on subgraphs",
+)
+@click.option(
+    "--split-threshold",
+    type=int,
+    default=2500,
+    help="Communities larger than this get split (default: 2500)",
+)
 def cluster(
     tier,
     mode,
@@ -2029,6 +2040,8 @@ def cluster(
     force_rebuild,
     progress_file,
     max_community_size,
+    split_mega,
+    split_threshold,
 ):
     """Run topic clustering with configurable options.
 
@@ -2171,6 +2184,8 @@ def cluster(
         progress_file=progress_file,
         tier=tier,
         max_comm_size=max_community_size,
+        split_mega=split_mega,
+        split_threshold=split_threshold,
     )
 
     unit = "communities" if tier == "community" else "clusters"

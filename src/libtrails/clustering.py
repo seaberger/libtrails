@@ -393,6 +393,108 @@ def _get_partition(
         raise ValueError(f"Unknown partition type: {partition_type}")
 
 
+def split_mega_communities(
+    g: ig.Graph,
+    membership: list[int],
+    size_threshold: int = 2500,
+    split_resolution: float | None = None,
+    base_resolution: float = 1e-4,
+    max_comm_size: int = 2500,
+) -> list[int]:
+    """Split oversized communities by re-running Leiden CPM on their subgraphs.
+
+    For each community exceeding size_threshold, extracts the induced subgraph
+    and runs CPM with max_comm_size to find natural sub-communities within the cap.
+
+    Args:
+        g: The full topic graph (with all nodes/edges)
+        membership: Community assignments from the first Leiden pass
+        size_threshold: Communities larger than this get split
+        split_resolution: Resolution for sub-graph CPM (default: 10x base_resolution)
+        base_resolution: The resolution used in the first pass
+        max_comm_size: Cap for sub-communities (passed to Leiden)
+
+    Returns:
+        Updated membership list with mega-communities replaced by sub-communities,
+        all IDs renumbered sequentially from 0.
+    """
+    from collections import Counter
+
+    if split_resolution is None:
+        split_resolution = base_resolution * 2
+
+    # Count community sizes
+    comm_sizes = Counter(c for c in membership if c >= 0)
+    mega_ids = {c for c, size in comm_sizes.items() if size > size_threshold}
+
+    if not mega_ids:
+        print(f"  [SPLIT] No communities exceed threshold ({size_threshold})")
+        return membership
+
+    mega_ids_sorted = sorted(mega_ids, key=lambda c: comm_sizes[c], reverse=True)
+    print(f"\n  [SPLIT] Found {len(mega_ids)} mega-communities (>{size_threshold} topics):")
+    print(
+        f"  [SPLIT] Using CPM split resolution: {split_resolution:.2e}, max_comm_size={max_comm_size}"
+    )
+    for c in mega_ids_sorted:
+        print(f"    Community {c}: {comm_sizes[c]} topics")
+
+    # Build new membership: start with non-mega communities (keep original IDs for now)
+    new_membership = list(membership)
+    next_id = max(membership) + 1
+
+    for mega_id in mega_ids_sorted:
+        # Find node indices belonging to this mega-community
+        node_indices = [i for i, c in enumerate(membership) if c == mega_id]
+
+        # Extract subgraph
+        subgraph = g.subgraph(node_indices)
+
+        # Run Leiden CPM with max_comm_size on subgraph
+        weights = subgraph.es["weight"] if "weight" in subgraph.es.attributes() else None
+        sub_partition = leidenalg.find_partition(
+            subgraph,
+            leidenalg.CPMVertexPartition,
+            weights=weights,
+            resolution_parameter=split_resolution,
+            max_comm_size=max_comm_size,
+        )
+
+        sub_membership = sub_partition.membership
+        n_sub = len(set(sub_membership))
+        sub_sizes = Counter(sub_membership)
+        largest_sub = max(sub_sizes.values())
+
+        print(
+            f"    Community {mega_id} ({comm_sizes[mega_id]} topics) "
+            f"→ {n_sub} sub-communities (largest: {largest_sub})"
+        )
+
+        # Map sub-community IDs to new global IDs
+        sub_id_map = {}
+        for sub_id in sorted(set(sub_membership)):
+            sub_id_map[sub_id] = next_id
+            next_id += 1
+
+        # Update membership for nodes in this mega-community
+        for local_idx, global_idx in enumerate(node_indices):
+            new_membership[global_idx] = sub_id_map[sub_membership[local_idx]]
+
+    # Renumber all IDs sequentially from 0
+    unique_ids = sorted(set(c for c in new_membership if c >= 0))
+    id_remap = {old: new for new, old in enumerate(unique_ids)}
+    final_membership = [id_remap.get(c, -1) for c in new_membership]
+
+    final_count = len(set(c for c in final_membership if c >= 0))
+    original_count = len(set(c for c in membership if c >= 0))
+    print(
+        f"\n  [SPLIT] Result: {original_count} communities → {final_count} "
+        f"(split {len(mega_ids)} mega-communities)"
+    )
+
+    return final_membership
+
+
 def _populate_community_tables(
     g: ig.Graph,
     membership: list[int],
@@ -505,6 +607,8 @@ def cluster_topics(
     progress_file: str | None = None,
     tier: str = "cluster",
     max_comm_size: int = 0,
+    split_mega: bool = False,
+    split_threshold: int = 2500,
 ) -> dict:
     """
     Cluster topics using the Leiden algorithm.
@@ -655,6 +759,19 @@ def cluster_topics(
     elapsed = time.time() - start_time
     mem_after_leiden = _log_memory("After Leiden")
     log_progress(f"Leiden completed in {elapsed:.1f}s")
+
+    # Optional: split mega-communities via second Leiden pass on subgraphs
+    if split_mega and tier == "community":
+        split_start = time.time()
+        membership = split_mega_communities(
+            g,
+            membership,
+            size_threshold=split_threshold,
+            base_resolution=resolution,
+            max_comm_size=split_threshold,  # cap sub-communities at threshold
+        )
+        split_elapsed = time.time() - split_start
+        log_progress(f"Split pass completed in {split_elapsed:.1f}s")
 
     # Calculate cluster sizes
     cluster_sizes = defaultdict(int)
