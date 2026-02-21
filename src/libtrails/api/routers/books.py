@@ -3,7 +3,7 @@
 from fastapi import APIRouter, Body, HTTPException, Query
 
 from ...hybrid_search import find_related_books
-from ..dependencies import DBConnection
+from ..dependencies import DBConnection, VecDBConnection
 from ..schemas import BookDetail, BookSummary, RelatedBook, ThemeRef, TopicInfo
 
 router = APIRouter()
@@ -147,7 +147,7 @@ def get_book(db: DBConnection, book_id: int):
 
 @router.get("/books/{book_id}/related", response_model=list[RelatedBook])
 def get_related_books(
-    db: DBConnection,
+    db: VecDBConnection,
     book_id: int,
     limit: int = Query(10, ge=1, le=50),
 ):
