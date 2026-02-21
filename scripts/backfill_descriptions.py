@@ -71,6 +71,8 @@ def rebuild_fts(demo: sqlite3.Connection) -> None:
     """Drop and recreate the FTS index with current book data."""
     demo.executescript("""
         DROP TRIGGER IF EXISTS books_ai;
+        DROP TRIGGER IF EXISTS books_au;
+        DROP TRIGGER IF EXISTS books_ad;
         DROP TABLE IF EXISTS books_fts;
 
         CREATE VIRTUAL TABLE books_fts USING fts5(
@@ -85,6 +87,18 @@ def rebuild_fts(demo: sqlite3.Connection) -> None:
         CREATE TRIGGER books_ai AFTER INSERT ON books BEGIN
             INSERT INTO books_fts(rowid, title, author, description, series)
             VALUES (new.id, new.title, new.author, new.description, new.series);
+        END;
+
+        CREATE TRIGGER books_au AFTER UPDATE ON books BEGIN
+            INSERT INTO books_fts(books_fts, rowid, title, author, description, series)
+            VALUES ('delete', old.id, old.title, old.author, old.description, old.series);
+            INSERT INTO books_fts(rowid, title, author, description, series)
+            VALUES (new.id, new.title, new.author, new.description, new.series);
+        END;
+
+        CREATE TRIGGER books_ad AFTER DELETE ON books BEGIN
+            INSERT INTO books_fts(books_fts, rowid, title, author, description, series)
+            VALUES ('delete', old.id, old.title, old.author, old.description, old.series);
         END;
     """)
 

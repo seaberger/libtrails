@@ -75,7 +75,7 @@ try {
       {book.description && (
         <div class="text-sm text-[var(--color-text)] mb-6 leading-relaxed" id="book-description">
           <p id="desc-truncated" class={book.description.length > 200 ? '' : 'hidden'}>
-            {book.description.slice(0, 200)}…
+            {book.description.slice(0, 200).replace(/\s+\S*$/, '')}…
             <button
               id="btn-more"
               class="text-[var(--color-accent)] hover:underline ml-1 cursor-pointer"
