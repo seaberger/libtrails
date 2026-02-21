@@ -265,10 +265,10 @@ libtrails generate-universe --dry-run   # Show counts only
 
 ```bash
 # Sync new books from MapleRead (iPad server must be running)
-libtrails sync -i http://192.168.1.124:8082
-libtrails sync -i http://192.168.1.124:8082 --dry-run   # Preview
-libtrails sync -i http://192.168.1.124:8082 --skip-index # Add without indexing
-libtrails sync -i http://192.168.1.124:8082 --save-url   # Remember URL
+libtrails sync -i http://<ipad-ip>:8082
+libtrails sync -i http://<ipad-ip>:8082 --dry-run   # Preview
+libtrails sync -i http://<ipad-ip>:8082 --skip-index # Add without indexing
+libtrails sync -i http://<ipad-ip>:8082 --save-url   # Remember URL
 ```
 
 ---

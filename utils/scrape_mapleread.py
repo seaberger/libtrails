@@ -1,11 +1,25 @@
 #!/usr/bin/env python3
 """Scrape all books from MapleRead server and save as JSON."""
-import re
 import json
+import os
+import re
+import sys
 import urllib.request
 from html import unescape
+from pathlib import Path
 
-BASE_URL = "http://192.168.1.124:8082"
+# Add project root to path so we can import config
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+from libtrails.config import get_ipad_url
+
+# iPad URL: CLI arg > env var > ~/.libtrails/config.yaml > error
+BASE_URL = os.environ.get("MAPLEREAD_URL") or get_ipad_url()
+if not BASE_URL:
+    print("Error: No iPad URL configured.")
+    print("Set it in ~/.libtrails/config.yaml under ipad.default_url,")
+    print("or pass via MAPLEREAD_URL env var.")
+    print("See config.example.yaml for details.")
+    sys.exit(1)
 SECTIONS = list(range(0, 28))  # 0-27 covers #, A-Z, ~
 
 books = []

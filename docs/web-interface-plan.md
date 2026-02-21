@@ -449,7 +449,7 @@ A simple, semi-automated routine to add new books from iPad without remembering 
 # 1. Open MapleRead server on iPad
 # 2. Run single command:
 
-libtrails sync --ipad http://192.168.1.124:8082
+libtrails sync --ipad http://<ipad-ip>:8082
 
 # That's it. Everything else is automated.
 ```
@@ -493,7 +493,7 @@ libtrails sync --ipad http://192.168.1.124:8082
 
 ```bash
 # Basic sync - index new books
-libtrails sync --ipad http://192.168.1.124:8082
+libtrails sync --ipad http://<ipad-ip>:8082
 
 # Sync with re-clustering (after adding many books)
 libtrails sync --ipad http://... --recluster
@@ -556,7 +556,7 @@ For your use case (personal site, few books at a time), direct deploy is simples
 
 ```bash
 # Full workflow after adding books to iPad:
-libtrails sync --ipad http://192.168.1.124:8082
+libtrails sync --ipad http://<ipad-ip>:8082
 libtrails deploy --target lightsail
 ```
 
@@ -573,13 +573,13 @@ Store defaults so you don't have to remember the IP:
 **~/.libtrails/config.yaml**
 ```yaml
 ipad:
-  default_url: http://192.168.1.124:8082
+  default_url: http://<ipad-ip>:8082
 
 deploy:
   target: lightsail
   host: your-lightsail-ip
   user: ubuntu
-  app_path: /home/ubuntu/libtrails
+  app_path: /path/to/libtrails
 
 indexing:
   model: gemma3:4b

@@ -77,6 +77,9 @@ logs/
 # Private infrastructure details (IPs, MACs, SSH credentials)
 PRIVATE.md
 
+# Local config with private IPs (config.example.yaml is tracked)
+config.yaml
+
 # Serena (AI coding assistant)
 .serena/
 

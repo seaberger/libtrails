@@ -21,19 +21,25 @@ else:
 USER_CONFIG_DIR = Path.home() / ".libtrails"
 USER_CONFIG_FILE = USER_CONFIG_DIR / "config.yaml"
 
+# Repo-local config (gitignored, takes precedence over ~/.libtrails/config.yaml)
+LOCAL_CONFIG_FILE = PROJECT_ROOT / "config.yaml"
+
 
 def get_user_config() -> dict:
-    """Load user configuration from ~/.libtrails/config.yaml"""
-    if not USER_CONFIG_FILE.exists():
-        return {}
+    """Load user configuration.
 
-    try:
-        import yaml
+    Checks repo-local config.yaml first (gitignored), then ~/.libtrails/config.yaml.
+    """
+    for config_path in (LOCAL_CONFIG_FILE, USER_CONFIG_FILE):
+        if config_path.exists():
+            try:
+                import yaml
 
-        with open(USER_CONFIG_FILE) as f:
-            return yaml.safe_load(f) or {}
-    except Exception:
-        return {}
+                with open(config_path) as f:
+                    return yaml.safe_load(f) or {}
+            except Exception:
+                continue
+    return {}
 
 
 def save_user_config(config: dict):
@@ -60,9 +66,12 @@ def set_ipad_url(url: str):
     save_user_config(config)
 
 
-# Calibre library (read-only) — override with CALIBRE_LIBRARY_PATH env var
+# Calibre library (read-only) — env var > YAML config > default
 CALIBRE_LIBRARY_PATH = Path(
-    os.environ.get("CALIBRE_LIBRARY_PATH", str(Path.home() / "Calibre_Main_Library"))
+    os.environ.get(
+        "CALIBRE_LIBRARY_PATH",
+        _user_cfg.get("calibre", {}).get("library_path", str(Path.home() / "Calibre Library")),
+    )
 )
 CALIBRE_DB_PATH = CALIBRE_LIBRARY_PATH / "metadata.db"
 
@@ -74,7 +83,7 @@ OLLAMA_HOST = "http://localhost:11434"
 # YAML example:
 #   lm_studio:
 #     theme_api_base: http://localhost:1234
-#     chunk_api_base: http://192.168.1.36:1234
+#     chunk_api_base: http://<gpu-host>:1234
 _user_cfg = get_user_config()
 LM_STUDIO_THEME_API_BASE = os.environ.get(
     "LM_STUDIO_THEME_API_BASE",
@@ -88,7 +97,7 @@ LM_STUDIO_CHUNK_API_BASE = os.environ.get(
 # GPU KNN via FAISS — configurable via ~/.libtrails/config.yaml
 # YAML example:
 #   gpu:
-#     host: seanb@192.168.1.36
+#     host: user@<gpu-host>
 #     port: 2222
 #     remote_dir: ~/projects/gpu-knn
 

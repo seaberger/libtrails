@@ -171,7 +171,7 @@ def status():
 
 @main.command()
 @click.option(
-    "--ipad", "-i", default=None, help="iPad MapleRead server URL (e.g., http://192.168.1.124:8082)"
+    "--ipad", "-i", default=None, help="iPad MapleRead server URL (e.g., http://<ipad-ip>:8082)"
 )
 @click.option("--dry-run", is_flag=True, help="Show what would be added without making changes")
 @click.option("--skip-index", is_flag=True, help="Add books to database but skip indexing")
@@ -187,7 +187,7 @@ def sync(ipad: str, dry_run: bool, skip_index: bool, model: str, save_url: bool)
         ipad = get_ipad_url()
         if not ipad:
             console.print("[red]Error:[/red] No iPad URL provided.")
-            console.print("Use: [cyan]libtrails sync --ipad http://192.168.1.124:8082[/cyan]")
+            console.print("Use: [cyan]libtrails sync --ipad http://<ipad-ip>:8082[/cyan]")
             console.print("Or save a default: [cyan]libtrails sync --ipad <url> --save-url[/cyan]")
             return
 
@@ -307,12 +307,12 @@ def sync(ipad: str, dry_run: bool, skip_index: bool, model: str, save_url: bool)
 @click.option(
     "--theme-api-base",
     default=None,
-    help="LM Studio API base URL for theme model (e.g., http://192.168.1.36:1234)",
+    help="LM Studio API base URL for theme model (e.g., http://your-gpu-host:1234)",
 )
 @click.option(
     "--chunk-api-base",
     default=None,
-    help="LM Studio API base URL for chunk model (e.g., http://192.168.1.36:1234)",
+    help="LM Studio API base URL for chunk model (e.g., http://your-gpu-host:1234)",
 )
 def index(
     book_id: int,

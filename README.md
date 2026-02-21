@@ -255,11 +255,37 @@ ollama pull gemma3:27b && ollama pull gemma3:4b
 
 ### Configuration
 
-Edit `src/libtrails/config.py` to set your Calibre library path:
+Copy the example config and edit for your setup:
 
-```python
-CALIBRE_LIBRARY_PATH = Path.home() / "Calibre Library"  # Adjust to your path
+```bash
+cp config.example.yaml config.yaml    # repo-local (gitignored, recommended)
+# OR
+mkdir -p ~/.libtrails
+cp config.example.yaml ~/.libtrails/config.yaml   # shared across clones
 ```
+
+The config file controls LLM endpoints, remote GPU access, iPad sync URL, and Calibre library path. Repo-local `config.yaml` takes precedence over `~/.libtrails/config.yaml`. All settings are optional — sensible defaults are used when omitted. See [`config.example.yaml`](config.example.yaml) for all available options.
+
+**Key settings:**
+
+```yaml
+# LLM inference endpoints (LM Studio, Ollama, etc.)
+lm_studio:
+  theme_api_base: http://localhost:1234      # Larger model for book themes
+  chunk_api_base: http://localhost:1234      # Smaller model for chunk topics
+
+# Remote GPU for FAISS KNN (optional)
+gpu:
+  host: user@your-gpu-host
+  port: 2222
+  remote_dir: ~/projects/gpu-knn
+
+# Calibre library path (override with CALIBRE_LIBRARY_PATH env var)
+calibre:
+  library_path: ~/Calibre Library
+```
+
+Environment variables override YAML values where noted in the example config.
 
 ## Quick Start
 

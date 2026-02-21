@@ -1,9 +1,14 @@
 #!/usr/bin/env python3
 """Match iPad library books to Calibre metadata."""
 import json
-import sqlite3
 import re
+import sqlite3
+import sys
 from pathlib import Path
+
+# Add project root to path so we can import config
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+from libtrails.config import CALIBRE_DB_PATH
 
 # Load iPad library
 PROJECT_ROOT = Path(__file__).parent.parent
@@ -14,7 +19,8 @@ with open(str(PROJECT_ROOT / "data" / "ipad_library.json")) as f:
 print(f"Loaded {len(ipad_books)} iPad books")
 
 # Connect to Calibre database (read-only)
-calibre_db = "/Users/seanbergman/Calibre_Main_Library/metadata.db"
+# Set CALIBRE_LIBRARY_PATH env var or configure in ~/.libtrails/config.yaml
+calibre_db = str(CALIBRE_DB_PATH)
 conn = sqlite3.connect(f"file:{calibre_db}?mode=ro", uri=True)
 conn.row_factory = sqlite3.Row
 

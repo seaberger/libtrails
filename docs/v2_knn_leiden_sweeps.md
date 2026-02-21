@@ -1352,7 +1352,7 @@ After clustering, each community was named using `gemma-3-27b-it` on the remote 
 
 - **Script**: `experiments/name_communities.py`
 - **Method**: Top 30 topics by occurrence count per community → structured JSON prompt → 2-5 word noun phrase
-- **Model**: `gemma-3-27b-it` via LM Studio at `192.168.1.36:1234`
+- **Model**: `gemma-3-27b-it` via LM Studio on remote GPU
 - **Workers**: 8 parallel (ThreadPoolExecutor)
 - **Throughput**: ~1.3 names/sec
 - **Total time**: ~9 min for 739 non-singleton communities

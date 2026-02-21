@@ -73,7 +73,7 @@ class TestIpadUrl:
         monkeypatch.setattr(config, "USER_CONFIG_DIR", temp_config_dir)
         monkeypatch.setattr(config, "USER_CONFIG_FILE", temp_config_dir / "config.yaml")
 
-        test_url = "http://192.168.1.100:8082"
+        test_url = "http://127.0.0.1:8082"
         set_ipad_url(test_url)
 
         result = get_ipad_url()

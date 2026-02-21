@@ -51,7 +51,7 @@ EPUB → selectolax → Chunks (500 words) → Ollama → Raw Topics
 ## Data Sources
 
 ### 1. Main Calibre Library
-- **Location**: `/Users/seanbergman/Calibre_Main_Library/`
+- **Location**: Configured via `CALIBRE_LIBRARY_PATH` env var or `~/.libtrails/config.yaml`
 - **Database**: `metadata.db` (SQLite)
 - **Size**: **39,374 books**
 - **Metadata available**:
@@ -86,13 +86,14 @@ GROUP BY b.id;
 ### 2. iPad Reading Library (MapleRead SE)
 - **Size**: **969 books** - curated, high-value collection
 - **Access**: HTTP server from iPad when enabled
-- **Server URL**: `http://192.168.1.124:8082` (when iPad server is running)
+- **Server URL**: Configured in `~/.libtrails/config.yaml` under `ipad.default_url`
 - **Data scraped to**: `data/ipad_library.json`
 
 **To refresh iPad library data**:
 1. Open MapleRead SE on iPad
 2. Enable "Book Sharing" server
-3. Run `python3 utils/scrape_mapleread.py` or `utils/scrape_mapleread_full.py`
+3. Set the iPad URL in `~/.libtrails/config.yaml` or pass via `MAPLEREAD_URL` env var
+4. Run `python3 utils/scrape_mapleread.py` or `utils/scrape_mapleread_full.py`
 
 ---
 
@@ -380,18 +381,18 @@ The `LIBTRAILS_DB` env var is read in `config.py` and controls `IPAD_DB_PATH`.
 | Role | Model | Machine | API Endpoint |
 |------|-------|---------|--------------|
 | Theme extraction (Pass 1) | `gemma-3-27b` | MacBook Pro (local, MLX) | `http://localhost:1234` |
-| Chunk extraction (Pass 2) | `gemma-3-12b` | Windows PC with RTX 3090 | Configured via `~/.libtrails/config.yaml` |
+| Chunk extraction (Pass 2) | `gemma-3-12b` | Remote GPU workstation | Configured in `~/.libtrails/config.yaml` |
 
-Configured in `~/.libtrails/config.yaml`:
+Configured in `~/.libtrails/config.yaml` (see `config.example.yaml` for template):
 ```yaml
 lm_studio:
-  theme_api_base: http://localhost:1234      # 27b on local Mac
-  chunk_api_base: http://<GPU_HOST>:1234     # 12b on remote 3090
+  theme_api_base: http://localhost:1234      # Larger model on local Mac
+  chunk_api_base: http://<gpu-host>:1234     # Smaller model on remote GPU
 ```
 
 It can also be set via env vars: `LM_STUDIO_THEME_API_BASE`, `LM_STUDIO_CHUNK_API_BASE`.
 
-**3090 PC Remote Access**: See `~/.libtrails/config.yaml` for host/port details. GPU KNN pipeline is in `gpu_knn.py` (`run_gpu_knn(k=N)`) — exports embeddings, SSH upload, FAISS on 3090, download results. Wake-on-LAN supported (`brew install wakeonlan`).
+**Remote GPU Access**: The GPU workstation runs LM Studio and FAISS-GPU for KNN graph building. SSH host/port are configured in `~/.libtrails/config.yaml` under the `gpu:` section. The `gpu_knn.py` module handles the full pipeline: export embeddings → SSH upload → FAISS on GPU → download results. See `PRIVATE.md` for actual connection details.
 
 ### config.py Settings
 
@@ -532,7 +533,7 @@ This wraps uvicorn but direct `uv run uvicorn libtrails.api:app` gives more cont
 
 ---
 
-## Deployment (sbergman.net)
+## Deployment
 
 ### Quick Deploy (after local changes)
 
@@ -540,8 +541,8 @@ This wraps uvicorn but direct `uv run uvicorn libtrails.api:app` gives more cont
 # 1. Commit and push locally
 git push
 
-# 2. Deploy to server (one command)
-ssh ubuntu@52.25.145.220 /home/ubuntu/projects/libtrails/deploy.sh
+# 2. Deploy to server (one command — see PRIVATE.md for SSH details)
+ssh <user>@<server> /path/to/libtrails/deploy.sh
 ```
 
 The deploy script does: `git pull` → `npm run build` → restart both systemd services.
@@ -554,11 +555,10 @@ The deploy script does: `git pull` → `npm run build` → restart both systemd 
 | **libtrails-web** | Astro SSR (`node dist/server/entry.mjs`) | 4321 |
 | **libtrails-api** | FastAPI (`uvicorn`, `LIBTRAILS_DB=demo`) | 8000 |
 
-- **Caddy routes**: `/libtrails/api/*` → uvicorn:8000, `/libtrails*` → node:4321
+- **Caddy routes**: `<domain>/api/*` → uvicorn:8000, everything else → node:4321
 - All 3 services are `systemd` enabled (auto-start on boot)
 - **Caddy never needs restarting** for code deploys — it just proxies
-- Project lives at `/home/ubuntu/projects/libtrails` on the server
-- SSH: `ubuntu@52.25.145.220`
+- See `PRIVATE.md` for server SSH details and domain info
 
 ### Important: Build Memory Limit
 
