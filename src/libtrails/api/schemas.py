@@ -141,6 +141,7 @@ class CommunitySummary(BaseModel):
     community_id: int
     label: str
     topic_count: int
+    cluster_count: int = 0
     book_count: int
     primary_book_count: int = 0
     domain_id: int | None = None
@@ -180,6 +181,8 @@ class UniverseCommunity(BaseModel):
     x: float
     y: float
     z: float
+    cluster_count: int = 0
+    top_clusters: list[str] = []
     top_topics: list[str] = []
 
 

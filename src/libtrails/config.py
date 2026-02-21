@@ -181,5 +181,8 @@ TOPIC_STOPLIST = frozenset(
     }
 )
 
-# Universe visualization
-UNIVERSE_JSON_PATH = DATA_DIR / "universe_coords.json"
+# Universe visualization — keyed per DB variant
+if _db_variant:
+    UNIVERSE_JSON_PATH = DATA_DIR / f"universe_coords_{_db_variant}.json"
+else:
+    UNIVERSE_JSON_PATH = DATA_DIR / "universe_coords.json"
