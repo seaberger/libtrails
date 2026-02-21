@@ -101,6 +101,7 @@ export interface CommunitySummary {
   community_id: number;
   label: string;
   topic_count: number;
+  cluster_count: number;
   book_count: number;
   primary_book_count: number;
   domain_id: number | null;
@@ -134,6 +135,8 @@ export interface UniverseCommunity {
   x: number;
   y: number;
   z: number;
+  cluster_count: number;
+  top_clusters: string[];
   top_topics: string[];
 }
 

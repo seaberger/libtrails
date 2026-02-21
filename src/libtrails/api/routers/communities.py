@@ -47,6 +47,14 @@ def list_communities(
 
     rows = cursor.fetchall()
 
+    # Pre-fetch cluster counts per community
+    cursor.execute("""
+        SELECT community_id, COUNT(*) as cluster_count
+        FROM cluster_communities
+        GROUP BY community_id
+    """)
+    cluster_counts = {r["community_id"]: r["cluster_count"] for r in cursor.fetchall()}
+
     result = []
     for row in rows:
         sample_books_raw = json.loads(row["sample_books_json"] or "[]")
@@ -57,6 +65,7 @@ def list_communities(
                 community_id=row["community_id"],
                 label=row["label"],
                 topic_count=row["topic_count"],
+                cluster_count=cluster_counts.get(row["community_id"], 0),
                 book_count=row["book_count"] or 0,
                 primary_book_count=row["primary_book_count"] or 0,
                 domain_id=row["domain_id"],

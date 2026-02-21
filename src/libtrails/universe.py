@@ -147,6 +147,28 @@ def generate_universe_data(
     """)
     communities = cursor.fetchall()
 
+    # Pre-fetch cluster counts and top cluster labels per community
+    cluster_info: dict[int, dict] = {}
+    cursor.execute("""
+        SELECT community_id,
+               COUNT(*) as cluster_count,
+               GROUP_CONCAT(top_label, '||') as cluster_labels
+        FROM (
+            SELECT cc.community_id, cs.top_label
+            FROM cluster_communities cc
+            JOIN cluster_stats cs ON cs.cluster_id = cc.cluster_id
+            ORDER BY cc.community_id, cs.book_count DESC
+        )
+        GROUP BY community_id
+    """)
+    for row in cursor.fetchall():
+        labels_raw = row["cluster_labels"] or ""
+        labels = [lbl for lbl in labels_raw.split("||") if lbl][:8]
+        cluster_info[row["community_id"]] = {
+            "cluster_count": row["cluster_count"],
+            "top_clusters": labels,
+        }
+
     # Compute community centroids (average of child cluster centroids)
     community_data = []
     centroids = []
@@ -163,6 +185,7 @@ def generate_universe_data(
             domain_id = row["domain_id"] if row["domain_id"] is not None else -1
             domain_label = row["domain_label"] or "Unknown"
 
+            ci = cluster_info.get(community_id, {})
             community_data.append(
                 {
                     "community_id": community_id,
@@ -172,6 +195,8 @@ def generate_universe_data(
                     "book_ids": book_ids,
                     "domain_id": domain_id,
                     "domain_label": domain_label,
+                    "cluster_count": ci.get("cluster_count", 0),
+                    "top_clusters": ci.get("top_clusters", []),
                     "top_topics": top_topics,
                 }
             )

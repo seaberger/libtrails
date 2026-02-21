@@ -256,6 +256,23 @@ def hybrid_search(
 
     elif scope == "communities":
         raw = hybrid_search_communities(db, q, limit)
+
+        # Pre-fetch cluster counts for all matched communities
+        community_ids = [r["community_id"] for r in raw]
+        cluster_counts: dict[int, int] = {}
+        if community_ids:
+            placeholders = ",".join("?" * len(community_ids))
+            rows = db.execute(
+                f"""
+                SELECT community_id, COUNT(*) as cnt
+                FROM cluster_communities
+                WHERE community_id IN ({placeholders})
+                GROUP BY community_id
+                """,
+                community_ids,
+            ).fetchall()
+            cluster_counts = {r["community_id"]: r["cnt"] for r in rows}
+
         community_results = []
         for r in raw:
             sample_books = []
@@ -269,6 +286,7 @@ def hybrid_search(
                     community_id=r["community_id"],
                     label=r["label"],
                     topic_count=r["topic_count"],
+                    cluster_count=cluster_counts.get(r["community_id"], 0),
                     book_count=r["book_count"],
                     score=r["score"],
                     sample_books=sample_books,

@@ -633,11 +633,6 @@ function MultiSelectPanel({
     return ids;
   }, [communities]);
 
-  const totalTopics = useMemo(
-    () => communities.reduce((sum, c) => sum + c.size, 0),
-    [communities]
-  );
-
   // Domain breakdown: group communities by domain, sorted by count desc
   const domainBreakdown = useMemo(() => {
     const counts = new Map<number, number>();
@@ -669,11 +664,11 @@ function MultiSelectPanel({
       .map(([id]) => id);
   }, [communities]);
 
-  // Top topics: aggregate top_topics across communities, count frequency
-  const topTopics = useMemo(() => {
+  // Top clusters: aggregate top_clusters across communities, count frequency
+  const topClusters = useMemo(() => {
     const freq = new Map<string, number>();
     for (const c of communities) {
-      for (const t of c.top_topics) {
+      for (const t of (c.top_clusters ?? [])) {
         freq.set(t, (freq.get(t) || 0) + 1);
       }
     }
@@ -747,8 +742,8 @@ function MultiSelectPanel({
       >
         {[
           `${uniqueBookIds.size} books`,
-          `${totalTopics} topics`,
-          `${domainBreakdown.length} domains`,
+          `${communities.reduce((sum, c) => sum + c.cluster_count, 0)} clusters`,
+          `${domainBreakdown.length} themes`,
         ].map((label) => (
           <span
             key={label}
@@ -777,7 +772,7 @@ function MultiSelectPanel({
               marginBottom: 6,
             }}
           >
-            Domain Breakdown
+            Theme Breakdown
           </div>
           {/* Stacked bar */}
           <div
@@ -797,7 +792,7 @@ function MultiSelectPanel({
                   background: domain?.color || "#555",
                   minWidth: 2,
                 }}
-                title={`${domain?.label || `Domain ${domainId}`}: ${count} topics`}
+                title={`${domain?.label || `Theme ${domainId}`}: ${count} communities`}
               />
             ))}
           </div>
@@ -823,10 +818,10 @@ function MultiSelectPanel({
                   }}
                 />
                 <span style={{ color: colors.text, flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                  {domain?.label || `Domain ${domainId}`}
+                  {domain?.label || `Theme ${domainId}`}
                 </span>
                 <span style={{ color: colors.textMuted, fontSize: "0.65rem", flexShrink: 0 }}>
-                  {count} topics
+                  {count}
                 </span>
               </div>
             ))}
@@ -924,8 +919,8 @@ function MultiSelectPanel({
         )}
       </div>
 
-      {/* ── 4. Top Topics ── */}
-      {topTopics.length > 0 && (
+      {/* ── 4. Top Clusters ── */}
+      {topClusters.length > 0 && (
         <div style={{ marginBottom: 16 }}>
           <div
             style={{
@@ -936,12 +931,12 @@ function MultiSelectPanel({
               marginBottom: 6,
             }}
           >
-            Top Topics
+            Top Clusters
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-            {topTopics.map(([topic, count]) => (
+            {topClusters.map(([cluster, count]) => (
               <span
-                key={topic}
+                key={cluster}
                 style={{
                   background: colors.chipBgHover,
                   borderRadius: 4,
@@ -950,7 +945,7 @@ function MultiSelectPanel({
                   color: colors.text,
                 }}
               >
-                {topic}
+                {cluster}
                 {count > 1 && (
                   <span style={{ color: colors.textMuted, marginLeft: 4, fontSize: "0.6rem" }}>
                     ×{count}
@@ -1142,11 +1137,11 @@ function CommunityPanel({
       >
         <span>{community.book_count} books</span>
         <span>·</span>
-        <span>{community.size} topics</span>
+        <span>{community.cluster_count} clusters</span>
       </div>
 
-      {/* Top topics */}
-      {community.top_topics.length > 0 && (
+      {/* Cluster labels */}
+      {(community.top_clusters ?? []).length > 0 && (
         <div style={{ marginBottom: 16 }}>
           <div
             style={{
@@ -1157,10 +1152,10 @@ function CommunityPanel({
               marginBottom: 6,
             }}
           >
-            Top Topics
+            Clusters
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-            {community.top_topics.slice(0, 8).map((t) => (
+            {(community.top_clusters ?? []).slice(0, 8).map((t) => (
               <span
                 key={t}
                 style={{
@@ -1223,42 +1218,6 @@ function CommunityPanel({
         </div>
       )}
 
-      {/* Clusters from detail */}
-      {detail && detail.clusters.length > 0 && (
-        <div style={{ marginBottom: 16 }}>
-          <div
-            style={{
-              fontSize: "0.65rem",
-              textTransform: "uppercase",
-              letterSpacing: "0.05em",
-              color: colors.textMuted,
-              marginBottom: 6,
-            }}
-          >
-            Clusters ({detail.clusters.length})
-          </div>
-          <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-            {detail.clusters.slice(0, 12).map((cl) => (
-              <span
-                key={cl.cluster_id}
-                style={{
-                  background: colors.chipBg,
-                  borderRadius: 4,
-                  padding: "2px 7px",
-                  fontSize: "0.65rem",
-                  color: colors.textMuted,
-                }}
-              >
-                {cl.label}
-                <span style={{ color: colors.textFaint, marginLeft: 4 }}>
-                  {cl.size}
-                </span>
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
-
       {/* Explore link */}
       <a
         href={`${basePath}/communities/${community.community_id}`}
@@ -1314,7 +1273,7 @@ function DomainLegend({
           alignItems: "center",
         }}
       >
-        <span>Domains</span>
+        <span>Themes</span>
         {activeDomains && (
           <button
             onClick={onClear}
@@ -1381,7 +1340,7 @@ function DomainLegend({
             padding: "6px 0",
           }}
         >
-          +{hiddenCount} more domains
+          +{hiddenCount} more themes
         </button>
       )}
       {isMobile && expanded && hiddenCount > 0 && (
@@ -1859,11 +1818,11 @@ export default function GalaxyView() {
               marginBottom: "6px",
             }}
           >
-            {tooltip.community.book_count} books &middot; {tooltip.community.size} topics
+            {tooltip.community.book_count} books &middot; {tooltip.community.cluster_count} clusters
           </div>
-          {tooltip.community.top_topics.length > 0 && (
+          {(tooltip.community.top_clusters ?? []).length > 0 && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-              {tooltip.community.top_topics.slice(0, 4).map((t) => (
+              {(tooltip.community.top_clusters ?? []).slice(0, 4).map((t) => (
                 <span
                   key={t}
                   style={{

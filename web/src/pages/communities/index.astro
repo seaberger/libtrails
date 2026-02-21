@@ -50,7 +50,7 @@ if (domainId != null) {
         cluster_id: community.community_id,
         community_id: community.community_id,
         label: community.label,
-        size: community.topic_count,
+        size: community.cluster_count,
         book_count: community.book_count,
         sample_books: community.sample_books,
       }} />
@@ -114,7 +114,7 @@ if (domainId != null) {
     // Stats
     const stats = document.createElement('p');
     stats.className = 'text-xs text-[var(--color-text-muted)] text-center';
-    stats.textContent = `${community.book_count} books · ${community.topic_count} topics`;
+    stats.textContent = `${community.book_count} books · ${community.cluster_count ?? community.topic_count} clusters`;
     card.appendChild(stats);
 
     return card;
