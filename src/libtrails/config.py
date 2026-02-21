@@ -43,12 +43,31 @@ def get_user_config() -> dict:
 
 
 def save_user_config(config: dict):
-    """Save user configuration to ~/.libtrails/config.yaml"""
+    """Save user configuration to ~/.libtrails/config.yaml.
+
+    Always writes to USER_CONFIG_FILE (not repo-local config.yaml).
+    """
     import yaml
 
     USER_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     with open(USER_CONFIG_FILE, "w") as f:
         yaml.dump(config, f, default_flow_style=False)
+
+
+def _load_user_config_file() -> dict:
+    """Load config from ~/.libtrails/config.yaml only (ignoring repo-local).
+
+    Used by setter functions to ensure read/write symmetry with save_user_config.
+    """
+    if USER_CONFIG_FILE.exists():
+        try:
+            import yaml
+
+            with open(USER_CONFIG_FILE) as f:
+                return yaml.safe_load(f) or {}
+        except Exception:
+            pass
+    return {}
 
 
 def get_ipad_url() -> Optional[str]:
@@ -58,8 +77,8 @@ def get_ipad_url() -> Optional[str]:
 
 
 def set_ipad_url(url: str):
-    """Save iPad URL to user config."""
-    config = get_user_config()
+    """Save iPad URL to user config (~/.libtrails/config.yaml)."""
+    config = _load_user_config_file()
     if "ipad" not in config:
         config["ipad"] = {}
     config["ipad"]["default_url"] = url
