@@ -49,7 +49,7 @@ def main() -> None:
     print()
     print("To deploy to server:")
     print(
-        f"  scp -r {ONNX_OUTPUT_DIR} ubuntu@52.25.145.220:/home/ubuntu/projects/libtrails/models/"
+        f"  scp -r {ONNX_OUTPUT_DIR} <user>@<server>:/path/to/libtrails/models/"
     )
 
 

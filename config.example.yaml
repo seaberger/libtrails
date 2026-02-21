@@ -1,0 +1,49 @@
+# libtrails configuration
+#
+# Option A (recommended): Copy to config.yaml in repo root (gitignored):
+#   cp config.example.yaml config.yaml
+#
+# Option B: Copy to ~/.libtrails/config.yaml (shared across clones):
+#   mkdir -p ~/.libtrails
+#   cp config.example.yaml ~/.libtrails/config.yaml
+#
+# Precedence: repo-local config.yaml > ~/.libtrails/config.yaml > defaults
+# Environment variables override YAML values where noted.
+# All settings are optional — sensible defaults are used when omitted.
+
+# ---------------------------------------------------------------------------
+# LM Studio / LLM inference endpoints
+# ---------------------------------------------------------------------------
+# Two-pass topic extraction uses separate models:
+#   Pass 1 (themes):  larger model, 1 call per book
+#   Pass 2 (chunks):  smaller model, 1 call per chunk
+#
+# Override with env vars: LM_STUDIO_THEME_API_BASE, LM_STUDIO_CHUNK_API_BASE
+lm_studio:
+  theme_api_base: http://localhost:1234        # e.g., gemma-3-27b on local Mac
+  chunk_api_base: http://localhost:1234        # e.g., gemma-3-12b on a remote GPU
+
+# ---------------------------------------------------------------------------
+# Remote GPU (optional) — for FAISS-GPU KNN graph building
+# ---------------------------------------------------------------------------
+# If you have a remote machine with an NVIDIA GPU, configure SSH access here.
+# Used by `gpu_knn.py` to offload KNN computation.
+# gpu:
+#   host: user@your-gpu-host       # SSH user@host (Tailscale IP recommended)
+#   port: 2222                      # SSH port
+#   remote_dir: ~/projects/gpu-knn  # Path to FAISS project on remote machine
+
+# ---------------------------------------------------------------------------
+# iPad / MapleRead (optional) — for syncing books from iPad
+# ---------------------------------------------------------------------------
+# Enable "Book Sharing" in MapleRead SE, then set the URL here.
+# Override with env var: MAPLEREAD_URL
+# ipad:
+#   default_url: http://your-ipad-ip:8082
+
+# ---------------------------------------------------------------------------
+# Calibre library (optional)
+# ---------------------------------------------------------------------------
+# Override with env var: CALIBRE_LIBRARY_PATH
+# calibre:
+#   library_path: ~/Calibre Library

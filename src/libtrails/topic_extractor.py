@@ -47,7 +47,7 @@ def set_lm_studio_api_base(model: str, api_base: str) -> None:
     Allows routing different models to different LM Studio instances,
     e.g., theme model on local Mac, chunk model on a remote GPU.
 
-    The api_base should be the server root (e.g., http://192.168.1.36:1234).
+    The api_base should be the server root (e.g., http://your-gpu-host:1234).
     The /v1 suffix is added automatically.
     """
     if not api_base.endswith("/v1"):

@@ -21,28 +21,53 @@ else:
 USER_CONFIG_DIR = Path.home() / ".libtrails"
 USER_CONFIG_FILE = USER_CONFIG_DIR / "config.yaml"
 
+# Repo-local config (gitignored, takes precedence over ~/.libtrails/config.yaml)
+LOCAL_CONFIG_FILE = PROJECT_ROOT / "config.yaml"
+
 
 def get_user_config() -> dict:
-    """Load user configuration from ~/.libtrails/config.yaml"""
-    if not USER_CONFIG_FILE.exists():
-        return {}
+    """Load user configuration.
 
-    try:
-        import yaml
+    Checks repo-local config.yaml first (gitignored), then ~/.libtrails/config.yaml.
+    """
+    for config_path in (LOCAL_CONFIG_FILE, USER_CONFIG_FILE):
+        if config_path.exists():
+            try:
+                import yaml
 
-        with open(USER_CONFIG_FILE) as f:
-            return yaml.safe_load(f) or {}
-    except Exception:
-        return {}
+                with open(config_path) as f:
+                    return yaml.safe_load(f) or {}
+            except Exception:
+                continue
+    return {}
 
 
 def save_user_config(config: dict):
-    """Save user configuration to ~/.libtrails/config.yaml"""
+    """Save user configuration to ~/.libtrails/config.yaml.
+
+    Always writes to USER_CONFIG_FILE (not repo-local config.yaml).
+    """
     import yaml
 
     USER_CONFIG_DIR.mkdir(parents=True, exist_ok=True)
     with open(USER_CONFIG_FILE, "w") as f:
         yaml.dump(config, f, default_flow_style=False)
+
+
+def _load_user_config_file() -> dict:
+    """Load config from ~/.libtrails/config.yaml only (ignoring repo-local).
+
+    Used by setter functions to ensure read/write symmetry with save_user_config.
+    """
+    if USER_CONFIG_FILE.exists():
+        try:
+            import yaml
+
+            with open(USER_CONFIG_FILE) as f:
+                return yaml.safe_load(f) or {}
+        except Exception:
+            pass
+    return {}
 
 
 def get_ipad_url() -> Optional[str]:
@@ -52,17 +77,23 @@ def get_ipad_url() -> Optional[str]:
 
 
 def set_ipad_url(url: str):
-    """Save iPad URL to user config."""
-    config = get_user_config()
+    """Save iPad URL to user config (~/.libtrails/config.yaml)."""
+    config = _load_user_config_file()
     if "ipad" not in config:
         config["ipad"] = {}
     config["ipad"]["default_url"] = url
     save_user_config(config)
 
 
-# Calibre library (read-only) — override with CALIBRE_LIBRARY_PATH env var
+# Load user config once — used by all settings below
+_user_cfg = get_user_config()
+
+# Calibre library (read-only) — env var > YAML config > default
 CALIBRE_LIBRARY_PATH = Path(
-    os.environ.get("CALIBRE_LIBRARY_PATH", str(Path.home() / "Calibre_Main_Library"))
+    os.environ.get(
+        "CALIBRE_LIBRARY_PATH",
+        _user_cfg.get("calibre", {}).get("library_path", str(Path.home() / "Calibre Library")),
+    )
 )
 CALIBRE_DB_PATH = CALIBRE_LIBRARY_PATH / "metadata.db"
 
@@ -74,8 +105,7 @@ OLLAMA_HOST = "http://localhost:11434"
 # YAML example:
 #   lm_studio:
 #     theme_api_base: http://localhost:1234
-#     chunk_api_base: http://192.168.1.36:1234
-_user_cfg = get_user_config()
+#     chunk_api_base: http://<gpu-host>:1234
 LM_STUDIO_THEME_API_BASE = os.environ.get(
     "LM_STUDIO_THEME_API_BASE",
     _user_cfg.get("lm_studio", {}).get("theme_api_base", "http://localhost:1234"),
@@ -88,7 +118,7 @@ LM_STUDIO_CHUNK_API_BASE = os.environ.get(
 # GPU KNN via FAISS — configurable via ~/.libtrails/config.yaml
 # YAML example:
 #   gpu:
-#     host: seanb@192.168.1.36
+#     host: user@<gpu-host>
 #     port: 2222
 #     remote_dir: ~/projects/gpu-knn
 

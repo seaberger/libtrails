@@ -32,7 +32,7 @@ import shutil
 
 from libtrails.chunker import chunk_text
 from libtrails.config import CALIBRE_LIBRARY_PATH, DATA_DIR, IPAD_DB_PATH
-from libtrails.database import get_db, save_chunk_topics
+from libtrails.database import save_chunk_topics
 from libtrails.topic_extractor import (
     extract_book_themes,
     extract_topics_single_optimized_parallel,
@@ -40,7 +40,10 @@ from libtrails.topic_extractor import (
 
 # Volume definitions: prefix -> (title, era description for theme context)
 VOLUMES = {
-    "a": ("Our Oriental Heritage", "Ancient civilizations of Egypt, Mesopotamia, India, China, Japan"),
+    "a": (
+        "Our Oriental Heritage",
+        "Ancient civilizations of Egypt, Mesopotamia, India, China, Japan",
+    ),
     "b": ("The Life of Greece", "Ancient Greek civilization, philosophy, art, and democracy"),
     "c": ("Caesar and Christ", "Roman Republic and Empire, rise of Christianity"),
     "d": ("The Age of Faith", "Medieval Europe, Byzantine Empire, Islamic golden age, 325-1300"),
@@ -72,8 +75,20 @@ def _html_to_text(html_content: str) -> str:
     content = re.sub(r'\s+xmlns(?::[a-zA-Z]+)?="[^"]*"', "", html_content)
     # Convert XHTML self-closing tags
     void_elements = {
-        "area", "base", "br", "col", "embed", "hr", "img",
-        "input", "link", "meta", "param", "source", "track", "wbr",
+        "area",
+        "base",
+        "br",
+        "col",
+        "embed",
+        "hr",
+        "img",
+        "input",
+        "link",
+        "meta",
+        "param",
+        "source",
+        "track",
+        "wbr",
     }
 
     def fix_self_closing(match):
@@ -106,9 +121,9 @@ def extract_volume_text(epub_path: Path, prefix: str) -> str:
 
     with zipfile.ZipFile(epub_path, "r") as zf:
         html_files = sorted(
-            f for f in zf.namelist()
-            if f.endswith((".xhtml", ".html", ".htm"))
-            and f.split("/")[-1].startswith(f"{prefix}_")
+            f
+            for f in zf.namelist()
+            if f.endswith((".xhtml", ".html", ".htm")) and f.split("/")[-1].startswith(f"{prefix}_")
         )
 
         # Skip cover, copyright, TOC files
@@ -231,7 +246,7 @@ def phase1_split_and_chunk():
         print(f"  Words: {word_count:,}")
 
         if word_count < 100:
-            print(f"  WARNING: Very little text extracted, skipping")
+            print("  WARNING: Very little text extracted, skipping")
             continue
 
         # Create book entry
@@ -334,18 +349,24 @@ def phase3_extract_topics(volume_filter: str | None = None, workers: int = 20):
 
         # Get chunks needing topics
         all_chunk_ids = [
-            r[0] for r in conn.execute(
+            r[0]
+            for r in conn.execute(
                 "SELECT id FROM chunks WHERE book_id = ? ORDER BY chunk_index", (book_id,)
             ).fetchall()
         ]
-        done_ids = {
-            r[0] for r in conn.execute(
-                "SELECT DISTINCT chunk_id FROM chunk_topics WHERE chunk_id IN ({})".format(
-                    ",".join("?" * len(all_chunk_ids))
-                ),
-                all_chunk_ids,
-            ).fetchall()
-        } if all_chunk_ids else set()
+        done_ids = (
+            {
+                r[0]
+                for r in conn.execute(
+                    "SELECT DISTINCT chunk_id FROM chunk_topics WHERE chunk_id IN ({})".format(
+                        ",".join("?" * len(all_chunk_ids))
+                    ),
+                    all_chunk_ids,
+                ).fetchall()
+            }
+            if all_chunk_ids
+            else set()
+        )
 
         pending_ids = [cid for cid in all_chunk_ids if cid not in done_ids]
 
@@ -398,10 +419,18 @@ def main():
     import argparse
 
     parser = argparse.ArgumentParser(description="Prepare Story of Civilization for V2 extraction")
-    parser.add_argument("--extract-topics", action="store_true", help="Run Phase 3 (topic extraction with Gemini)")
-    parser.add_argument("--volume", type=str, default=None, help="Process only this volume (by title)")
-    parser.add_argument("--workers", type=int, default=20, help="Parallel workers for topic extraction")
-    parser.add_argument("--themes-only", action="store_true", help="Run only Phase 2 (theme extraction)")
+    parser.add_argument(
+        "--extract-topics", action="store_true", help="Run Phase 3 (topic extraction with Gemini)"
+    )
+    parser.add_argument(
+        "--volume", type=str, default=None, help="Process only this volume (by title)"
+    )
+    parser.add_argument(
+        "--workers", type=int, default=20, help="Parallel workers for topic extraction"
+    )
+    parser.add_argument(
+        "--themes-only", action="store_true", help="Run only Phase 2 (theme extraction)"
+    )
     args = parser.parse_args()
 
     if args.extract_topics:

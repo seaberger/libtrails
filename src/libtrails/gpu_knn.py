@@ -7,7 +7,7 @@ doesn't have the SFTP subsystem configured.
 
 Configuration in ~/.libtrails/config.yaml:
     gpu:
-      host: seanb@192.168.1.36
+      host: user@<gpu-host>
       port: 2222
       remote_dir: ~/projects/gpu-knn
 """

@@ -1,8 +1,9 @@
 #!/usr/bin/env python3
 """Create SQLite database for iPad library with Calibre metadata."""
+
 import json
-import sqlite3
 import re
+import sqlite3
 from pathlib import Path
 
 # Load enriched data
@@ -101,6 +102,7 @@ CREATE TRIGGER books_ai AFTER INSERT ON books BEGIN
 END;
 """)
 
+
 def get_or_create(cursor, table, name):
     """Get or create an entity, return ID."""
     cursor.execute(f"SELECT id FROM {table} WHERE name = ?", (name,))
@@ -110,66 +112,75 @@ def get_or_create(cursor, table, name):
     cursor.execute(f"INSERT INTO {table} (name) VALUES (?)", (name,))
     return cursor.lastrowid
 
+
 def clean_html(text):
     """Remove HTML tags from description."""
     if not text:
         return None
-    return re.sub('<[^<]+?>', '', text).strip()
+    return re.sub("<[^<]+?>", "", text).strip()
+
 
 # Insert enriched books
 for item in enriched:
-    ipad = item['ipad']
-    cal = item['calibre']
-    
-    cursor.execute("""
-        INSERT INTO books (ipad_id, calibre_id, title, author, format, series, 
+    ipad = item["ipad"]
+    cal = item["calibre"]
+
+    cursor.execute(
+        """
+        INSERT INTO books (ipad_id, calibre_id, title, author, format, series,
                           series_index, publisher, pubdate, description, has_calibre_match)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-    """, (
-        ipad['id'],
-        item['calibre_id'],
-        cal['title'],
-        ', '.join(cal['authors']),
-        ipad['format'],
-        cal['series'],
-        cal.get('series_index'),
-        cal['publisher'],
-        cal['pubdate'],
-        clean_html(cal['description'])
-    ))
+    """,
+        (
+            ipad["id"],
+            item["calibre_id"],
+            cal["title"],
+            ", ".join(cal["authors"]),
+            ipad["format"],
+            cal["series"],
+            cal.get("series_index"),
+            cal["publisher"],
+            cal["pubdate"],
+            clean_html(cal["description"]),
+        ),
+    )
     book_id = cursor.lastrowid
-    
+
     # Add authors
-    for author in cal['authors']:
-        author_id = get_or_create(cursor, 'authors', author)
+    for author in cal["authors"]:
+        author_id = get_or_create(cursor, "authors", author)
         cursor.execute("INSERT OR IGNORE INTO book_authors VALUES (?, ?)", (book_id, author_id))
-    
+
     # Add iPad tags
-    for tag in ipad.get('tags', []):
-        tag_id = get_or_create(cursor, 'ipad_tags', tag)
+    for tag in ipad.get("tags", []):
+        tag_id = get_or_create(cursor, "ipad_tags", tag)
         cursor.execute("INSERT OR IGNORE INTO book_ipad_tags VALUES (?, ?)", (book_id, tag_id))
-    
+
     # Add Calibre tags
-    for tag in cal.get('tags', []):
-        tag_id = get_or_create(cursor, 'calibre_tags', tag)
+    for tag in cal.get("tags", []):
+        tag_id = get_or_create(cursor, "calibre_tags", tag)
         cursor.execute("INSERT OR IGNORE INTO book_calibre_tags VALUES (?, ?)", (book_id, tag_id))
-    
+
     # Add identifiers
-    for id_type, id_val in cal.get('identifiers', {}).items():
-        cursor.execute("INSERT OR IGNORE INTO identifiers VALUES (?, ?, ?)", 
-                      (book_id, id_type, id_val))
+    for id_type, id_val in cal.get("identifiers", {}).items():
+        cursor.execute(
+            "INSERT OR IGNORE INTO identifiers VALUES (?, ?, ?)", (book_id, id_type, id_val)
+        )
 
 # Insert unmatched books (no Calibre data)
 for ipad in unmatched:
-    cursor.execute("""
+    cursor.execute(
+        """
         INSERT INTO books (ipad_id, title, author, format, has_calibre_match)
         VALUES (?, ?, ?, ?, 0)
-    """, (ipad['id'], ipad['title'], ipad['author'], ipad['format']))
+    """,
+        (ipad["id"], ipad["title"], ipad["author"], ipad["format"]),
+    )
     book_id = cursor.lastrowid
-    
+
     # Add iPad tags
-    for tag in ipad.get('tags', []):
-        tag_id = get_or_create(cursor, 'ipad_tags', tag)
+    for tag in ipad.get("tags", []):
+        tag_id = get_or_create(cursor, "ipad_tags", tag)
         cursor.execute("INSERT OR IGNORE INTO book_ipad_tags VALUES (?, ?)", (book_id, tag_id))
 
 conn.commit()

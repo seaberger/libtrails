@@ -11,6 +11,7 @@ class TestUserConfig:
         # Ensure the config module uses our temp directory
         from libtrails import config
 
+        monkeypatch.setattr(config, "LOCAL_CONFIG_FILE", temp_config_dir / "nonexistent.yaml")
         monkeypatch.setattr(config, "USER_CONFIG_DIR", temp_config_dir)
         monkeypatch.setattr(config, "USER_CONFIG_FILE", temp_config_dir / "config.yaml")
 
@@ -21,6 +22,7 @@ class TestUserConfig:
         """Test saving and loading configuration."""
         from libtrails import config
 
+        monkeypatch.setattr(config, "LOCAL_CONFIG_FILE", temp_config_dir / "nonexistent.yaml")
         monkeypatch.setattr(config, "USER_CONFIG_DIR", temp_config_dir)
         monkeypatch.setattr(config, "USER_CONFIG_FILE", temp_config_dir / "config.yaml")
 
@@ -44,6 +46,7 @@ class TestUserConfig:
         from libtrails import config
 
         new_config_dir = tmp_path / "new_dir" / ".libtrails"
+        monkeypatch.setattr(config, "LOCAL_CONFIG_FILE", tmp_path / "nonexistent.yaml")
         monkeypatch.setattr(config, "USER_CONFIG_DIR", new_config_dir)
         monkeypatch.setattr(config, "USER_CONFIG_FILE", new_config_dir / "config.yaml")
 
@@ -60,6 +63,7 @@ class TestIpadUrl:
         """Test getting iPad URL when not configured."""
         from libtrails import config
 
+        monkeypatch.setattr(config, "LOCAL_CONFIG_FILE", temp_config_dir / "nonexistent.yaml")
         monkeypatch.setattr(config, "USER_CONFIG_DIR", temp_config_dir)
         monkeypatch.setattr(config, "USER_CONFIG_FILE", temp_config_dir / "config.yaml")
 
@@ -70,10 +74,11 @@ class TestIpadUrl:
         """Test setting and getting iPad URL."""
         from libtrails import config
 
+        monkeypatch.setattr(config, "LOCAL_CONFIG_FILE", temp_config_dir / "nonexistent.yaml")
         monkeypatch.setattr(config, "USER_CONFIG_DIR", temp_config_dir)
         monkeypatch.setattr(config, "USER_CONFIG_FILE", temp_config_dir / "config.yaml")
 
-        test_url = "http://192.168.1.100:8082"
+        test_url = "http://127.0.0.1:8082"
         set_ipad_url(test_url)
 
         result = get_ipad_url()
@@ -83,6 +88,7 @@ class TestIpadUrl:
         """Test that setting iPad URL doesn't overwrite other config."""
         from libtrails import config
 
+        monkeypatch.setattr(config, "LOCAL_CONFIG_FILE", temp_config_dir / "nonexistent.yaml")
         monkeypatch.setattr(config, "USER_CONFIG_DIR", temp_config_dir)
         monkeypatch.setattr(config, "USER_CONFIG_FILE", temp_config_dir / "config.yaml")
 

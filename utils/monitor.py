@@ -264,7 +264,9 @@ def dashboard(stats: dict) -> str:
                 overall_pct = total_done * 100 // r["total"]
                 bar = render_bar(overall_pct)
                 lines.append(f"          {bar} {total_done}/{r['total']} chunks ({overall_pct}%)")
-                lines.append(f"          ({r['done']} previously done, {p['done']}/{p['total']} remaining)")
+                lines.append(
+                    f"          ({r['done']} previously done, {p['done']}/{p['total']} remaining)"
+                )
             elif p["pct"] >= 100:
                 lines.append(f"          Done! {p['total']} chunks")
             else:
@@ -279,7 +281,9 @@ def dashboard(stats: dict) -> str:
         overall_pct = processed * 100 // total
         bar = render_bar(overall_pct)
         lines.append(f"  Books:  {bar} {processed}/{total} ({overall_pct}%)")
-    lines.append(f"          {stats['books_completed']} extracted, {stats['books_skipped']} skipped, {stats['books_resumed']} resumed")
+    lines.append(
+        f"          {stats['books_completed']} extracted, {stats['books_skipped']} skipped, {stats['books_resumed']} resumed"
+    )
     if stats["books_errored"] > 0:
         lines.append(f"          {stats['books_errored']} errors")
 
@@ -311,7 +315,9 @@ def dashboard(stats: dict) -> str:
         lines.append("  Recent books:")
         for book in stats["completed_books"][-5:]:
             rate = book["time"] / book["chunks"] if book["chunks"] > 0 else 0
-            lines.append(f"    {book['title'][:42]:42s}  {book['chunks']:4d} chunks  {book['time']:6.1f}s  ({rate:.2f}s/ch)")
+            lines.append(
+                f"    {book['title'][:42]:42s}  {book['chunks']:4d} chunks  {book['time']:6.1f}s  ({rate:.2f}s/ch)"
+            )
 
     lines.append("")
     return "\n".join(lines)
@@ -323,9 +329,13 @@ def query_db_stats(db_path: str) -> dict:
 
     conn = sqlite3.connect(db_path, isolation_level=None, timeout=2)
 
-    total_books = conn.execute("SELECT COUNT(*) FROM books WHERE calibre_id IS NOT NULL").fetchone()[0]
+    total_books = conn.execute(
+        "SELECT COUNT(*) FROM books WHERE calibre_id IS NOT NULL"
+    ).fetchone()[0]
     total_chunks = conn.execute("SELECT COUNT(*) FROM chunks").fetchone()[0]
-    chunks_with_topics = conn.execute("SELECT COUNT(DISTINCT chunk_id) FROM chunk_topics").fetchone()[0]
+    chunks_with_topics = conn.execute(
+        "SELECT COUNT(DISTINCT chunk_id) FROM chunk_topics"
+    ).fetchone()[0]
     total_topics = conn.execute("SELECT COUNT(*) FROM chunk_topics").fetchone()[0]
 
     # Books fully done (all chunks have topics)
@@ -336,9 +346,6 @@ def query_db_stats(db_path: str) -> dict:
             GROUP BY c.book_id
         ) WHERE total = done AND total > 0
     """).fetchone()[0]
-
-    # Books with chunks (started)
-    books_started = conn.execute("SELECT COUNT(DISTINCT book_id) FROM chunks").fetchone()[0]
 
     # Most recently active book — find the book with the newest chunk_topic entry.
     # Don't filter on done < total: with fast APIs (Gemini), books complete between
@@ -374,9 +381,12 @@ def query_db_stats(db_path: str) -> dict:
         WHERE calibre_id IS NOT NULL
         AND id NOT IN (SELECT DISTINCT book_id FROM chunks)
     """).fetchone()[0]
-    avg_chunks_per_book = conn.execute(
-        "SELECT AVG(cnt) FROM (SELECT COUNT(*) as cnt FROM chunks GROUP BY book_id)"
-    ).fetchone()[0] or 0
+    avg_chunks_per_book = (
+        conn.execute(
+            "SELECT AVG(cnt) FROM (SELECT COUNT(*) as cnt FROM chunks GROUP BY book_id)"
+        ).fetchone()[0]
+        or 0
+    )
 
     conn.close()
 
@@ -436,7 +446,9 @@ def find_latest_log() -> str | None:
         if not task_dir.exists():
             continue
         # Search all project task directories for .output files
-        candidates = sorted(task_dir.rglob("*.output"), key=lambda p: p.stat().st_mtime, reverse=True)
+        candidates = sorted(
+            task_dir.rglob("*.output"), key=lambda p: p.stat().st_mtime, reverse=True
+        )
         for candidate in candidates:
             try:
                 # Quick check: does it look like a libtrails extraction log?
@@ -460,10 +472,21 @@ def main():
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
-    parser.add_argument("logfile", nargs="?", default=None, help="Path to the extraction log file (auto-detected if omitted)")
+    parser.add_argument(
+        "logfile",
+        nargs="?",
+        default=None,
+        help="Path to the extraction log file (auto-detected if omitted)",
+    )
     parser.add_argument("-w", "--watch", action="store_true", help="Auto-refresh")
-    parser.add_argument("-n", "--interval", type=int, default=5, help="Refresh interval in seconds (default: 5)")
-    parser.add_argument("--db", default=None, help="Query DB directly instead of parsing logs (alias: demo, v2, v1; or path)")
+    parser.add_argument(
+        "-n", "--interval", type=int, default=5, help="Refresh interval in seconds (default: 5)"
+    )
+    parser.add_argument(
+        "--db",
+        default=None,
+        help="Query DB directly instead of parsing logs (alias: demo, v2, v1; or path)",
+    )
     args = parser.parse_args()
 
     # DB mode: query database directly for real-time stats
