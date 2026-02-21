@@ -450,29 +450,30 @@ def _search_domain_labels(
 def hybrid_search_books(conn: sqlite3.Connection, query: str, limit: int = 20) -> list[dict]:
     """
     Hybrid book search: fuses FTS5 + semantic signals across books, topics, themes, and chunks.
+
+    Skips _semantic_search_topics (121K vector scan, ~2.7s on t3.micro) because
+    the chunk/theme/book vector signals already provide equivalent semantic matching
+    from smaller tables (total ~0.5s).
     """
 
     # Embed query once for all semantic signals
     query_bytes = embedding_to_bytes(embed_text(query))
 
-    # Gather ranked lists
+    # Gather ranked lists (6 signals — topic vectors omitted for performance)
     fts_books = _fts_search_books(conn, query)
     fts_topics = _fts_search_topics(conn, query)
     fts_topic_books = _topics_to_books(conn, fts_topics)
     fts_chunk_books = _fts_search_chunks(conn, query)
-    sem_topics = _semantic_search_topics(conn, query, query_bytes=query_bytes)
-    sem_topic_books = _topics_to_books(conn, sem_topics)
     sem_theme_books = _semantic_search_book_themes(conn, query, query_bytes=query_bytes)
     sem_book_direct = _semantic_search_books_direct(conn, query, query_bytes=query_bytes)
     sem_chunk_books = _semantic_search_chunks(conn, query, query_bytes=query_bytes)
 
-    # RRF fusion over all 7 signals
+    # RRF fusion over 6 signals
     fused = rrf_fuse(
         [
             fts_books,
             fts_topic_books,
             fts_chunk_books,
-            sem_topic_books,
             sem_theme_books,
             sem_book_direct,
             sem_chunk_books,
@@ -499,7 +500,6 @@ def hybrid_search_books(conn: sqlite3.Connection, query: str, limit: int = 20) -
         (fts_books, "keyword"),
         (fts_topic_books, "topic"),
         (fts_chunk_books, "content"),
-        (sem_topic_books, "semantic"),
         (sem_theme_books, "theme"),
         (sem_book_direct, "book"),
         (sem_chunk_books, "chunk"),
@@ -532,16 +532,18 @@ def hybrid_search_books(conn: sqlite3.Connection, query: str, limit: int = 20) -
 
 
 def hybrid_search_clusters(conn: sqlite3.Connection, query: str, limit: int = 20) -> list[dict]:
-    """Hybrid cluster search: fuses 5 signals — topic FTS/semantic, cluster labels, chunk FTS/semantic."""
+    """Hybrid cluster search: fuses 4 signals — topic FTS, cluster labels, chunk FTS/semantic.
+
+    Skips _semantic_search_topics (121K vector scan, ~2.7s) — the chunk semantic
+    signal provides equivalent coverage from a 4x smaller table.
+    """
 
     # Embed query once for all semantic signals
     query_bytes = embedding_to_bytes(embed_text(query))
 
-    # 5 signals
+    # 4 signals (topic vectors omitted for performance)
     fts_topics = _fts_search_topics(conn, query)
     fts_topic_clusters = _topics_to_clusters(conn, fts_topics)
-    sem_topics = _semantic_search_topics(conn, query, query_bytes=query_bytes)
-    sem_topic_clusters = _topics_to_clusters(conn, sem_topics)
     fts_label_clusters = _search_cluster_labels(conn, query)
     fts_chunk_clusters = _fts_chunks_to_clusters(conn, query)
     sem_chunk_clusters = _semantic_chunks_to_clusters(conn, query, query_bytes=query_bytes)
@@ -549,7 +551,6 @@ def hybrid_search_clusters(conn: sqlite3.Connection, query: str, limit: int = 20
     fused = rrf_fuse(
         [
             fts_topic_clusters,
-            sem_topic_clusters,
             fts_label_clusters,
             fts_chunk_clusters,
             sem_chunk_clusters,
@@ -835,11 +836,11 @@ def hybrid_search_universe(conn: sqlite3.Connection, query: str, limit: int = 50
 
 
 def find_related_books(conn: sqlite3.Connection, book_id: int, limit: int = 12) -> list[dict]:
-    """Find related books using hybrid search on the source book's metadata.
+    """Find related books using fast vector signals only.
 
-    Builds a query from the book's title, author, and themes, runs it through
-    hybrid_search_books(), filters out the source book, and normalizes scores
-    to 0-1 range.
+    Uses book_vectors (100 rows) + book_theme_vectors (800 rows) + FTS5 books
+    for sub-second results. Avoids the full hybrid_search_books pipeline which
+    scans 121K topic vectors and 31K chunk FTS entries (19s on the server).
     """
     row = conn.execute(
         "SELECT title, author, book_themes FROM books WHERE id = ?",
@@ -853,27 +854,64 @@ def find_related_books(conn: sqlite3.Connection, book_id: int, limit: int = 12) 
     themes_json = row["book_themes"]
     themes = json.loads(themes_json) if themes_json else []
 
-    # Build query string matching the book_vectors embedding format
+    # Build short query for embedding
     query_parts = [f"{title} by {author}"]
     if themes:
-        query_parts.append("Themes: " + ", ".join(themes[:10]))
+        query_parts.append(", ".join(themes[:5]))
     query = ". ".join(query_parts)
 
-    # Fetch extra results to account for self-filtering
-    raw_results = hybrid_search_books(conn, query, limit + 5)
+    query_bytes = embedding_to_bytes(embed_text(query))
+
+    # Fast signals only (~0.05s total vs 19s for full hybrid)
+    book_direct = _semantic_search_books_direct(
+        conn, query, limit=limit + 5, query_bytes=query_bytes
+    )
+    theme_books = _semantic_search_book_themes(
+        conn, query, limit=limit + 5, query_bytes=query_bytes
+    )
+    fts_books = _fts_search_books(conn, title, limit=limit + 5)
+
+    fused = rrf_fuse([book_direct, theme_books, fts_books])
 
     # Filter out the source book
-    filtered = [r for r in raw_results if r["book_id"] != book_id][:limit]
+    filtered = [(bid, score) for bid, score in fused if bid != book_id][:limit]
     if not filtered:
-        return filtered
+        return []
 
-    # Normalize scores to 0-1 (top match ≈ 1.0)
-    max_score = filtered[0]["score"]
-    if max_score > 0:
-        for r in filtered:
-            r["similarity"] = round(r["score"] / max_score, 3)
-    else:
-        for r in filtered:
-            r["similarity"] = 0.0
+    book_ids = [bid for bid, _ in filtered]
+    placeholders = ",".join("?" * len(book_ids))
+    rows = conn.execute(
+        f"SELECT id, title, author, calibre_id FROM books WHERE id IN ({placeholders})",
+        book_ids,
+    ).fetchall()
+    book_map = {r["id"]: dict(r) for r in rows}
 
-    return filtered
+    # Determine match_type from strongest signal
+    signal_labels = [(book_direct, "book"), (theme_books, "theme"), (fts_books, "keyword")]
+    best_signal: dict[int, tuple[int, str]] = {}
+    for ranked_list, label in signal_labels:
+        for rank, (bid, _score) in enumerate(ranked_list):
+            if bid not in best_signal or rank < best_signal[bid][0]:
+                best_signal[bid] = (rank, label)
+
+    # Normalize scores to 0-1
+    max_score = filtered[0][1] if filtered else 1.0
+    results = []
+    for bid, score in filtered:
+        if bid not in book_map:
+            continue
+        b = book_map[bid]
+        match_type = best_signal[bid][1] if bid in best_signal else "book"
+        results.append(
+            {
+                "book_id": bid,
+                "title": b["title"],
+                "author": b["author"],
+                "calibre_id": b["calibre_id"],
+                "score": round(score, 4),
+                "match_type": match_type,
+                "similarity": round(score / max_score, 3) if max_score > 0 else 0.0,
+            }
+        )
+
+    return results

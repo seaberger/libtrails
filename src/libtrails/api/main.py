@@ -13,6 +13,7 @@ from ..database import init_chunks_table
 from ..embeddings import embed_text
 from .routers import books, communities, covers, domains, search, themes, universe
 
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 
@@ -37,7 +38,7 @@ def _warmup_database() -> None:
     try:
         t0 = time.monotonic()
         # One hybrid search touches all hot tables: FTS5 indexes (books, topics,
-        # chunks), sqlite-vec indexes (topic_vectors, book_vectors, chunk_vectors,
+        # chunks), sqlite-vec indexes (book_vectors, chunk_vectors,
         # book_theme_vectors), and the key join tables (chunk_topic_links, etc.)
         hybrid_search_books(conn, "philosophy history science", limit=5)
         elapsed = time.monotonic() - t0
