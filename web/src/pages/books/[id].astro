@@ -73,8 +73,25 @@ try {
       </p>
 
       {book.description && (
-        <div class="prose prose-sm max-w-none text-[var(--color-text)] mb-6">
-          <p>{book.description}</p>
+        <div class="text-sm text-[var(--color-text)] mb-6 leading-relaxed" id="book-description">
+          <p id="desc-truncated" class={book.description.length > 200 ? '' : 'hidden'}>
+            {book.description.slice(0, 200).replace(/\s+\S*$/, '')}…
+            <button
+              id="btn-more"
+              class="text-[var(--color-accent)] hover:underline ml-1 cursor-pointer"
+              type="button"
+            >Read more</button>
+          </p>
+          <p id="desc-full" class={book.description.length > 200 ? 'hidden' : ''}>
+            {book.description}
+            {book.description.length > 200 && (
+              <button
+                id="btn-less"
+                class="text-[var(--color-accent)] hover:underline ml-1 cursor-pointer"
+                type="button"
+              >Show less</button>
+            )}
+          </p>
         </div>
       )}
 
@@ -133,3 +150,20 @@ try {
   <!-- Related books -->
   <RelatedBooks books={relatedBooks} />
 </BaseLayout>
+
+<script>
+  const btnMore = document.getElementById('btn-more');
+  const btnLess = document.getElementById('btn-less');
+  const truncated = document.getElementById('desc-truncated');
+  const full = document.getElementById('desc-full');
+
+  btnMore?.addEventListener('click', () => {
+    truncated?.classList.add('hidden');
+    full?.classList.remove('hidden');
+  });
+
+  btnLess?.addEventListener('click', () => {
+    full?.classList.add('hidden');
+    truncated?.classList.remove('hidden');
+  });
+</script>

@@ -106,6 +106,18 @@ def create_demo_db(library_dir: Path, db_path: Path) -> None:
             INSERT INTO books_fts(rowid, title, author, description, series)
             VALUES (new.id, new.title, new.author, new.description, new.series);
         END;
+
+        CREATE TRIGGER books_au AFTER UPDATE ON books BEGIN
+            INSERT INTO books_fts(books_fts, rowid, title, author, description, series)
+            VALUES ('delete', old.id, old.title, old.author, old.description, old.series);
+            INSERT INTO books_fts(rowid, title, author, description, series)
+            VALUES (new.id, new.title, new.author, new.description, new.series);
+        END;
+
+        CREATE TRIGGER books_ad AFTER DELETE ON books BEGIN
+            INSERT INTO books_fts(books_fts, rowid, title, author, description, series)
+            VALUES ('delete', old.id, old.title, old.author, old.description, old.series);
+        END;
     """)
 
     # Read all books from the Calibre demo library
