@@ -15,6 +15,7 @@ Usage:
 
 from __future__ import annotations
 
+import html as _html
 import re
 import sqlite3
 import time
@@ -33,7 +34,7 @@ CALIBRE_DB = Path.home() / "Calibre_Demo_Library" / "metadata.db"
 def clean_html(text: str | None) -> str | None:
     if not text:
         return None
-    return re.sub("<[^<]+?>", "", text).strip()
+    return _html.unescape(re.sub("<[^<]+?>", "", text).strip())
 
 
 def fetch_gutenberg_description(gutenberg_id: int) -> str | None:
@@ -134,7 +135,12 @@ def main() -> int:
             demo.execute("UPDATE books SET description = ? WHERE id = ?", (desc, book_id))
             from_calibre += 1
         elif ipad_id and ipad_id.startswith("gutenberg:"):
-            gid = int(ipad_id.split(":")[1])
+            raw_id = ipad_id.split(":", 1)[1]
+            if not raw_id.isdigit():
+                print(f"  Skipping '{title}': malformed ipad_id '{ipad_id}'")
+                still_missing.append((book_id, title))
+                continue
+            gid = int(raw_id)
             print(f"  Fetching Gutenberg description for '{title}' (id={gid})...")
             desc = fetch_gutenberg_description(gid)
             if desc:

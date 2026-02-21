@@ -17,6 +17,7 @@ The resulting DB is used with: LIBTRAILS_DB=demo uv run libtrails ...
 from __future__ import annotations
 
 import argparse
+import html as _html
 import logging
 import re
 import sqlite3
@@ -31,7 +32,7 @@ DATA_DIR = PROJECT_ROOT / "data"
 def clean_html(text: str | None) -> str | None:
     if not text:
         return None
-    return re.sub("<[^<]+?>", "", text).strip()
+    return _html.unescape(re.sub("<[^<]+?>", "", text).strip())
 
 
 def create_demo_db(library_dir: Path, db_path: Path) -> None:
