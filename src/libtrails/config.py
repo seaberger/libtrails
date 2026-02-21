@@ -66,6 +66,9 @@ def set_ipad_url(url: str):
     save_user_config(config)
 
 
+# Load user config once — used by all settings below
+_user_cfg = get_user_config()
+
 # Calibre library (read-only) — env var > YAML config > default
 CALIBRE_LIBRARY_PATH = Path(
     os.environ.get(
@@ -84,7 +87,6 @@ OLLAMA_HOST = "http://localhost:11434"
 #   lm_studio:
 #     theme_api_base: http://localhost:1234
 #     chunk_api_base: http://<gpu-host>:1234
-_user_cfg = get_user_config()
 LM_STUDIO_THEME_API_BASE = os.environ.get(
     "LM_STUDIO_THEME_API_BASE",
     _user_cfg.get("lm_studio", {}).get("theme_api_base", "http://localhost:1234"),
