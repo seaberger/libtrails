@@ -232,6 +232,7 @@ class HybridCommunityResult(BaseModel):
     community_id: int
     label: str
     topic_count: int
+    cluster_count: int = 0
     book_count: int
     score: float
     sample_books: list[BookSummary] = []

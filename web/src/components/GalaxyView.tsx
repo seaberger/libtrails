@@ -668,7 +668,7 @@ function MultiSelectPanel({
   const topClusters = useMemo(() => {
     const freq = new Map<string, number>();
     for (const c of communities) {
-      for (const t of c.top_clusters) {
+      for (const t of (c.top_clusters ?? [])) {
         freq.set(t, (freq.get(t) || 0) + 1);
       }
     }
@@ -1141,7 +1141,7 @@ function CommunityPanel({
       </div>
 
       {/* Cluster labels */}
-      {community.top_clusters.length > 0 && (
+      {(community.top_clusters ?? []).length > 0 && (
         <div style={{ marginBottom: 16 }}>
           <div
             style={{
@@ -1155,7 +1155,7 @@ function CommunityPanel({
             Clusters
           </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
-            {community.top_clusters.slice(0, 8).map((t) => (
+            {(community.top_clusters ?? []).slice(0, 8).map((t) => (
               <span
                 key={t}
                 style={{
@@ -1820,9 +1820,9 @@ export default function GalaxyView() {
           >
             {tooltip.community.book_count} books &middot; {tooltip.community.cluster_count} clusters
           </div>
-          {tooltip.community.top_clusters.length > 0 && (
+          {(tooltip.community.top_clusters ?? []).length > 0 && (
             <div style={{ display: "flex", flexWrap: "wrap", gap: "4px" }}>
-              {tooltip.community.top_clusters.slice(0, 4).map((t) => (
+              {(tooltip.community.top_clusters ?? []).slice(0, 4).map((t) => (
                 <span
                   key={t}
                   style={{

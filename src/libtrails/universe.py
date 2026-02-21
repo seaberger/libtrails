@@ -150,12 +150,16 @@ def generate_universe_data(
     # Pre-fetch cluster counts and top cluster labels per community
     cluster_info: dict[int, dict] = {}
     cursor.execute("""
-        SELECT cc.community_id,
+        SELECT community_id,
                COUNT(*) as cluster_count,
-               GROUP_CONCAT(cs.top_label, '||') as cluster_labels
-        FROM cluster_communities cc
-        JOIN cluster_stats cs ON cs.cluster_id = cc.cluster_id
-        GROUP BY cc.community_id
+               GROUP_CONCAT(top_label, '||') as cluster_labels
+        FROM (
+            SELECT cc.community_id, cs.top_label
+            FROM cluster_communities cc
+            JOIN cluster_stats cs ON cs.cluster_id = cc.cluster_id
+            ORDER BY cc.community_id, cs.book_count DESC
+        )
+        GROUP BY community_id
     """)
     for row in cursor.fetchall():
         labels_raw = row["cluster_labels"] or ""
