@@ -3,29 +3,29 @@
 /* LibTrails Design System - Inspired by trails.pieterma.es */
 
 @theme {
-  /* Dark theme (default) — matches Galaxy aesthetic */
-  --color-bg: #0f0f1a;
-  --color-surface: #1a1a2e;
+  /* Dark theme (default) — Library Amber palette */
+  --color-bg: #131210;
+  --color-surface: #1e1b17;
   --color-text: #e0e0e0;
   --color-text-muted: #999999;
-  --color-accent: #a0a0ff;
-  --color-accent-hover: #c0c0ff;
+  --color-accent: #d4a55a;
+  --color-accent-hover: #e0b86e;
   --color-border: rgba(255, 255, 255, 0.1);
-  --color-primary: #a0a0ff;
-  --color-primary-hover: #c0c0ff;
+  --color-primary: #d4a55a;
+  --color-primary-hover: #e0b86e;
 }
 
 /* Light theme overrides */
 [data-theme="light"] {
-  --color-bg: #fafaf9;
+  --color-bg: #faf8f5;
   --color-surface: #ffffff;
   --color-text: #1c1917;
   --color-text-muted: #78716c;
-  --color-accent: #6366f1;
-  --color-accent-hover: #4f46e5;
+  --color-accent: #8a6520;
+  --color-accent-hover: #735318;
   --color-border: #e7e5e4;
-  --color-primary: #6366f1;
-  --color-primary-hover: #4f46e5;
+  --color-primary: #8a6520;
+  --color-primary-hover: #735318;
 }
 
 /* Base styles */
