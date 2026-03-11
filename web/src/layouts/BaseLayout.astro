@@ -35,6 +35,14 @@ const isActive = (path: string) => {
         if (t) document.documentElement.setAttribute('data-theme', t);
       })();
     </script>
+    <!-- Google tag (gtag.js) -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-P9MM8EHH68" is:inline></script>
+    <script is:inline>
+      window.dataLayer = window.dataLayer || [];
+      function gtag(){dataLayer.push(arguments);}
+      gtag('js', new Date());
+      gtag('config', 'G-P9MM8EHH68');
+    </script>
   </head>
   <body class="min-h-screen bg-[var(--color-bg)]">
     <!-- Navigation -->
@@ -141,6 +149,9 @@ const isActive = (path: string) => {
     <footer class="mt-16 border-t border-[var(--color-border)] py-8">
       <div class="max-w-6xl mx-auto px-6 text-center text-sm text-[var(--color-text-muted)]">
         <p>LibTrails — Discover trails across your book library</p>
+        <p class="mt-2">
+          Built by <a href="https://sbergman.net" target="_blank" rel="noopener" class="text-[var(--color-accent)] hover:underline">Sean Bergman</a>
+        </p>
       </div>
     </footer>
 
