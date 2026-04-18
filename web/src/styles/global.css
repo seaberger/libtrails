@@ -138,3 +138,29 @@ h1, h2, h3, h4 {
 @keyframes spin {
   to { transform: rotate(360deg); }
 }
+
+/* Match badges — shared across every surface that renders hybrid-search
+   results (main book search, related-books, etc.). The color encodes which
+   retrieval signal dominated the result's ranking. See web/src/lib/matchBadge.ts
+   for the label mapping and backend src/libtrails/hybrid_search.py for the
+   signal-to-label mapping in the fusion step. */
+.match-badge {
+  display: inline-block;
+  padding: 0 6px;
+  font-size: 0.65rem;
+  line-height: 1.5;
+  border-radius: 3px;
+  background: var(--color-bg);
+  border: 1px solid var(--color-border);
+  color: var(--color-text-muted);
+  font-weight: 500;
+  letter-spacing: 0.02em;
+}
+
+.match-badge--keyword  { border-color: #f59e0b; color: #f59e0b; }
+.match-badge--topic    { border-color: #6366f1; color: #6366f1; }
+.match-badge--content  { border-color: #10b981; color: #10b981; }
+.match-badge--theme    { border-color: #8b5cf6; color: #8b5cf6; }
+.match-badge--book     { border-color: #3b82f6; color: #3b82f6; }
+.match-badge--chunk    { border-color: #06b6d4; color: #06b6d4; }
+.match-badge--semantic { border-color: #06b6d4; color: #06b6d4; }
