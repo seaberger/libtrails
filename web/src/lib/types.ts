@@ -159,7 +159,10 @@ export interface HybridBookResult {
   author: string;
   calibre_id: number | null;
   score: number;
-  match_type: "keyword" | "content" | "semantic" | "topic";
+  // Dominant-signal label from RRF fusion. See web/src/lib/matchBadge.ts for
+  // the rendered labels and backend src/libtrails/hybrid_search.py for the
+  // signal-to-label mapping produced by the fusion step.
+  match_type: "keyword" | "topic" | "content" | "theme" | "book" | "chunk" | "semantic";
 }
 
 export interface HybridClusterResult {
